@@ -66,7 +66,7 @@ end
 
 ---Wrapper for `copen` in the current tabpage.
 ---@param count uinteger
----@param ctx qf-herder.window.Ctx
+---@param ctx qf-herder.window.Cfg
 ---@return boolean, string
 function M.qf_open(count, ctx)
     local qf_win = _util.find_qf_win(0)
@@ -83,7 +83,7 @@ end
 ---@field spk "cursor"|"screen"|"topline"|""
 
 ---@param tabpage uinteger
----@param ctx qf-herder.window.Ctx
+---@param ctx qf-herder.window.Cfg
 ---@return boolean, uinteger
 function M.qf_close(tabpage, ctx)
     local qf_win = _util.find_qf_win(tabpage)
@@ -95,7 +95,7 @@ function M.qf_close(tabpage, ctx)
 end
 
 ---@param count uinteger
----@param ctx qf-herder.window.Ctx
+---@param ctx qf-herder.window.Cfg
 ---@return boolean, string
 function M.qf_toggle(count, ctx)
     local qf_win = _util.find_qf_win(0)
@@ -110,7 +110,7 @@ end
 
 ---@param tabpage uinteger
 ---@param count uinteger
----@param ctx qf-herder.window.Ctx
+---@param ctx qf-herder.window.Cfg
 function M.qf_resize(tabpage, count, ctx)
     local qf_win = _util.find_qf_win(tabpage)
     if qf_win ~= nil then
@@ -140,7 +140,7 @@ local function lopen_with_spk(spk, count, split)
 end
 
 ---@param count uinteger
----@param ctx qf-herder.window.Ctx
+---@param ctx qf-herder.window.Cfg
 ---@return boolean, string
 function M.ll_open(count, ctx)
     local src_win = api.nvim_get_current_win()
@@ -167,7 +167,7 @@ end
 ---@field silent boolean
 
 ---@param src_win uinteger
----@param ctx qf-herder.window.Ctx
+---@param ctx qf-herder.window.Cfg
 ---@return boolean, uinteger
 function M.ll_close(src_win, ctx)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
@@ -189,7 +189,7 @@ function M.ll_close(src_win, ctx)
 end
 
 ---@param count uinteger
----@param ctx qf-herder.window.Ctx
+---@param ctx qf-herder.window.Cfg
 ---@return boolean, string
 function M.ll_toggle(count, ctx)
     local src_win = api.nvim_get_current_win()
@@ -216,7 +216,7 @@ end
 
 ---@param src_win uinteger
 ---@param count uinteger
----@param ctx qf-herder.window.Ctx
+---@param ctx qf-herder.window.Cfg
 function M.ll_resize(src_win, count, ctx)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
     if qf_id == 0 then
@@ -232,6 +232,96 @@ function M.ll_resize(src_win, count, ctx)
     if ll_win ~= nil then
         win_resize_with_spk(ctx.spk, win_tabpage, ll_win, height_resolve(src_win, count, true))
     end
+end
+
+----------------
+-- MARK: Cmds --
+----------------
+
+---@param cargs vim.api.keyset.create_user_command.command_args
+function M.q_open_cmd(cargs)
+    local _, _, ok, ctx, err = require("qf-herder")._config_merged_get_cur_winbuf("window")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    M.qf_open(cargs.count, ctx)
+end
+
+function M.q_close_cmd()
+    local _, _, ok, ctx, err = require("qf-herder")._config_merged_get_cur_winbuf("window")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    M.qf_close(0, ctx)
+end
+
+---@param cargs vim.api.keyset.create_user_command.command_args
+function M.q_toggle_cmd(cargs)
+    local _, _, ok, ctx, err = require("qf-herder")._config_merged_get_cur_winbuf("window")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    M.qf_toggle(cargs.count, ctx)
+end
+
+---@param cargs vim.api.keyset.create_user_command.command_args
+function M.l_resize_cmd(cargs)
+    local _, _, ok, ctx, err = require("qf-herder")._config_merged_get_cur_winbuf("window")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    M.ll_resize(0, cargs.count, ctx)
+end
+
+---@param cargs vim.api.keyset.create_user_command.command_args
+function M.l_open_cmd(cargs)
+    local _, _, ok, ctx, err = require("qf-herder")._config_merged_get_cur_winbuf("window")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    M.ll_open(cargs.count, ctx)
+end
+
+function M.l_close_cmd()
+    local cur_win, _, ok, ctx, err = require("qf-herder")._config_merged_get_cur_winbuf("window")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    M.ll_close(cur_win, ctx)
+end
+
+---@param cargs vim.api.keyset.create_user_command.command_args
+function M.l_toggle_cmd(cargs)
+    local _, _, ok, ctx, err = require("qf-herder")._config_merged_get_cur_winbuf("window")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    M.ll_toggle(cargs.count, ctx)
+end
+
+---@param cargs vim.api.keyset.create_user_command.command_args
+function M.l_resize_cmd(cargs)
+    local cur_win, _, ok, ctx, err = require("qf-herder")._config_merged_get_cur_winbuf("window")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    M.ll_resize(cur_win, cargs.count, ctx)
 end
 
 return M

@@ -66,11 +66,14 @@ end
 ---@param buf uinteger
 ---@param wipe "decor"|"del"
 local function res_clear(res, buf, wipe)
+    if not api.nvim_buf_is_valid(buf) then
+        state_results[buf] = nil
+        return
+    end
+
     local has_decor = #api.nvim_buf_get_extmarks(buf, state_ns, 0, -1, { limit = 1 }) > 0
     if has_decor then
-        if api.nvim_buf_is_valid(buf) then
-            api.nvim_buf_clear_namespace(buf, state_ns, 0, -1)
-        end
+        api.nvim_buf_clear_namespace(buf, state_ns, 0, -1)
     end
 
     if wipe == "decor" then

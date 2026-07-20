@@ -35,7 +35,31 @@ end
 ---@return boolean
 function M.endswith_byte(str, byte)
     local len_str = #str
-    return len_str > 0 and string.byte(len_str, 1) == byte
+    return len_str > 0 and string.byte(str, len_str) == byte
+end
+
+---@param str string
+---@return string[]
+function M.split_map(str)
+    local result = {}
+    local i = 1
+    while i <= #str do
+        if string.byte(str, i) == 60 then
+            local j = str:find(">", i)
+            if j then
+                table.insert(result, str:sub(i, j))
+                i = j + 1
+            else
+                table.insert(result, str:sub(i, i))
+                i = i + 1
+            end
+        else
+            table.insert(result, str:sub(i, i))
+            i = i + 1
+        end
+    end
+
+    return result
 end
 
 ---@audited 2026-07-03
@@ -45,10 +69,6 @@ end
 ---@param idx uinteger
 ---@return integer
 function M.str_utfindex(s, encoding, idx)
-    if idx == 0 then
-        return 0
-    end
-
     local col_32, col_16 = vim._str_utfindex(s, idx) --[[@as integer?, integer?]]
     if encoding == "utf-16" then
         if col_16 then

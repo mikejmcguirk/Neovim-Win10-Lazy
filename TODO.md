@@ -21,6 +21,10 @@
 
 ## TODO:
 
+- For all plugins:
+  * Update config modules to how rancher is now done
+  * Rename ctx > cfg for sub-lists
+
 ## TODO-DEP:
 
 * If, after a week of using Emmylua_Ls, it actually works, remove LazyDev and begin the process of converting the repo over to it.

@@ -1,67 +1,74 @@
 local api = vim.api
+-- TODO: When cutting this plugin off, inline any functions that are only used here. We want to
+-- require as few exterior modules as possible for plugin init. Exterior util functions should be
+-- consolidated into as few modules as is reasonable.
+local ntt = require("nvim-tools.table")
 
-------------------
--- MARK: Schema --
-------------------
+---------------------
+-- MARK: Functions --
+---------------------
+
+---@param expected string
+---@param actual any
+---@return string
+local function validator_err_make(expected, actual)
+    return "Expected " .. expected .. ", found " .. type(actual)
+end
 
 ---@param val any
 ---@param typ string
----@return boolean
+---@return boolean, string
 local function string_type_is_valid(val, typ)
     if typ ~= "callable" then
-        return type(val) == typ
+        local ok = type(val) == typ
+        return ok, ok and "" or validator_err_make(typ, val)
     end
 
     if type(val) == "function" then
-        return true
+        return true, ""
     end
 
     local mt = getmetatable(val)
-    return mt ~= nil and type(rawget(mt, "__call")) == "function"
+    local ok = mt ~= nil and type(rawget(mt, "__call")) == "function"
+    return ok, ok and "" or "Not a callable metatable"
 end
 
----@param v any
----@param s string|string[]|fun(val:any): boolean, string
+---@param val any
+---@param validator string|string[]|fun(val:any): boolean, string
 ---@return boolean, string
-local function validator_check(v, s)
-    if type(s) == "string" then
-        local ok = string_type_is_valid(v, s)
-        local err = ok and ""
-            or "Expected " .. s .. ", got " .. type(v) .. " (" .. tostring(v) .. ")"
-        return ok, err
+local function validator_check(val, validator)
+    if type(validator) == "string" then
+        return string_type_is_valid(val, validator)
     end
 
-    if vim.islist(s) then
-        local s_len = #s
-        for i = 1, s_len do
+    if vim.islist(validator) then
+        for i = 1, #validator do
             ---@diagnostic disable-next-line: param-type-mismatch
-            if string_type_is_valid(v, s[i]) then
+            if string_type_is_valid(val, validator[i]) then
                 return true, ""
             end
         end
 
-        local err = tostring(v) .. ". Expected " .. vim.inspect(s) .. ". Actual: " .. type(v)
-        return false, err
+        return false, validator_err_make(vim.inspect(validator), val)
     end
 
-    if type(s) == "function" then
-        return s(v)
+    if type(validator) == "function" then
+        return validator(val)
     end
 
-    return false, "Invalid validator for " .. tostring(v)
+    return false, "Invalid validator for " .. tostring(val)
 end
 
 ---@param t table
 ---@param s table
 ---@param prev table<table, true>
 ---@return boolean, string
-local function matches_validator_with(t, s, prev)
+local function matches_schema_checked(t, s, prev)
     if prev[t] ~= nil then
-        return false, "Cyclic reference found in values."
+        return false, "Cyclic reference detected in values."
     end
 
     prev[t] = true
-    local ntt = require("nvim-tools.table")
     for k, v in pairs(t) do
         local vs = s[k]
         if vs == nil then
@@ -71,23 +78,21 @@ local function matches_validator_with(t, s, prev)
 
         local v_is_dict = ntt.is_dict(v) == 2
         local vs_is_dict = ntt.is_dict(vs) == 2
-        if v_is_dict ~= vs_is_dict then
-            prev[t] = nil
-            return false, "[" .. tostring(k) .. "]" .. " sub-table mismatch."
-        end
-
-        if v_is_dict and vs_is_dict then
-            local ok, err = matches_validator_with(v, vs, prev)
-            if not ok then
-                prev[t] = nil
-                return false, "[" .. tostring(k) .. "]" .. err
-            end
-        else
+        if (not v_is_dict) and not vs_is_dict then
             local ok, err = validator_check(v, vs)
             if not ok then
                 prev[t] = nil
                 return false, "[" .. tostring(k) .. "]" .. err
             end
+        elseif v_is_dict and vs_is_dict then
+            local ok, err = matches_schema_checked(v, vs, prev)
+            if not ok then
+                prev[t] = nil
+                return false, "[" .. tostring(k) .. "]" .. err
+            end
+        else
+            prev[t] = nil
+            return false, "[" .. tostring(k) .. "]" .. " sub-table mismatch."
         end
     end
 
@@ -108,8 +113,7 @@ end
 ---@param t table
 ---@param s table
 ---@return boolean, string
-local function matches_schema_with_run(t, s)
-    local ntt = require("nvim-tools.table")
+local function matches_schema(t, s)
     if ntt.is_dict(t) == 0 then
         return false, "Config values are not a dictionary table."
     end
@@ -118,418 +122,284 @@ local function matches_schema_with_run(t, s)
         return false, "Schema values are not a dictionary table."
     end
 
-    return matches_validator_with(t, s, {})
+    return matches_schema_checked(t, s, {})
 end
 
----@param val string
----@return boolean
-local function try_regex(val)
-    local ok, _ = pcall(vim.regex, val)
-    return ok
-end
--- TODO: Keep this for grep.
-
----@param val string
----@return boolean, string
-local function fold_cmd_check(val)
-    local has = val == "" or val == "zv" or val == "zO" or val == "zx" or val == "zR"
-    return has, has and "" or "Invalid unfold cmd"
-end
--- TODO: Keep this for list item opening.
+---------------------------
+-- MARK: Defaults/Schema --
+---------------------------
 
 ---@class qf-herder.config.Schema
 local schema = {
     default_keymaps_set = "boolean",
+    qf_map_prefix = "string",
+    ll_map_prefix = "string",
     window = {
         auto_height = "boolean",
         ll_split = function(val)
-            return val == "belowright" or val == "aboveleft"
+            local ll_splits = {
+                "abo",
+                "aboveleft",
+                "bel",
+                "belowright",
+                "lefta",
+                "leftabove",
+                "rightb",
+                "rightbelow",
+            }
+
+            local ok = ntt.i_includes(ll_splits, val)
+            return ok, ok and "" or validator_err_make(vim.inspect(ll_splits), val)
         end,
         qf_split = function(val)
-            return val == "botright" or val == "topleft"
+            local qf_splits = {
+                "bo",
+                "botright",
+                "to",
+                "topleft",
+            }
+
+            local ok = ntt.i_includes(qf_splits, val)
+            return ok, ok and "" or validator_err_make(vim.inspect(qf_splits), val)
         end,
         silent = "boolean",
         spk = function(val)
-            return val == "" or val == "cursor" or val == "screen" or val == "topline"
+            local spk = { "", "cursor", "screen", "topline" }
+            local ok = ntt.i_includes(spk, val)
+            return ok, ok and "" or validator_err_make(vim.inspect(spk), val)
         end,
     },
 }
--- MID: Support the built-in abbreviations for splt settings.
 
---------------------
--- MARK: Defaults --
---------------------
+---@alias qf-herder.window.llSplit "abo"|"aboveleft"|"bel"|"belowright"|"lefta"|"leftabove"|"rightb"|"rightbelow"
 
----@class qf-herder.config.Config
+---@alias qf-herder.window.qfSplit "bo"|"botright"|"to"|"topleft"
+
+---@class qf-herder.Config
 local default_config = {
     default_keymaps_set = true, ---@type boolean -- Only checked on startup.
-    ---@class qf-herder.window.Ctx
+    ll_map_prefix = "<leader>l", ---@type string -- Only checked on startup.
+    qf_map_prefix = "<leader>q", ---@type string -- Only checked on startup.
+    ---@class qf-herder.window.Cfg
     window = {
         auto_height = true, ---@type boolean
-        ll_split = "belowright", ---@type "aboveleft"|"belowright"
-        qf_split = "botright", ---@type "botright"|"topleft"
+        ll_split = "belowright", ---@type qf-herder.window.llSplit
+        qf_split = "botright", ---@type qf-herder.window.qfSplit
         silent = false, ---@type boolean
         spk = "topline", ---@type ""|"cursor"|"screen"|"topline"
     },
 }
 
----@class qf-herder.config.Input
+-- TODO: Rename ctx to cfg here and throughout the module
+
+---@class qf-herder.window.cfg.Partial
+---@field auto_height? boolean
+---@field ll_split? qf-herder.window.llSplit
+---@field qf_split? qf-herder.window.qfSplit
+---@field silent? boolean
+---@field spk? ""|"cursor"|"screen"|"topline"
+
+---@class qf-herder.config.Partial
 ---@field default_keymaps_set? boolean
+---@field ll_map_prefix? string
+---@field qf_map_prefix? string
+---@field window? qf-herder.window.cfg.Partial
 
--- TODO: These can't be the same opts tables the APIs use because those are subsets of the
--- ctx tables.
+------------------
+-- MARK: Config --
+------------------
 
-------------------------
--- MARK: Config Class --
-------------------------
+local config = ntt.deepcopy(default_config)
+---@cast config qf-herder.Config
 
 local M = {}
 
----@nodoc
----@class qf-herder.Config
----@field _config qf-herder.config.Config
----@field _defaults qf-herder.config.Schema
-local Config = {}
-
----Store global plugin config.
----
----Get config:
----```lua
----   config()
----```
----```lua
----   config().foo
----```
----
----Set config:
----```lua
----    config({ foo = "bar" })
----```
----@param t qf-herder.config.Input? Table of new values to merge in.
----@return qf-herder.config.Config The current or updated config.
----@diagnostic disable-next-line: assign-type-mismatch
-function M.config(t)
-    local _ = t -- ignore unused
-    ---@diagnostic disable-next-line: return-type-mismatch
-    -- dummy proto for docs
-    return {}
-end
-
+---@param new_config? qf-herder.config.Partial
 ---@return qf-herder.Config
-local function config_create()
-    local ntt = require("nvim-tools.table")
-    local _config = ntt.deepcopy(default_config)
-    local config = { _config = _config, _defaults = default_config }
-    return setmetatable(config, Config)
-end
-
----@diagnostic disable-next-line: assign-type-mismatch
----@nodoc
-M.config = config_create()
-
----@nodoc
----Alias so lazy.nvim can load with its `opts` key.
-M.setup = M.config
---TODO: Test. If this doesn't work then just document that it doesn't.
-
----@generic K, V
----@param self qf-herder.Config
----@param k K
----@return V
-Config.__index = function(self, k)
-    local _config = rawget(self, "_config")
-    local v = rawget(_config, k)
-    if v ~= nil then
-        return v
-    end
-
-    return rawget(Config, k)
-end
-
-Config.__newindex = function(_, _, _)
-    local msg = "Configs must be modified with setter methods. See help."
-    api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
-end
-
----@param self qf-herder.Config
----@param t? qf-herder.config.Input
----@return qf-herder.config.Config
-function Config.__call(self, t)
-    local _config = rawget(self, "_config")
-    local ntt = require("nvim-tools.table")
-    if t == nil then
+function M.config(new_config)
+    if new_config == nil then
         ---@diagnostic disable-next-line: return-type-mismatch
-        return ntt.deepcopy(_config)
+        return ntt.deepcopy(config)
     end
 
-    local ok, err = matches_schema_with_run(t, schema)
+    local ok, err = matches_schema(new_config, schema)
     if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        ---@diagnostic disable-next-line: return-type-mismatch
-        return ntt.deepcopy(_config)
+        error(err)
     end
 
-    ntt.merge_deep_right(_config, ntt.deepcopy(t))
+    ntt.merge_deep_right(config, new_config)
     ---@diagnostic disable-next-line: return-type-mismatch
-    return ntt.deepcopy(_config)
+    return ntt.deepcopy(config)
 end
 
----Set all config values back to default. This clears buffer-specific configs.
-function Config:reset()
-    local _defaults = rawget(self, "_defaults")
-    rawset(self, "_config", require("nvim-tools.table").deepcopy(_defaults))
+function M.config_reset()
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    config = ntt.deepcopy(default_config)
 end
 
----Set a key back to its default. This clears buffer config values.
----```lua
----   -- foo = { foo = "bar" } -- Default: "buzz"
----   foo:unset_keys({ foo = true })
----   -- foo - { foo = "buzz" }
----```
+-- TODO: Add an unset def that just has boolean values for everything.
+
 ---@param keys table
-function Config:unset_keys(keys)
-    vim.validate("t", keys, "table")
+---@return qf-herder.Config
+function M.unset_keys(keys)
+    vim.validate("keys", keys, "table")
 
-    local _config = rawget(self, "_config")
-    local ntt = require("nvim-tools.table")
-    ntt.unset_keys(_config, keys)
-    local defaults_zipped = ntt.zip_deep_with_to(keys, rawget(self, "_defaults"), function(_, dv)
+    ntt.unset_keys(config, keys)
+    local defaults_zipped = ntt.zip_deep_with_to(keys, default_config, function(_, dv)
         return dv
     end)
 
-    ntt.defaults_deep(_config, defaults_zipped)
-    return ntt.deepcopy(_config)
-end
-
----@return boolean, string
-function Config:validate()
-    local _config = rawget(self, "_config")
-    return matches_schema_with_run(_config, schema)
-end
-
-------------------------
--- MARK: Buf Accessor --
-------------------------
-
----@nodoc
----@class qf-herder.config.BufAccessor
----@field _configs table<uinteger, qf-herder.Config>
-local Buf_Config_Accessor = {}
-
----Store buffer-specific configuration. When the plugin accesses config data, buffer-specific
----config will be merged over global config.
----
----```lua
----    buf_config[0] -- Gets config for current buffer. Creates if needed.
----```
----
----Buffer configs are interacted with the same as as the global config.
----
----Configs cannot be created or accessed for invalid buffers. If a buffer is wiped, its config
----will be deleted.
----@param buf uinteger Buffer config to access.
----@return qf-herder.config.BufAccessor The current or updated buf config.
----@diagnostic disable-next-line: assign-type-mismatch
-function M.buf_config(buf)
-    local _ = buf -- ignore unused
-    -- dummy proto for docs
+    ntt.defaults_deep(config, defaults_zipped)
     ---@diagnostic disable-next-line: return-type-mismatch
-    return {}
+    return ntt.deepcopy(config)
 end
 
----@return qf-herder.config.BufAccessor
-local function buf_config_create()
-    local buf_config = { _configs = {} }
-    return setmetatable(buf_config, Buf_Config_Accessor)
+function M._config_get()
+    return config
 end
 
----@diagnostic disable-next-line: assign-type-mismatch
----@nodoc
-M.buf_config = buf_config_create() ---@type qf-herder.config.BufAccessor
+----------------------
+-- MARK: Buf Config --
+----------------------
 
----@param buf uinteger
----@return string
+local buf_configs = {} ---@type table<uinteger, qf-herder.config.Partial>
+
 local function get_buf_augroup_name(buf)
     return "qf-herder.buf_config." .. tostring(buf)
 end
 
----Assumes new buf is valid.
----@side-effect Creates BufWipeout autocmd.
 ---@param buf uinteger
----@param _configs table<uinteger, qf-herder.Config> Modified in place!
-local function add_buf_to__configs(buf, _configs)
-    local buf_config = setmetatable({ _config = {}, _defaults = {} }, Config)
+---@return qf-herder.config.Partial
+local function buf_config_add(buf)
     api.nvim_create_autocmd("BufWipeout", {
         group = api.nvim_create_augroup(get_buf_augroup_name(buf), {}),
         -- TODO-DEP: Change this to "buf" when v0.14 comes out.
         buffer = buf,
         callback = function()
-            _configs[buf] = nil
+            buf_configs[buf] = nil
         end,
     })
 
-    _configs[buf] = buf_config
+    local buf_config = {}
+    buf_configs[buf] = buf_config
     return buf_config
 end
 
----@generic T
----@param self qf-herder.config.BufAccessor
----@param k T
----@return any
-Buf_Config_Accessor.__index = function(self, k)
-    if not require("nvim-tools.types").is_uint(k) then
-        return rawget(Buf_Config_Accessor, k)
+---@param buf uinteger
+---@return qf-herder.config.Partial
+local function buf_configs_get(buf)
+    local buf_config = buf_configs[buf]
+    if buf_config == nil then
+        buf_config = buf_config_add(buf)
     end
 
-    k = k ~= 0 and k or api.nvim_get_current_buf()
+    return buf_config
+end
 
-    ---@type table<integer, qf-herder.Config>
-    local _configs = rawget(self, "_configs")
-    ---@diagnostic disable-next-line: param-type-mismatch
-    if api.nvim_buf_is_valid(k) == false then
-        _configs[k] = nil
-        api.nvim_echo({ { k .. " is not valid", "WarningMsg" } }, true, {})
+---@param new_config qf-herder.config.Partial?
+---@param buf? uinteger
+---@return qf-herder.config.Partial
+function M.buf_config(new_config, buf)
+    vim.validate("buf", buf, require("nvim-tools.types").is_uint, true)
+    buf = (buf ~= nil and buf ~= 0) and buf or api.nvim_get_current_buf()
+    if not api.nvim_buf_is_valid(buf) then
+        buf_configs[buf] = nil
+        error(buf .. " is not valid")
+    end
+
+    local buf_config = buf_configs_get(buf)
+    if new_config == nil then
+        ---@diagnostic disable-next-line: return-type-mismatch
+        return ntt.deepcopy(buf_config)
+    end
+
+    local ok, err = matches_schema(new_config, schema)
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        ---@diagnostic disable-next-line: return-type-mismatch
+    else
+        ntt.merge_deep_right(buf_config, new_config)
+    end
+
+    ---@diagnostic disable-next-line: return-type-mismatch
+    return ntt.deepcopy(buf_config)
+end
+
+---@param bufs uinteger[]|nil
+function M.buf_config_clear(bufs)
+    vim.validate("bufs", bufs, function()
+        local nty = require("nvim-tools.types")
+        return nty.valid_list(bufs, { item_type = "number" })
+    end, true)
+
+    if bufs == nil then
+        for _, cfg in pairs(buf_configs) do
+            ntt.clear(cfg)
+        end
+
         return
     end
 
-    ---@diagnostic disable-next-line: assign-type-mismatch
-    local buf_config = rawget(_configs, k) ---@type qf-herder.Config
-    if buf_config == nil then
-        buf_config = add_buf_to__configs(k, _configs)
-    end
-
-    return buf_config ---@type table
-end
-
-Buf_Config_Accessor.__newindex = function(_, _, _)
-    local msg = "Buf configs must be modified with setter methods. See help."
-    api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
-end
-
----Add a new config for a buffer. Warns if one already exists. This creates the autocmd to
----remove the config on |BufWipeout|.
----@param buf uinteger
----@return boolean `True` if the new config was created.
-function Buf_Config_Accessor:add(buf)
-    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
-
-    buf = buf ~= 0 and buf or api.nvim_get_current_buf()
-    if api.nvim_buf_is_valid(buf) == false then
-        api.nvim_echo({ { buf .. " is not valid", "WarningMsg" } }, true, {})
-        return false
-    end
-
-    ---@type table<uinteger, qf-herder.Config>
-    local _configs = rawget(self, "_configs")
-    if _configs[buf] ~= nil then
-        local msg = "Config for buffer " .. buf .. " already exists."
-        api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
-        return false
-    end
-
-    add_buf_to__configs(buf, _configs)
-    return true
-end
-
----Clear buffer configs for `bufs`. If `bufs` is `nil`, clear all buffer configs.
----@param bufs uinteger[]|nil
-function Buf_Config_Accessor:clear(bufs)
-    vim.validate("bufs", bufs, function()
-        local nty = require("nvim-tools.types")
-        return nty.valid_list(bufs, { item_type = "number" })
-    end, true)
-
-    local _configs = rawget(self, "_configs") ---@type table<uinteger, qf-herder.Config>
-    if bufs == nil then
-        for _, buf_config in pairs(_configs) do
-            buf_config:reset()
-        end
-    else
-        for _, buf in ipairs(bufs) do
-            local resolved_buf = buf ~= 0 and buf or api.nvim_get_current_buf()
-            local b_cfg = _configs[resolved_buf]
-            if b_cfg ~= nil then
-                b_cfg:reset()
-            end
+    for _, buf in ipairs(bufs) do
+        local buf_config = buf_configs[buf]
+        if buf_config ~= nil then
+            ntt.clear(buf_config)
         end
     end
 end
 
----Delete buffer configs for `bufs`. If `bufs` is `nil`, delete all buffer configs.
----@param bufs uinteger[]|nil
-function Buf_Config_Accessor:del(bufs)
-    vim.validate("bufs", bufs, function()
-        local nty = require("nvim-tools.types")
-        return nty.valid_list(bufs, { item_type = "number" })
-    end, true)
-
-    local _configs = rawget(self, "_configs") ---@type table<uinteger, qf-herder.Config>
-    if bufs == nil then
-        require("nvim-tools.table").clear(_configs)
-    else
-        for _, buf in ipairs(bufs) do
-            local resolved_buf = buf ~= 0 and buf or api.nvim_get_current_buf()
-            _configs[resolved_buf] = nil
-        end
-    end
-end
-
----List buffers with active configs.
----@return integer[]
-function Buf_Config_Accessor:list_bufs()
-    local keys = require("nvim-tools.table").keys(rawget(self, "_configs"))
+---@return uinteger[]
+function M.buf_config_list_bufs()
+    local keys = ntt.keys(buf_configs)
     table.sort(keys)
     return keys
 end
 
-------------------------
--- MARK: Merging Code --
-------------------------
+-----------------------
+-- MARK: API Helpers --
+-----------------------
 
 ---@param buf uinteger
 ---@param usr_config table?
 ---@param ... any
 ---@return boolean, table, string
-function M._get_merged_config(buf, usr_config, ...)
-    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
-    vim.validate("usr_config", usr_config, "table", true)
-
+local function config_merged_get(buf, usr_config, ...)
     buf = buf ~= 0 and buf or api.nvim_get_current_buf()
 
-    local _config = rawget(M.config, "_config") ---@type table
-    local ntt = require("nvim-tools.table")
-    local config = ntt.deepcopy(ntt.get(_config, ...))
-    if config == nil then
+    local cfg = ntt.deepcopy(ntt.get(config, ...))
+    if cfg == nil then
         return false, {}, "Invalid config path."
     end
 
-    ---@type table<uinteger, qf-herder.Config>
-    local _configs = rawget(M.buf_config, "_configs")
-    local buf_config_get = rawget(_configs, buf) ---@type qf-herder.Config
-    if buf_config_get ~= nil then
-        local _buf_config = rawget(buf_config_get, "_config") ---@type table
-        local buf_config = ntt.get(_buf_config, ...)
-        if buf_config ~= nil then
-            ntt.merge_deep_right(config, buf_config)
+    local buf_config = buf_configs[buf]
+    if buf_config ~= nil then
+        local buf_cfg = ntt.get(buf_config, ...)
+        if buf_cfg ~= nil then
+            ntt.merge_deep_right(cfg, buf_cfg)
         end
     end
 
     if usr_config == nil then
-        return true, config, ""
+        return true, cfg, ""
     end
 
-    local validators = ntt.get(schema, ...)
-    if validators == nil then
-        return false, {}, "No validators for path."
-    end
-
-    local ok, err = matches_schema_with_run(usr_config, validators)
+    local sub_schema = ntt.get(schema, ...)
+    local ok, err = matches_schema(usr_config, sub_schema)
     if not ok then
         return false, {}, err
     end
 
-    ntt.merge_deep_right(config, usr_config)
-    return true, config, ""
+    ntt.merge_deep_right(cfg, usr_config)
+    return true, cfg, ""
+end
+
+---@nodoc
+---@param ... any
+---@return uinteger, uinteger, boolean, table, string
+function M._config_merged_get_cur_winbuf(...)
+    local win = api.nvim_get_current_win()
+    local buf = api.nvim_win_get_buf(win)
+    return win, buf, config_merged_get(buf, nil, ...)
 end
 
 ---------------
@@ -538,25 +408,25 @@ end
 
 ---@param opts table?
 ---@param key string
-local function ctx_get(opts, key)
+local function cfg_get_from_opts(opts, key)
     vim.validate("opts", opts, "table", true)
     opts = opts or {}
 
-    local cur_win = api.nvim_get_current_win()
-    local cur_win_buf = api.nvim_win_get_buf(cur_win)
-    return cur_win, cur_win_buf, M._get_merged_config(cur_win_buf, opts, key)
+    local win = api.nvim_get_current_win()
+    local buf = api.nvim_win_get_buf(win)
+    return win, buf, config_merged_get(buf, opts, key)
 end
 
 M.window = {}
 
 ---@class qf-herder.window.qfOpen.Opts
 ---@field auto_height? boolean
----@field qf_split? "botright"|"topleft"
+---@field qf_split? qf-herder.window.qfSplit
 ---@field spk? "cursor"|"screen"|"topline"|""
 
 ---@param opts qf-herder.window.qfOpen.Opts
 function M.window.qf_open(opts)
-    local _, _, ok, ctx, err = ctx_get(opts, "window")
+    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
@@ -570,7 +440,7 @@ end
 
 ---@param opts qf-herder.window.qfClose.Opts
 function M.window.qf_close(opts)
-    local _, _, ok, ctx, err = ctx_get(opts, "window")
+    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
@@ -581,12 +451,12 @@ end
 
 ---@class qf-herder.window.qfToggle.Opts
 ---@field auto_height? boolean
----@field qf_split? "botright"|"topleft"
+---@field qf_split? qf-herder.window.qfSplit
 ---@field spk? "cursor"|"screen"|"topline"|""
 
 ---@param opts qf-herder.window.qfToggle.Opts
 function M.window.qf_toggle(opts)
-    local _, _, ok, ctx, err = ctx_get(opts, "window")
+    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
@@ -600,7 +470,7 @@ end
 
 ---@param opts qf-herder.window.qfResize.Opts
 function M.window.qf_resize(opts)
-    local _, _, ok, ctx, err = ctx_get(opts, "window")
+    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
@@ -611,13 +481,13 @@ end
 
 ---@class qf-herder.window.llOpen.Opts
 ---@field auto_height? boolean
----@field qf_split? "botright"|"topleft"
+---@field ll_split? qf-herder.window.llSplit
 ---@field silent? boolean
 ---@field spk? "cursor"|"screen"|"topline"|""
 
 ---@param opts qf-herder.window.llOpen.Opts
 function M.window.ll_open(opts)
-    local _, _, ok, ctx, err = ctx_get(opts, "window")
+    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
@@ -632,7 +502,7 @@ end
 
 ---@param opts qf-herder.window.llClose.Opts
 function M.window.ll_close(opts)
-    local _, _, ok, ctx, err = ctx_get(opts, "window")
+    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
@@ -643,13 +513,13 @@ end
 
 ---@class qf-herder.window.llToggle.Opts
 ---@field auto_height? boolean
----@field qf_split? "botright"|"topleft"
+---@field ll_split? qf-herder.window.llSplit
 ---@field silent? boolean
 ---@field spk? "cursor"|"screen"|"topline"|""
 
 ---@param opts qf-herder.window.llToggle.Opts
 function M.window.ll_toggle(opts)
-    local _, _, ok, ctx, err = ctx_get(opts, "window")
+    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
@@ -664,7 +534,7 @@ end
 
 ---@param opts qf-herder.window.llResize.Opts
 function M.window.ll_resize(opts)
-    local _, _, ok, ctx, err = ctx_get(opts, "window")
+    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return

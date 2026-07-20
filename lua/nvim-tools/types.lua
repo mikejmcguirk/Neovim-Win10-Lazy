@@ -28,6 +28,9 @@ end
 ---@field max_len? integer
 ---@field min_len? integer
 
+-- TODO: item_type needs to take and handle function validators like vim.validate does. Go
+-- through all usages to see where `fun` is used to paste over this problem.
+
 ---@generic T
 ---@param t any
 ---@param opts nvim-tools.types.ValidateListOpts
