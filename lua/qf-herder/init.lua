@@ -131,9 +131,17 @@ end
 
 ---@class qf-herder.config.Schema
 local schema = {
+    default_cmds_set = "boolean",
     default_keymaps_set = "boolean",
-    qf_map_prefix = "string",
-    ll_map_prefix = "string",
+    keymap = {
+        ll_prefix = "string",
+        qf_prefix = "string",
+        win_close = "string",
+        win_open = function(val)
+            local ok = type(val) == "string" and val == string.lower(val)
+            return ok, ok and "" or validator_err_make("string", val)
+        end,
+    },
     window = {
         auto_height = "boolean",
         ll_split = function(val)
@@ -177,9 +185,17 @@ local schema = {
 
 ---@class qf-herder.Config
 local default_config = {
-    default_keymaps_set = true, ---@type boolean -- Only checked on startup.
-    ll_map_prefix = "<leader>l", ---@type string -- Only checked on startup.
-    qf_map_prefix = "<leader>q", ---@type string -- Only checked on startup.
+    -- Only checked on startup.
+    default_cmds_set = true, ---@type boolean
+    default_keymaps_set = true, ---@type boolean
+    -- Only checked on startup
+    ---@class qf-herder.keymap.Cfg
+    keymap = {
+        ll_prefix = "<leader>l", ---@type string
+        qf_prefix = "<leader>q", ---@type string
+        win_close = "o",
+        win_open = "p",
+    },
     ---@class qf-herder.window.Cfg
     window = {
         auto_height = true, ---@type boolean
@@ -192,6 +208,12 @@ local default_config = {
 
 -- TODO: Rename ctx to cfg here and throughout the module
 
+---@class qf-herder.keymap.cfg.Partial
+---@field ll_prefix? string
+---@field qf_prefix? string
+---@field win_close? string
+---@field win_open? string
+
 ---@class qf-herder.window.cfg.Partial
 ---@field auto_height? boolean
 ---@field ll_split? qf-herder.window.llSplit
@@ -200,6 +222,7 @@ local default_config = {
 ---@field spk? ""|"cursor"|"screen"|"topline"
 
 ---@class qf-herder.config.Partial
+---@field default_cmds_set? boolean
 ---@field default_keymaps_set? boolean
 ---@field ll_map_prefix? string
 ---@field qf_map_prefix? string
@@ -424,7 +447,7 @@ M.window = {}
 ---@field qf_split? qf-herder.window.qfSplit
 ---@field spk? "cursor"|"screen"|"topline"|""
 
----@param opts qf-herder.window.qfOpen.Opts
+---@param opts? qf-herder.window.qfOpen.Opts
 function M.window.qf_open(opts)
     local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
@@ -438,7 +461,7 @@ end
 ---@class qf-herder.window.qfClose.Opts
 ---@field spk? "cursor"|"screen"|"topline"|""
 
----@param opts qf-herder.window.qfClose.Opts
+---@param opts? qf-herder.window.qfClose.Opts
 function M.window.qf_close(opts)
     local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
@@ -454,7 +477,7 @@ end
 ---@field qf_split? qf-herder.window.qfSplit
 ---@field spk? "cursor"|"screen"|"topline"|""
 
----@param opts qf-herder.window.qfToggle.Opts
+---@param opts? qf-herder.window.qfToggle.Opts
 function M.window.qf_toggle(opts)
     local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
@@ -468,7 +491,7 @@ end
 ---@class qf-herder.window.qfResize.Opts
 ---@field spk? "cursor"|"screen"|"topline"|""
 
----@param opts qf-herder.window.qfResize.Opts
+---@param opts? qf-herder.window.qfResize.Opts
 function M.window.qf_resize(opts)
     local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
@@ -485,7 +508,7 @@ end
 ---@field silent? boolean
 ---@field spk? "cursor"|"screen"|"topline"|""
 
----@param opts qf-herder.window.llOpen.Opts
+---@param opts? qf-herder.window.llOpen.Opts
 function M.window.ll_open(opts)
     local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
@@ -500,7 +523,7 @@ end
 ---@field silent? boolean
 ---@field spk? "cursor"|"screen"|"topline"|""
 
----@param opts qf-herder.window.llClose.Opts
+---@param opts? qf-herder.window.llClose.Opts
 function M.window.ll_close(opts)
     local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
@@ -517,7 +540,7 @@ end
 ---@field silent? boolean
 ---@field spk? "cursor"|"screen"|"topline"|""
 
----@param opts qf-herder.window.llToggle.Opts
+---@param opts? qf-herder.window.llToggle.Opts
 function M.window.ll_toggle(opts)
     local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then
@@ -532,7 +555,7 @@ end
 ---@field silent? boolean
 ---@field spk? "cursor"|"screen"|"topline"|""
 
----@param opts qf-herder.window.llResize.Opts
+---@param opts? qf-herder.window.llResize.Opts
 function M.window.ll_resize(opts)
     local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
     if not ok then

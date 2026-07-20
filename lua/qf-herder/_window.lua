@@ -46,11 +46,12 @@ local M = {}
 
 ---@param spk string
 ---@param count uinteger
----@param split "botright"|"topleft"
+---@param split qf-herder.window.qfSplit
 ---@return boolean, string
 local function copen_with_spk(spk, count, split)
     local old_spk = #spk > 0 and _util.ensure_spk(0, spk) or nil
     local ok, err = pcall(function()
+        ---@diagnostic disable-next-line: assign-type-mismatch
         api.nvim_cmd({ cmd = "copen", count = count, mods = { split = split } }, {})
     end)
 
@@ -124,10 +125,12 @@ end
 
 ---@param spk string
 ---@param count uinteger
+---@param split qf-herder.window.llSplit
 ---@return boolean, string
 local function lopen_with_spk(spk, count, split)
     local old_spk = #spk > 0 and _util.ensure_spk(0, spk) or nil
     local ok, err = pcall(function()
+        ---@diagnostic disable-next-line: assign-type-mismatch
         api.nvim_cmd({ cmd = "lopen", count = count, mods = { split = split } }, {})
     end)
 
@@ -271,14 +274,14 @@ function M.q_toggle_cmd(cargs)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args
-function M.l_resize_cmd(cargs)
+function M.q_resize_cmd(cargs)
     local _, _, ok, ctx, err = require("qf-herder")._config_merged_get_cur_winbuf("window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    M.ll_resize(0, cargs.count, ctx)
+    M.qf_resize(0, cargs.count, ctx)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args

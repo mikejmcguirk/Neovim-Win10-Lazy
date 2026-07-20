@@ -2,6 +2,7 @@ local api = vim.api
 local keymap = vim.keymap
 
 require("farsight.plugin")
+
 keymap.set({ "n", "x", "o" }, "s", function()
     print("Use ;")
 end)
@@ -9,6 +10,17 @@ end)
 keymap.set({ "n", "x", "o" }, "S", function()
     print("Use ,")
 end)
+
+--------------
+
+local herder = require("qf-herder")
+herder.config({ keymap = {
+    qf_prefix = "gq",
+    ll_prefix = "gl",
+} })
+
+require("qf-herder.plugin")
+keymap.set({ "n", "x" }, "gw", "gq")
 
 --------------
 
