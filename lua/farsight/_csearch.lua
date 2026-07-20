@@ -156,6 +156,42 @@ local function cont_set_cur_char_mark(pos, till, upward)
     })
 end
 
+---@param mode string
+---@return 0|1|2|3|4|5
+---- 0: normal
+---- 1: cmd
+---- 2: visual
+---- 3: o mode
+---- 4: nov / noV / no<C-v>
+---- 5: everything else
+local function mode_status_get(mode)
+    local ntm = require("nvim-tools.misc")
+    local b1 = string.byte(mode, 1)
+    if b1 == 110 then
+        if #mode == 1 then
+            return 0
+        end
+
+        if string.byte(mode, 2) == 111 then
+            if #mode > 2 and ntm.is_vmode(string.sub(mode, 3)) then
+                return 4
+            end
+
+            return 3
+        end
+    end
+
+    if b1 == 99 then
+        return 1
+    end
+
+    if ntm.is_vmode(mode) then
+        return 2
+    end
+
+    return 5
+end
+
 ---@param win uinteger
 ---@param buf uinteger
 ---@param top uinteger -- 0 indexed
@@ -220,12 +256,13 @@ local function continuation_begin(win, buf, top, bot, jump_pos, till, upward, ca
         callback = function()
             local event = vim.v.event
             ---@diagnostic disable-next-line: undefined-field
-            local old_byte = string.byte(event.old_mode, 1)
+            local old_mode = event.old_mode
+            ---@cast old_mode string
             ---@diagnostic disable-next-line: undefined-field
-            local new_byte = string.byte(event.new_mode, 1)
-            local n_c = old_byte == 110 and new_byte == 99
-            local c_n = old_byte == 99 and new_byte == 110
-            if not (n_c or c_n) then
+            local new_mode = event.new_mode
+            ---@cast new_mode string
+
+            if mode_status_get(old_mode) > 2 or mode_status_get(new_mode) > 2 then
                 continuation_teardown()
             end
         end,
@@ -248,11 +285,21 @@ local function continuation_begin(win, buf, top, bot, jump_pos, till, upward, ca
         end),
     })
 
-    vim.on_key(function(key, typed)
-        if #ntt.i_overlap(nil, true, { key, typed }, cancel_keys) > 0 then
-            if string.byte(api.nvim_get_mode().mode, 1) ~= 99 then
-                continuation_teardown()
-            end
+    vim.on_key(function(_, typed)
+        local mode_status = mode_status_get(api.nvim_get_mode().mode)
+        if mode_status == 1 then
+            return
+        end
+
+        local typed_kt = fn.keytrans(typed)
+        if ntt.i_includes(cancel_keys, typed_kt) then
+            continuation_teardown()
+            return
+        end
+
+        local global_exit = { "<C-C>", "<Esc>" } ---@type string[]
+        if mode_status ~= 2 and ntt.i_includes(global_exit, typed_kt) then
+            continuation_teardown()
         end
     end, state_ns_on_key)
 
@@ -286,7 +333,7 @@ end
 ---@param char string
 ---@param upward boolean
 ---@param till boolean
----@param mode_status 0|1|2|3
+---@param mode_status 0|1|2|3|4|5
 ---@param exclusive boolean
 ---@return string
 local function pattern_resolve(char, upward, till, mode_status, exclusive)
@@ -302,7 +349,7 @@ local function pattern_resolve(char, upward, till, mode_status, exclusive)
         end
     else
         if till then
-            if not (mode_status == 2 and exclusive) then
+            if not (mode_status == 3 and exclusive) then
                 pattern_tbl[#pattern_tbl + 1] = "\\m."
                 pattern_tbl[#pattern_tbl + 1] = "\\ze"
             end
@@ -313,7 +360,7 @@ local function pattern_resolve(char, upward, till, mode_status, exclusive)
             pattern_tbl[#pattern_tbl + 1] = "\\V"
             pattern_tbl[#pattern_tbl + 1] = pattern
 
-            if mode_status == 2 and exclusive then
+            if mode_status == 3 and exclusive then
                 pattern_tbl[#pattern_tbl + 1] = "\\zs"
                 pattern_tbl[#pattern_tbl + 1] = "\\m."
             end
@@ -329,7 +376,7 @@ end
 ---@param count1 uinteger
 ---@param top uinteger 0-indexed
 ---@param bot uinteger 0-indexed
----@param mode_status 0|1|2|3
+---@param mode_status 0|1|2|3|4|5
 ---@param win uinteger
 ---@param buf uinteger
 ---@param ctx farsight.csearch.Ctx
@@ -358,7 +405,7 @@ local function do_jump(char, upward, till, count1, top, bot, mode_status, win, b
         api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
     end
 
-    if mode_status == 2 then
+    if mode_status == 3 then
         if upward and not exclusive then
             local cur_pos = require("nvim-tools.win").cursor_ext_get(win)
             if cur_pos[1] > 0 or cur_pos[2] > 0 then
@@ -560,7 +607,7 @@ end
 ---@param till boolean
 ---@param top uinteger 0-indexed
 ---@param bot uinteger 0-indexed
----@param mode_status 0|1|2|3
+---@param mode_status 0|1|2|3|4|5
 ---@param ctx farsight.csearch.Ctx
 local function cont_jump(upward, till, count1, top, bot, mode_status, ctx)
     cont_did_csearch = true
@@ -587,25 +634,6 @@ local function cont_mode_ensure_valid()
     return is_repeating, is_reg_executing
 end
 
----@return 0|1|2|3
----- 3: `noV` mode
----- 2: `o` mode
----- 1: `v` mode
----- 0: Everything else
-local function mode_status_get()
-    local mode = api.nvim_get_mode().mode
-    local ntm = require("nvim-tools.misc")
-    if #mode >= 2 and string.byte(mode, 1) == 110 and string.byte(mode, 2) == 111 then
-        if #mode > 2 and ntm.is_vmode(string.sub(mode, 3)) then
-            return 3
-        end
-
-        return 2
-    end
-
-    return ntm.is_vmode(mode) and 1 or 0
-end
-
 ---@param win uinteger
 ---@param buf uinteger
 ---@param count1 uinteger
@@ -613,7 +641,7 @@ end
 ---@param till boolean
 ---@param ctx farsight.csearch.Ctx
 function M.csearch(win, buf, count1, upward, till, ctx)
-    local mode_status = mode_status_get()
+    local mode_status = mode_status_get(api.nvim_get_mode().mode)
     local is_repeating, is_reg_executing = cont_mode_ensure_valid()
     local top = fn.line("w0", win) - 1
     local bot = fn.line("w$", win) - 1
@@ -642,7 +670,7 @@ function M.csearch(win, buf, count1, upward, till, ctx)
         return
     end
 
-    if mode_status > 0 then
+    if mode_status > 2 then
         return
     end
 

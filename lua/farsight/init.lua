@@ -208,7 +208,12 @@ local default_config = {
     default_keymaps_set = true, ---@type boolean -- Only checked on startup.
     ---@class farsight.csearch.Ctx
     csearch = {
-        cancel_keys = { "\3", "\27", "\r", ";", "," }, ---@type string[]
+        -- `cancel_keys` is compared against the `typed` param from |vim.on_key()| after being
+        -- run through |keytrans()|. Cancel keys will stop continuation mode in any mode other
+        -- than cmd mode.
+        -- `<Esc>`/`<C-C>` will always exit continuation mode from any mode other than normal,
+        -- visual, and cmd mode.
+        cancel_keys = { "<CR>", ";", "," }, ---@type string[]
         dim = true, ---@type boolean
         keepjumps = false, ---@type boolean
         ---@type  fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
