@@ -1,5 +1,8 @@
 local api = vim.api
 
+-- TODO: Rename the prefix back to QF_RANCHER for specificity
+QFR_NO_LL = "No location list"
+
 local herder = require("qf-herder")
 local config = herder._config_get()
 local cfg_keymap = config.keymap

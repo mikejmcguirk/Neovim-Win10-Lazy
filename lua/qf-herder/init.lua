@@ -131,6 +131,7 @@ end
 
 ---@class qf-herder.config.Schema
 local schema = {
+    auto_open_changes = "boolean",
     default_cmds_set = "boolean",
     default_keymaps_set = "boolean",
     keymap = {
@@ -140,6 +141,14 @@ local schema = {
         win_open = function(val)
             local ok = type(val) == "string" and val == string.lower(val)
             return ok, ok and "" or validator_err_make("string", val)
+        end,
+    },
+    stack = {
+        autosize_changes = "boolean",
+        spk = function(val)
+            local spk = { "", "cursor", "screen", "topline" }
+            local ok = ntt.i_includes(spk, val)
+            return ok, ok and "" or validator_err_make(vim.inspect(spk), val)
         end,
     },
     window = {
@@ -185,9 +194,8 @@ local schema = {
 
 ---@class qf-herder.Config
 local default_config = {
-    -- Only checked on startup.
-    default_cmds_set = true, ---@type boolean
-    default_keymaps_set = true, ---@type boolean
+    default_cmds_set = true, ---@type boolean -- Only checked on startup.
+    default_keymaps_set = true, ---@type boolean -- Only checked on startup.
     -- Only checked on startup
     ---@class qf-herder.keymap.Cfg
     keymap = {
@@ -196,15 +204,28 @@ local default_config = {
         win_close = "o",
         win_open = "p",
     },
+    ---@class qf-herder.sort.Cfg
+    sort = {
+        open_after = true,
+    },
+    ---@class qf-herder.stack.Cfg
+    stack = {
+        autosize_changes = true, ---@type boolean
+        spk = "topline", ---@type ""|"cursor"|"screen"|"topline"
+    },
     ---@class qf-herder.window.Cfg
     window = {
         auto_height = true, ---@type boolean
         ll_split = "belowright", ---@type qf-herder.window.llSplit
         qf_split = "botright", ---@type qf-herder.window.qfSplit
+        -- TODO: Remove this as a Cfg option
         silent = false, ---@type boolean
         spk = "topline", ---@type ""|"cursor"|"screen"|"topline"
     },
 }
+
+-- TODO: Having to define `spk` in multiple places feels bad. Ideal behavior: Define a "global"
+-- table that merges under the module tables. The module-level vars are allowed to be nil.
 
 -- TODO: Rename ctx to cfg here and throughout the module
 
@@ -213,6 +234,10 @@ local default_config = {
 ---@field qf_prefix? string
 ---@field win_close? string
 ---@field win_open? string
+
+---@class qf-herder.stack.cfg.Partial
+---@field autosize_changes? boolean
+---@field spk? ""|"cursor"|"screen"|"topline"
 
 ---@class qf-herder.window.cfg.Partial
 ---@field auto_height? boolean
@@ -247,7 +272,13 @@ function M.config(new_config)
 
     local ok, err = matches_schema(new_config, schema)
     if not ok then
-        error(err)
+        if vim.v.vim_did_enter == 1 then
+            error(err)
+        end
+
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        ---@diagnostic disable-next-line: return-type-mismatch
+        return ntt.deepcopy(config)
     end
 
     ntt.merge_deep_right(config, new_config)
@@ -565,5 +596,101 @@ function M.window.ll_resize(opts)
 
     require("qf-herder._window").ll_resize(0, vim.v.count, ctx)
 end
+
+M.stack = {}
+
+---@class qf-herder.stack.Opts
+---@field autosize_changes? boolean
+---@field spk? ""|"cursor"|"screen"|"topline"
+
+---@param opts qf-herder.stack.Opts
+function M.q_newer(opts)
+    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("qf-herder._stack").q_newer(0, false, vim.v.count1, cfg)
+end
+
+---@param opts qf-herder.stack.Opts
+function M.q_older(opts)
+    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("qf-herder._stack").q_older(0, false, vim.v.count1, cfg)
+end
+
+---@param opts qf-herder.stack.Opts
+function M.q_history(opts)
+    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("qf-herder._stack").q_history(0, false, vim.v.count, cfg)
+end
+
+---@param opts qf-herder.stack.Opts
+function M.q_history_list(opts)
+    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("qf-herder._stack").q_history(0, false, nil, cfg)
+end
+
+---@param opts qf-herder.stack.Opts
+function M.l_newer(opts)
+    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("qf-herder._stack").l_newer(api.nvim_get_current_win(), false, vim.v.count1, cfg)
+end
+
+---@param opts qf-herder.stack.Opts
+function M.l_older(opts)
+    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("qf-herder._stack").l_older(api.nvim_get_current_win(), false, vim.v.count1, cfg)
+end
+
+---@param opts qf-herder.stack.Opts
+function M.l_history(opts)
+    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("qf-herder._stack").l_history(api.nvim_get_current_win(), false, vim.v.count, cfg)
+end
+
+---@param opts qf-herder.stack.Opts
+function M.l_history_list(opts)
+    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("qf-herder._stack").l_history(api.nvim_get_current_win(), false, nil, cfg)
+end
+
+-- TODO: I think you put `history_all` as `<leader>qQ`.
 
 return M

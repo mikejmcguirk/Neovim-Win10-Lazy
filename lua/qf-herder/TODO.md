@@ -4,6 +4,12 @@
 
 ## MID:
 
+- [ ] Add cmds for the various modules:
+  - [ ] Have a set of defaults that cannot be removed
+  - [ ] Allow the user to register new args for each one
+- [ ] Add preview win
+  - [ ] Need to develop simple primitives for getting the position, even if they're a bit slower
+
 #### WINDOW:
 
 - [ ] Re-implement `cwindow`/`lwindow`
@@ -22,3 +28,7 @@
 about the order of operations. Might leave the cursor in the new win on failure, unless it's specifically unwound.
     * Possible solution: Use eventignore. Creates problems on failure though.
   - This does not feel like a high-value enough feature to justify the complexity.
+
+#### STACK:
+
+  - [ ] The wrapup step could run bulk operations in case there are multiple list wins open. Obscure case though.

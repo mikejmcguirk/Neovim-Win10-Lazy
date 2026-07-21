@@ -58,6 +58,58 @@ function M.set_list(src_win, action, what)
     return src_win and fn.setloclist(src_win, {}, action, what) or fn.setqflist({}, action, what)
 end
 
+---@param result -1|0
+---@param src_win integer|nil
+---@param nr integer|"$"
+---@param action qf-rancher.types.Action
+---@return integer
+local function get_result(result, src_win, nr, action)
+    if result == -1 then
+        return -1
+    end
+
+    if action == "f" then
+        return 0 -- Stack cleared
+    end
+
+    if nr == 0 then
+        return M.get_list(src_win, { nr = 0 }).nr ---@type uinteger
+    end
+
+    local max_nr = M.get_list(src_win, { nr = "$" }).nr ---@type integer
+    -- "$" will always have acted on the last item in the list. When action is " ", the new list
+    -- is always at the end.
+    if type(nr) == "string" or action == " " then
+        return max_nr
+    end
+
+    return math.min(nr, max_nr)
+end
+
+---@param src_win integer|nil
+---@param action qf-rancher.types.Action
+---@param what table
+---@return integer
+function M.set_list_checked(src_win, action, what)
+    local what_set = require("nvim-tools.table").deepcopy(what)
+
+    what_set.nr = M.resolve_list_nr(src_win, what_set.nr)
+    if what_set.idx then
+        if what_set.items or what_set.lines then
+            local items_len = what_set.items and #what_set.items or 0
+            local lines_len = what_set.lines and #what_set.lines or 0
+            local new_len = items_len + lines_len
+            what_set.idx = new_len > 0 and math.min(what_set.idx, new_len) or nil
+        else
+            ---@type uinteger
+            local cur_size = M.get_list(src_win, { nr = what_set.nr, size = 0 }).size
+            what_set.idx = math.min(what_set.idx, cur_size)
+        end
+    end
+
+    return get_result(M.set_list(src_win, action, what), src_win, what_set.nr, action)
+end
+
 ---@param what_ret table
 ---@return table
 function M.what_ret_to_set(what_ret)

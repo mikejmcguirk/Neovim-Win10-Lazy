@@ -4,7 +4,6 @@ local fn = vim.fn
 local _util = require("qf-herder._util")
 
 local LIST_MAX_HEIGHT = 10
-local NO_LL = "No location list"
 
 ------------------
 -- MARK: Common --
@@ -109,13 +108,16 @@ function M.qf_toggle(count, ctx)
     end
 end
 
+---@class qf-herder.window.qf_resize.Cfg
+---@field spk "cursor"|"screen"|"topline"|""
+
 ---@param tabpage uinteger
 ---@param count uinteger
----@param ctx qf-herder.window.Cfg
-function M.qf_resize(tabpage, count, ctx)
+---@param cfg qf-herder.window.qf_resize.Cfg
+function M.qf_resize(tabpage, count, cfg)
     local qf_win = _util.find_qf_win(tabpage)
     if qf_win ~= nil then
-        win_resize_with_spk(ctx.spk, tabpage, qf_win, height_resolve(nil, count, true))
+        win_resize_with_spk(cfg.spk, tabpage, qf_win, height_resolve(nil, count, true))
     end
 end
 
@@ -150,10 +152,10 @@ function M.ll_open(count, ctx)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
     if qf_id == 0 then
         if not ctx.silent then
-            api.nvim_echo({ { NO_LL, "" } }, false, {})
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
         end
 
-        return false, NO_LL
+        return false, QFR_NO_LL
     end
 
     local ll_win = _util.ll_win_find_one_by_qf_id(0, qf_id)
@@ -176,7 +178,7 @@ function M.ll_close(src_win, ctx)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
     if qf_id == 0 then
         if not ctx.silent then
-            api.nvim_echo({ { NO_LL, "" } }, false, {})
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
         end
 
         return false, 0
@@ -199,10 +201,10 @@ function M.ll_toggle(count, ctx)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
     if qf_id == 0 then
         if not ctx.silent then
-            api.nvim_echo({ { NO_LL, "" } }, false, {})
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
         end
 
-        return false, NO_LL
+        return false, QFR_NO_LL
     end
 
     local ll_win = _util.ll_win_find_one_by_qf_id(0, qf_id)
@@ -217,25 +219,31 @@ function M.ll_toggle(count, ctx)
     end
 end
 
+---@class qf-herder.window.ll_resize.Cfg
+---@field silent boolean
+---@field spk "cursor"|"screen"|"topline"|""
+
 ---@param src_win uinteger
 ---@param count uinteger
----@param ctx qf-herder.window.Cfg
-function M.ll_resize(src_win, count, ctx)
+---@param cfg qf-herder.window.ll_resize.Cfg
+function M.ll_resize(src_win, count, cfg)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
     if qf_id == 0 then
-        if not ctx.silent then
-            api.nvim_echo({ { NO_LL, "" } }, false, {})
+        if not cfg.silent then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
         end
 
-        return false, NO_LL
+        return false, QFR_NO_LL
     end
 
     local win_tabpage = api.nvim_win_get_tabpage(src_win)
     local ll_win = _util.ll_win_find_one_by_qf_id(win_tabpage, qf_id)
     if ll_win ~= nil then
-        win_resize_with_spk(ctx.spk, win_tabpage, ll_win, height_resolve(src_win, count, true))
+        win_resize_with_spk(cfg.spk, win_tabpage, ll_win, height_resolve(src_win, count, true))
     end
 end
+
+-- TODO: rename `ctx` vars to config
 
 ----------------
 -- MARK: Cmds --

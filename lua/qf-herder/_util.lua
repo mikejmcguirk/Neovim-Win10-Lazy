@@ -62,6 +62,18 @@ function M.find_qf_win(tabpage)
     return win
 end
 
+---@param tabpages uinteger[]
+---@return boolean
+function M.list_win_has(tabpages)
+    local ntt = require("nvim-tools.table")
+    return ntt.i_any(tabpages, function(tabpage)
+        return ntt.i_any(api.nvim_tabpage_list_wins(tabpage), function(win)
+            local wintype = vim.call("win_gettype", win)
+            return wintype == "quickfix" or wintype == "loclist"
+        end)
+    end)
+end
+
 ---@param win uinteger
 ---@param tabpage uinteger
 ---@param spk string
