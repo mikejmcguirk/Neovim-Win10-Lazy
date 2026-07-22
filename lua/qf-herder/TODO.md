@@ -1,6 +1,25 @@
 ## TODO:
 
+- Why are we sending tabpage to quickfix cmds? I think it's only so we know scope for spk. I don't understand why that needs to be an input var.
+  * Prioritize because this idea is upstream of so many interfaces
+- `_util` is accumulating functions that are not orthogonal. Reduce to a set of functions that have mutually exclusive concerns.
+  * Additionally, move to relevant modules. Window opening/closing should be in window
+- Put stack functions into stack, because future dev will need them
+- Add remaining stack cmds
+* stack and sort maps
+* stack and sort options
+  + schema
+  + defaults
+  + partials
+  + opts tables
+
 - Change all mentions of "herder" back to rancher.
+
+#### DIAGNOSTICS:
+
+- have qin/qiw and so on for general diagnostics by/only severity
+- have grq and grQ for LSP diagnostics in all buffers or current buffer (loclist)
+- I'm not sure if this is in diagnostic opts or what, but make sure that there's a way for the user to customize namespaces/diagnostic sources in general
 
 ## MID:
 

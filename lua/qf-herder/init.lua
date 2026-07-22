@@ -129,27 +129,37 @@ end
 -- MARK: Defaults/Schema --
 ---------------------------
 
+---@param val any
+---@return boolean, string
+local function is_lower_string(val)
+    local ok = type(val) == "string" and val == string.lower(val)
+    return ok, ok and "" or validator_err_make("string", val)
+end
+
 ---@class qf-herder.config.Schema
 local schema = {
     auto_open_changes = "boolean",
     default_cmds_set = "boolean",
     default_keymaps_set = "boolean",
     keymap = {
-        ll_prefix = "string",
-        qf_prefix = "string",
+        prefix_ll = is_lower_string,
+        prefix_qf = is_lower_string,
+        stack_clear = is_lower_string,
+        stack_newer = "string",
+        stack_older = "string",
         win_close = "string",
-        win_open = function(val)
-            local ok = type(val) == "string" and val == string.lower(val)
-            return ok, ok and "" or validator_err_make("string", val)
-        end,
+        win_open = is_lower_string,
     },
     stack = {
-        autosize_changes = "boolean",
+        update_list_wins = "boolean",
         spk = function(val)
             local spk = { "", "cursor", "screen", "topline" }
             local ok = ntt.i_includes(spk, val)
             return ok, ok and "" or validator_err_make(vim.inspect(spk), val)
         end,
+    },
+    sort = {
+        goto_after = "boolean",
     },
     window = {
         auto_height = "boolean",
@@ -199,19 +209,24 @@ local default_config = {
     -- Only checked on startup
     ---@class qf-herder.keymap.Cfg
     keymap = {
-        ll_prefix = "<leader>l", ---@type string
-        qf_prefix = "<leader>q", ---@type string
-        win_close = "o",
-        win_open = "p",
+        prefix_ll = "<leader>l", ---@type string
+        prefix_qf = "<leader>q", ---@type string
+        stack_clear = "e", ---@type string
+        stack_newer = "]", ---@type string
+        stack_older = "[", ---@type string
+        win_close = "o", ---@type string
+        win_open = "p", ---@type string
     },
     ---@class qf-herder.sort.Cfg
     sort = {
-        open_after = true,
+        -- TODO: history_after?
+        goto_after = true, ---@type boolean
     },
     ---@class qf-herder.stack.Cfg
     stack = {
-        autosize_changes = true, ---@type boolean
         spk = "topline", ---@type ""|"cursor"|"screen"|"topline"
+        -- Resizes the list after running history cmds. Closes the list if the stack is freed.
+        update_list_wins = true, ---@type boolean
     },
     ---@class qf-herder.window.Cfg
     window = {
@@ -234,6 +249,9 @@ local default_config = {
 ---@field qf_prefix? string
 ---@field win_close? string
 ---@field win_open? string
+
+---@class qf-herder.sort.cfg.Partial
+---@field goto_after? boolean
 
 ---@class qf-herder.stack.cfg.Partial
 ---@field autosize_changes? boolean
@@ -416,13 +434,13 @@ end
 ---@param buf uinteger
 ---@param usr_config table?
 ---@param ... any
----@return boolean, table, string
+---@return table
 local function config_merged_get(buf, usr_config, ...)
     buf = buf ~= 0 and buf or api.nvim_get_current_buf()
 
     local cfg = ntt.deepcopy(ntt.get(config, ...))
     if cfg == nil then
-        return false, {}, "Invalid config path."
+        error("Invalid config path")
     end
 
     local buf_config = buf_configs[buf]
@@ -434,24 +452,24 @@ local function config_merged_get(buf, usr_config, ...)
     end
 
     if usr_config == nil then
-        return true, cfg, ""
+        return cfg
     end
 
     local sub_schema = ntt.get(schema, ...)
     local ok, err = matches_schema(usr_config, sub_schema)
     if not ok then
-        return false, {}, err
+        error(err)
     end
 
     ntt.merge_deep_right(cfg, usr_config)
-    return true, cfg, ""
+    return cfg
 end
 
 ---@nodoc
 ---@param ... any
----@return uinteger, uinteger, boolean, table, string
-function M._config_merged_get_cur_winbuf(...)
-    local win = api.nvim_get_current_win()
+---@return uinteger, uinteger, table
+function M._config_merged_from_win(win, ...)
+    win = win ~= 0 and win or api.nvim_get_current_win()
     local buf = api.nvim_win_get_buf(win)
     return win, buf, config_merged_get(buf, nil, ...)
 end
@@ -462,6 +480,7 @@ end
 
 ---@param opts table?
 ---@param key string
+---@return uinteger, uinteger, table
 local function cfg_get_from_opts(opts, key)
     vim.validate("opts", opts, "table", true)
     opts = opts or {}
@@ -480,12 +499,7 @@ M.window = {}
 
 ---@param opts? qf-herder.window.qfOpen.Opts
 function M.window.qf_open(opts)
-    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
+    local _, _, ctx = cfg_get_from_opts(opts, "window")
     require("qf-herder._window").qf_open(vim.v.count, ctx)
 end
 
@@ -494,13 +508,8 @@ end
 
 ---@param opts? qf-herder.window.qfClose.Opts
 function M.window.qf_close(opts)
-    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
-    require("qf-herder._window").qf_close(0, ctx)
+    local _, _, ctx = cfg_get_from_opts(opts, "window")
+    require("qf-herder._window").qf_close({ 0 }, ctx)
 end
 
 ---@class qf-herder.window.qfToggle.Opts
@@ -510,12 +519,7 @@ end
 
 ---@param opts? qf-herder.window.qfToggle.Opts
 function M.window.qf_toggle(opts)
-    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
+    local _, _, ctx = cfg_get_from_opts(opts, "window")
     require("qf-herder._window").qf_toggle(vim.v.count, ctx)
 end
 
@@ -524,12 +528,7 @@ end
 
 ---@param opts? qf-herder.window.qfResize.Opts
 function M.window.qf_resize(opts)
-    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
+    local _, _, ctx = cfg_get_from_opts(opts, "window")
     require("qf-herder._window").qf_resize(0, vim.v.count, ctx)
 end
 
@@ -541,12 +540,7 @@ end
 
 ---@param opts? qf-herder.window.llOpen.Opts
 function M.window.ll_open(opts)
-    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
+    local _, _, ctx = cfg_get_from_opts(opts, "window")
     require("qf-herder._window").ll_open(vim.v.count, ctx)
 end
 
@@ -556,12 +550,7 @@ end
 
 ---@param opts? qf-herder.window.llClose.Opts
 function M.window.ll_close(opts)
-    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
+    local _, _, ctx = cfg_get_from_opts(opts, "window")
     require("qf-herder._window").ll_close(api.nvim_get_current_win(), ctx)
 end
 
@@ -573,12 +562,7 @@ end
 
 ---@param opts? qf-herder.window.llToggle.Opts
 function M.window.ll_toggle(opts)
-    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
+    local _, _, ctx = cfg_get_from_opts(opts, "window")
     require("qf-herder._window").ll_toggle(vim.v.count, ctx)
 end
 
@@ -588,13 +572,83 @@ end
 
 ---@param opts? qf-herder.window.llResize.Opts
 function M.window.ll_resize(opts)
-    local _, _, ok, ctx, err = cfg_get_from_opts(opts, "window")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
+    local _, _, ctx = cfg_get_from_opts(opts, "window")
     require("qf-herder._window").ll_resize(0, vim.v.count, ctx)
+end
+
+M.sort = {}
+
+---@class qf-herder.sort.Opts
+---@field goto_after? boolean
+
+---@param opts qf-herder.sort.Opts
+function M.sort.qf_fname_asc(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "sort")
+    local qfr_sort = require("qf-herder._sort")
+    qfr_sort.sort(nil, vim.v.count, qfr_sort.fname_asc, cfg)
+end
+
+---@param opts qf-herder.sort.Opts
+function M.sort.qf_fname_desc(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "sort")
+    local qfr_sort = require("qf-herder._sort")
+    qfr_sort.sort(nil, vim.v.count, qfr_sort.fname_desc, cfg)
+end
+
+---@param opts qf-herder.sort.Opts
+function M.sort.qf_severity_asc(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "sort")
+    local qfr_sort = require("qf-herder._sort")
+    qfr_sort.sort(nil, vim.v.count, qfr_sort.severity_asc, cfg)
+end
+
+---@param opts qf-herder.sort.Opts
+function M.sort.qf_severity_desc(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "sort")
+    local qfr_sort = require("qf-herder._sort")
+    qfr_sort.sort(nil, vim.v.count, qfr_sort.severity_desc, cfg)
+end
+
+---@param f fun(a:vim.quickfix.entry, b:vim.quickfix.entry): boolean
+---@param opts qf-herder.sort.Opts
+function M.sort.qf_by(f, opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "sort")
+    require("qf-herder._sort").sort(nil, vim.v.count, f, cfg)
+end
+
+---@param opts qf-herder.sort.Opts
+function M.sort.ll_fname_asc(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "sort")
+    local qfr_sort = require("qf-herder._sort")
+    qfr_sort.sort(win, vim.v.count, qfr_sort.fname_asc, cfg)
+end
+
+---@param opts qf-herder.sort.Opts
+function M.sort.ll_fname_desc(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "sort")
+    local qfr_sort = require("qf-herder._sort")
+    qfr_sort.sort(win, vim.v.count, qfr_sort.fname_desc, cfg)
+end
+
+---@param opts qf-herder.sort.Opts
+function M.sort.ll_severity_asc(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "sort")
+    local qfr_sort = require("qf-herder._sort")
+    qfr_sort.sort(win, vim.v.count, qfr_sort.severity_asc, cfg)
+end
+
+---@param opts qf-herder.sort.Opts
+function M.sort.ll_severity_desc(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "sort")
+    local qfr_sort = require("qf-herder._sort")
+    qfr_sort.sort(win, vim.v.count, qfr_sort.severity_desc, cfg)
+end
+
+---@param f fun(a:vim.quickfix.entry, b:vim.quickfix.entry): boolean
+---@param opts qf-herder.sort.Opts
+function M.sort.ll_by(f, opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "sort")
+    require("qf-herder._sort").sort(win, vim.v.count, f, cfg)
 end
 
 M.stack = {}
@@ -603,94 +657,68 @@ M.stack = {}
 ---@field autosize_changes? boolean
 ---@field spk? ""|"cursor"|"screen"|"topline"
 
----@param opts qf-herder.stack.Opts
-function M.q_newer(opts)
-    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
-    require("qf-herder._stack").q_newer(0, false, vim.v.count1, cfg)
+---@param opts? qf-herder.stack.Opts
+function M.stack.q_older(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "stack")
+    require("qf-herder._stack").q_older(false, vim.v.count1, cfg)
 end
 
----@param opts qf-herder.stack.Opts
-function M.q_older(opts)
-    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
-    require("qf-herder._stack").q_older(0, false, vim.v.count1, cfg)
+---@param opts? qf-herder.stack.Opts
+function M.stack.q_newer(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "stack")
+    require("qf-herder._stack").q_newer(false, vim.v.count1, cfg)
 end
 
----@param opts qf-herder.stack.Opts
-function M.q_history(opts)
-    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
-    require("qf-herder._stack").q_history(0, false, vim.v.count, cfg)
+---@param opts? qf-herder.stack.Opts
+function M.stack.q_history(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "stack")
+    local vcount = vim.v.count
+    require("qf-herder._stack").q_history(false, vcount > 0 and vcount or nil, cfg)
 end
 
----@param opts qf-herder.stack.Opts
-function M.q_history_list(opts)
-    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
-    require("qf-herder._stack").q_history(0, false, nil, cfg)
+---@param opts? qf-herder.stack.Opts
+function M.stack.q_clear(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "stack")
+    require("qf-herder._stack").q_clear(vim.v.count, cfg)
 end
 
----@param opts qf-herder.stack.Opts
-function M.l_newer(opts)
-    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
-    require("qf-herder._stack").l_newer(api.nvim_get_current_win(), false, vim.v.count1, cfg)
+---@param opts? qf-herder.stack.Opts
+function M.stack.q_free(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "stack")
+    require("qf-herder._stack").q_free(cfg)
 end
 
----@param opts qf-herder.stack.Opts
-function M.l_older(opts)
-    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
-    require("qf-herder._stack").l_older(api.nvim_get_current_win(), false, vim.v.count1, cfg)
+---@param opts? qf-herder.stack.Opts
+function M.stack.l_older(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "stack")
+    require("qf-herder._stack").l_older(win, false, vim.v.count1, cfg)
 end
 
----@param opts qf-herder.stack.Opts
-function M.l_history(opts)
-    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
-    require("qf-herder._stack").l_history(api.nvim_get_current_win(), false, vim.v.count, cfg)
+---@param opts? qf-herder.stack.Opts
+function M.stack.l_newer(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "stack")
+    require("qf-herder._stack").l_newer(win, false, vim.v.count1, cfg)
 end
 
----@param opts qf-herder.stack.Opts
-function M.l_history_list(opts)
-    local _, _, ok, cfg, err = cfg_get_from_opts(opts, "stack")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
-    require("qf-herder._stack").l_history(api.nvim_get_current_win(), false, nil, cfg)
+---@param opts? qf-herder.stack.Opts
+function M.stack.l_history(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "stack")
+    local vcount = vim.v.count
+    require("qf-herder._stack").l_history(win, false, vcount > 0 and vcount or nil, cfg)
 end
 
--- TODO: I think you put `history_all` as `<leader>qQ`.
+---@param opts? qf-herder.stack.Opts
+function M.stack.l_clear(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "stack")
+    require("qf-herder._stack").l_clear(win, vim.v.count, false, cfg)
+end
+
+---@param opts? qf-herder.stack.Opts
+function M.stack.l_free(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "stack")
+    require("qf-herder._stack").l_free(win, false, cfg)
+end
+
+-- TODO: I think you put `history_list` as `<leader>qQ`.
 
 return M

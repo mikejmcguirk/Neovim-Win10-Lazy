@@ -63,7 +63,7 @@ end
 ---@param nr integer|"$"
 ---@param action qf-rancher.types.Action
 ---@return integer
-local function get_result(result, src_win, nr, action)
+function M.set_result_resolve(result, src_win, nr, action)
     if result == -1 then
         return -1
     end
@@ -107,7 +107,7 @@ function M.set_list_checked(src_win, action, what)
         end
     end
 
-    return get_result(M.set_list(src_win, action, what), src_win, what_set.nr, action)
+    return M.set_result_resolve(M.set_list(src_win, action, what), src_win, what_set.nr, action)
 end
 
 ---@param what_ret table
@@ -137,6 +137,18 @@ function M.what_ret_to_set(what_ret)
 end
 -- TODO: I remember this being important in rancher but I'm not totally sure why.
 
+---@param src_win integer|nil
+---@param list_nr integer|"$"
+---@return integer
+function M.clear_list(src_win, list_nr)
+    local nr = M.resolve_list_nr(src_win, list_nr)
+    local what = { nr = nr, context = {}, items = {}, quickfixtextfunc = "", title = "" }
+    local action = "r"
+    return M.set_result_resolve(M.set_list(src_win, action, what), src_win, nr, action)
+end
+
 return M
 
+-- TODO: Move the highly customized rancher stuff out of here. Includes anything tied to bespoke
+-- list transformations and enhanced result reporting.
 -- TODO: Add custom annotations for the missing qf data types. Really should just be PR'd though.

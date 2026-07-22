@@ -132,6 +132,20 @@ function M.protected_close(win, force)
     end
 end
 
+---@param wins uinteger[]
+---@param force boolean
+---@return boolean
+function M.protected_close_multiple(wins, force)
+    for i = 1, #wins do
+        local ok, buf, _, _ = M.protected_close(wins[i], force)
+        if ok == false and buf == nil then
+            return false
+        end
+    end
+
+    return true
+end
+
 ---@param win integer
 ---@param cur_pos { [1]:integer, [2]: integer }
 ---@param is_term? boolean

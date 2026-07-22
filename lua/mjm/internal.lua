@@ -16,8 +16,8 @@ end)
 local herder = require("qf-herder")
 herder.config({
     keymap = {
-        qf_prefix = "gq",
-        ll_prefix = "gl",
+        prefix_ll = "gl",
+        prefix_qf = "gq",
     },
 })
 

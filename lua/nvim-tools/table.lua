@@ -3116,6 +3116,10 @@ function M.i_filter_modify_accum(t, init, f, limit)
 end
 -- LOW: Add rev option (can't be the same algorithm)
 
+function M.i_flat_map_to()
+    --
+end
+
 ---@generic T
 ---@param dst T[]
 ---@param iter_len uinteger
