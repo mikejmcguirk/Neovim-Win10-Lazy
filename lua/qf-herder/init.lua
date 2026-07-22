@@ -181,6 +181,7 @@ local schema = {
             local ok = ntt.i_includes(ll_splits, val)
             return ok, ok and "" or validator_err_make(vim.inspect(ll_splits), val)
         end,
+        -- TODO: These should be split_qf and split_ll
         qf_split = function(val)
             local qf_splits = {
                 "bo",
