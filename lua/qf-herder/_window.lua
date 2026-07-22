@@ -395,11 +395,3 @@ function M.l_resize_cmd(cargs)
 end
 
 return M
-
--- TODO-DEP: For any of these that I use internally, narrow the ctx param to only what the
--- function needs, so long as it's a subset of the overall Ctx var. Create specific sub-classes to
--- help with type-checking.
--- MID: For operations that check for ll wins, could first check if the current win is
--- a location list. Is this common enough to be worth the cases where you create double
--- checking?
--- MID: Make resizing work off of bulk operations like everything else does.

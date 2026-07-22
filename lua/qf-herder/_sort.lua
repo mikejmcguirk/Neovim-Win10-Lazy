@@ -49,10 +49,6 @@ function M.sort(src_win, count, f, cfg)
     require("qf-herder._stack")._history(src_win, true, dest_nr, stack_cfg)
 end
 
--- TODO: For APIs, I would have fname ASC/DESC and severity ASC/DESC as built-ins. And then
--- I would have an API that takes a custom predicate. I'm not sure what the use cases here are
--- so unwilling to go further
-
 ---@param a vim.quickfix.entry
 ---@param b vim.quickfix.entry
 ---@return boolean

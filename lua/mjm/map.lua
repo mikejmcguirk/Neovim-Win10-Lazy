@@ -484,6 +484,8 @@ set({ "x", "o" }, "<C-c>", "<esc>")
 -- NORMAL MODE --
 -----------------
 
+set("n", "<C-m>", "<cmd>messages<cr>")
+
 set("n", "U", "<nop>")
 
 set({ "n" }, "<M-s>", ":'<,'>s/\\%V")

@@ -115,12 +115,15 @@ end
 function M.what_ret_to_set(what_ret)
     local what_set = {}
 
+    local wr_nr = what_ret.nr
+    what_set.nr = wr_nr ~= nil and wr_nr or 0
+
     local wr_context = what_ret.context
     what_set.context = type(wr_context) == "table" and wr_context or nil
     local wr_idx = what_ret.idx
     what_set.idx = type(wr_idx) == "number" and wr_idx or nil
     local wr_items = what_ret.items
-    what_set.items = type(wr_items) == "table" and wr_items.items or {}
+    what_set.items = type(wr_items) == "table" and wr_items or {}
 
     local wr_quickfixtextfunc = what_ret.quickfixtextfunc
     local is_qftf_func = type(wr_quickfixtextfunc) == "function"
@@ -135,7 +138,6 @@ function M.what_ret_to_set(what_ret)
 
     return what_set
 end
--- TODO: I remember this being important in rancher but I'm not totally sure why.
 
 ---@param src_win integer|nil
 ---@param list_nr integer|"$"

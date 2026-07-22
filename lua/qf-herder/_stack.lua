@@ -114,7 +114,6 @@ end
 ---@param count1 uinteger
 ---@param cfg qf-herder.stack.Cfg
 function M.q_older(silent, count1, cfg)
-    print("in stack older")
     nr_change(require("nvim-tools.math").wrapping_sub, nil, silent, count1, cfg)
 end
 

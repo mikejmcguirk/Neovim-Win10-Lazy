@@ -15,6 +15,15 @@ local prefix_qf = cfg_keymap.prefix_qf
 local prefix_qf_tbl = require("nvim-tools.str").split_map(prefix_qf)
 local last_qf = prefix_qf_tbl[#prefix_qf_tbl]
 
+local key_diags = cfg_keymap.key_diags
+local key_filename = cfg_keymap.key_filename
+
+local sort_key = cfg_keymap.sort_key
+local fname_asc = key_filename
+local fname_desc = string.upper(fname_asc)
+local sev_asc = key_diags
+local sev_desc = string.upper(sev_asc)
+
 local stack_clear = cfg_keymap.stack_clear
 local stack_free = string.upper(stack_clear)
 local stack_l_history = string.upper(last_ll)
@@ -43,6 +52,19 @@ M.maps = {
 { { "n" }, "<Plug>(qf-herder-ll-close)", prefix_ll .. win_close, "", "Close the location list", function() require("qf-herder").window.ll_close() end, },
 { { "n" }, "<Plug>(qf-herder-ll-toggle)", prefix_ll .. last_ll, "", "Toggle the location list", function() require("qf-herder").window.ll_toggle() end, },
 { { "n" }, "<Plug>(qf-herder-ll-resize)", prefix_ll .. resize, "", "Resize the location list", function() require("qf-herder").window.ll_resize() end, },
+
+    -----------------------
+    -- MARK: Maps - Sort --
+    -----------------------
+
+{ { "n" } , "<Plug>(qf-herder-qf-sort-fname-asc)", prefix_qf .. sort_key .. fname_asc, "", "Sort [count] quickfix list by filename asc", function() require("qf-herder").sort.qf_fname_asc() end },
+{ { "n" } , "<Plug>(qf-herder-qf-sort-fname-desc)", prefix_qf .. sort_key .. fname_desc, "", "Sort [count] quickfix list by filename desc", function() require("qf-herder").sort.qf_fname_desc() end },
+{ { "n" } , "<Plug>(qf-herder-qf-sort-sev-asc)", prefix_qf .. sort_key .. sev_asc, "", "Sort [count] quickfix list by sev asc", function() require("qf-herder").sort.qf_severity_asc() end },
+{ { "n" } , "<Plug>(qf-herder-qf-sort-sev-desc)", prefix_qf .. sort_key .. sev_desc, "", "Sort [count] quickfix list by sev desc", function() require("qf-herder").sort.qf_severity_desc() end },
+{ { "n" } , "<Plug>(qf-herder-ll-sort-fname-asc)", prefix_ll .. sort_key .. fname_asc, "", "Sort [count] location list by filename asc", function() require("qf-herder").sort.ll_fname_asc() end },
+{ { "n" } , "<Plug>(qf-herder-ll-sort-fname-desc)", prefix_ll .. sort_key .. fname_desc, "", "Sort [count] location list by filename desc", function() require("qf-herder").sort.ll_fname_desc() end },
+{ { "n" } , "<Plug>(qf-herder-ll-sort-sev-asc)", prefix_ll .. sort_key .. sev_asc, "", "Sort [count] location list by severity asc", function() require("qf-herder").sort.ll_severity_asc() end },
+{ { "n" } , "<Plug>(qf-herder-ll-sort-sev-desc)", prefix_ll .. sort_key .. sev_desc, "", "Sort [count] location list by severity desc", function() require("qf-herder").sort.ll_severity_desc() end },
 
     ------------------------
     -- MARK: Maps - Stack --

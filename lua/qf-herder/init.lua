@@ -142,8 +142,11 @@ local schema = {
     default_cmds_set = "boolean",
     default_keymaps_set = "boolean",
     keymap = {
+        key_diags = is_lower_string,
+        key_filename = is_lower_string,
         prefix_ll = is_lower_string,
         prefix_qf = is_lower_string,
+        sort_key = "string",
         stack_clear = is_lower_string,
         stack_newer = "string",
         stack_older = "string",
@@ -209,8 +212,11 @@ local default_config = {
     -- Only checked on startup
     ---@class qf-herder.keymap.Cfg
     keymap = {
-        prefix_ll = "<leader>l", ---@type string
-        prefix_qf = "<leader>q", ---@type string
+        key_diags = "i", ---@type string -- Must be lowercase
+        key_filename = "f", ---@type string -- Must be lowercase
+        prefix_ll = "<leader>l", ---@type string -- Must be lowercase
+        prefix_qf = "<leader>q", ---@type string -- Must be lowercase
+        sort_key = "t", ---@type string
         stack_clear = "e", ---@type string
         stack_newer = "]", ---@type string
         stack_older = "[", ---@type string
@@ -238,11 +244,6 @@ local default_config = {
         spk = "topline", ---@type ""|"cursor"|"screen"|"topline"
     },
 }
-
--- TODO: Having to define `spk` in multiple places feels bad. Ideal behavior: Define a "global"
--- table that merges under the module tables. The module-level vars are allowed to be nil.
-
--- TODO: Rename ctx to cfg here and throughout the module
 
 ---@class qf-herder.keymap.cfg.Partial
 ---@field ll_prefix? string
@@ -581,28 +582,28 @@ M.sort = {}
 ---@class qf-herder.sort.Opts
 ---@field goto_after? boolean
 
----@param opts qf-herder.sort.Opts
+---@param opts? qf-herder.sort.Opts
 function M.sort.qf_fname_asc(opts)
     local _, _, cfg = cfg_get_from_opts(opts, "sort")
     local qfr_sort = require("qf-herder._sort")
     qfr_sort.sort(nil, vim.v.count, qfr_sort.fname_asc, cfg)
 end
 
----@param opts qf-herder.sort.Opts
+---@param opts? qf-herder.sort.Opts
 function M.sort.qf_fname_desc(opts)
     local _, _, cfg = cfg_get_from_opts(opts, "sort")
     local qfr_sort = require("qf-herder._sort")
     qfr_sort.sort(nil, vim.v.count, qfr_sort.fname_desc, cfg)
 end
 
----@param opts qf-herder.sort.Opts
+---@param opts? qf-herder.sort.Opts
 function M.sort.qf_severity_asc(opts)
     local _, _, cfg = cfg_get_from_opts(opts, "sort")
     local qfr_sort = require("qf-herder._sort")
     qfr_sort.sort(nil, vim.v.count, qfr_sort.severity_asc, cfg)
 end
 
----@param opts qf-herder.sort.Opts
+---@param opts? qf-herder.sort.Opts
 function M.sort.qf_severity_desc(opts)
     local _, _, cfg = cfg_get_from_opts(opts, "sort")
     local qfr_sort = require("qf-herder._sort")
@@ -610,34 +611,34 @@ function M.sort.qf_severity_desc(opts)
 end
 
 ---@param f fun(a:vim.quickfix.entry, b:vim.quickfix.entry): boolean
----@param opts qf-herder.sort.Opts
+---@param opts? qf-herder.sort.Opts
 function M.sort.qf_by(f, opts)
     local _, _, cfg = cfg_get_from_opts(opts, "sort")
     require("qf-herder._sort").sort(nil, vim.v.count, f, cfg)
 end
 
----@param opts qf-herder.sort.Opts
+---@param opts? qf-herder.sort.Opts
 function M.sort.ll_fname_asc(opts)
     local win, _, cfg = cfg_get_from_opts(opts, "sort")
     local qfr_sort = require("qf-herder._sort")
     qfr_sort.sort(win, vim.v.count, qfr_sort.fname_asc, cfg)
 end
 
----@param opts qf-herder.sort.Opts
+---@param opts? qf-herder.sort.Opts
 function M.sort.ll_fname_desc(opts)
     local win, _, cfg = cfg_get_from_opts(opts, "sort")
     local qfr_sort = require("qf-herder._sort")
     qfr_sort.sort(win, vim.v.count, qfr_sort.fname_desc, cfg)
 end
 
----@param opts qf-herder.sort.Opts
+---@param opts? qf-herder.sort.Opts
 function M.sort.ll_severity_asc(opts)
     local win, _, cfg = cfg_get_from_opts(opts, "sort")
     local qfr_sort = require("qf-herder._sort")
     qfr_sort.sort(win, vim.v.count, qfr_sort.severity_asc, cfg)
 end
 
----@param opts qf-herder.sort.Opts
+---@param opts? qf-herder.sort.Opts
 function M.sort.ll_severity_desc(opts)
     local win, _, cfg = cfg_get_from_opts(opts, "sort")
     local qfr_sort = require("qf-herder._sort")
@@ -645,7 +646,7 @@ function M.sort.ll_severity_desc(opts)
 end
 
 ---@param f fun(a:vim.quickfix.entry, b:vim.quickfix.entry): boolean
----@param opts qf-herder.sort.Opts
+---@param opts? qf-herder.sort.Opts
 function M.sort.ll_by(f, opts)
     local win, _, cfg = cfg_get_from_opts(opts, "sort")
     require("qf-herder._sort").sort(win, vim.v.count, f, cfg)
@@ -718,7 +719,5 @@ function M.stack.l_free(opts)
     local win, _, cfg = cfg_get_from_opts(opts, "stack")
     require("qf-herder._stack").l_free(win, false, cfg)
 end
-
--- TODO: I think you put `history_list` as `<leader>qQ`.
 
 return M
