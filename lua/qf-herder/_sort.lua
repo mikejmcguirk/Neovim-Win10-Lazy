@@ -35,6 +35,7 @@ function M.sort(src_win, count, f, cfg)
         return
     end
 
+    -- TODO: Does this opt really make sense?
     if not cfg.goto_after then
         return
     end

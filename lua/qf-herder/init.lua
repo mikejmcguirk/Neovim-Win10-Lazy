@@ -131,6 +131,46 @@ end
 
 ---@param val any
 ---@return boolean, string
+local function ll_split_validate(val)
+    local ll_splits = {
+        "abo",
+        "aboveleft",
+        "bel",
+        "belowright",
+        "lefta",
+        "leftabove",
+        "rightb",
+        "rightbelow",
+    }
+
+    local ok = ntt.i_includes(ll_splits, val)
+    return ok, ok and "" or validator_err_make(vim.inspect(ll_splits), val)
+end
+
+---@param val any
+---@return boolean, string
+local function qf_split_validate(val)
+    local qf_splits = {
+        "bo",
+        "botright",
+        "to",
+        "topleft",
+    }
+
+    local ok = ntt.i_includes(qf_splits, val)
+    return ok, ok and "" or validator_err_make(vim.inspect(qf_splits), val)
+end
+
+---@param val any
+---@return boolean, string
+local function spk_validate(val)
+    local spk = { "", "cursor", "screen", "topline" }
+    local ok = ntt.i_includes(spk, val)
+    return ok, ok and "" or validator_err_make(vim.inspect(spk), val)
+end
+
+---@param val any
+---@return boolean, string
 local function is_lower_string(val)
     local ok = type(val) == "string" and val == string.lower(val)
     return ok, ok and "" or validator_err_make("string", val)
@@ -153,52 +193,34 @@ local schema = {
         win_close = "string",
         win_open = is_lower_string,
     },
-    stack = {
-        update_list_wins = "boolean",
-        spk = function(val)
-            local spk = { "", "cursor", "screen", "topline" }
-            local ok = ntt.i_includes(spk, val)
-            return ok, ok and "" or validator_err_make(vim.inspect(spk), val)
-        end,
+    nav = {
+        do_zzze = "boolean",
     },
     sort = {
         goto_after = "boolean",
     },
+    stack = {
+        update_list_wins = "boolean",
+        spk = spk_validate,
+    },
+    system = {
+        auto_height = "boolean",
+        open_results = "boolean",
+        silent = "boolean",
+        spk = spk_validate,
+        split_ll = ll_split_validate,
+        split_qf = qf_split_validate,
+        timeout = function(val)
+            return require("nvim-tools.types").is_uint(val)
+        end,
+        update_list_wins = "boolean",
+    },
     window = {
         auto_height = "boolean",
-        ll_split = function(val)
-            local ll_splits = {
-                "abo",
-                "aboveleft",
-                "bel",
-                "belowright",
-                "lefta",
-                "leftabove",
-                "rightb",
-                "rightbelow",
-            }
-
-            local ok = ntt.i_includes(ll_splits, val)
-            return ok, ok and "" or validator_err_make(vim.inspect(ll_splits), val)
-        end,
-        -- TODO: These should be split_qf and split_ll
-        qf_split = function(val)
-            local qf_splits = {
-                "bo",
-                "botright",
-                "to",
-                "topleft",
-            }
-
-            local ok = ntt.i_includes(qf_splits, val)
-            return ok, ok and "" or validator_err_make(vim.inspect(qf_splits), val)
-        end,
+        split_ll = ll_split_validate,
+        split_qf = qf_split_validate,
         silent = "boolean",
-        spk = function(val)
-            local spk = { "", "cursor", "screen", "topline" }
-            local ok = ntt.i_includes(spk, val)
-            return ok, ok and "" or validator_err_make(vim.inspect(spk), val)
-        end,
+        spk = spk_validate,
     },
 }
 
@@ -224,6 +246,10 @@ local default_config = {
         win_close = "o", ---@type string
         win_open = "p", ---@type string
     },
+    ---@class qf-herder.nav.Cfg
+    nav = {
+        do_zzze = true, ---@type boolean
+    },
     ---@class qf-herder.sort.Cfg
     sort = {
         -- TODO: history_after?
@@ -235,11 +261,22 @@ local default_config = {
         -- Resizes the list after running history cmds. Closes the list if the stack is freed.
         update_list_wins = true, ---@type boolean
     },
+    ---@class qf-rancher.system.Cfg
+    system = {
+        auto_height = true, ---@type boolean
+        open_results = true, ---@type boolean
+        silent = false, ---@type boolean
+        spk = "topline", ---@type ""|"cursor"|"screen"|"topline"
+        split_ll = "belowright", ---@type qf-herder.window.llSplit
+        split_qf = "botright", ---@type qf-herder.window.qfSplit
+        timeout = 1000, ---@type uinteger
+        update_list_wins = true, ---@type boolean
+    },
     ---@class qf-herder.window.Cfg
     window = {
         auto_height = true, ---@type boolean
-        ll_split = "belowright", ---@type qf-herder.window.llSplit
-        qf_split = "botright", ---@type qf-herder.window.qfSplit
+        split_ll = "belowright", ---@type qf-herder.window.llSplit
+        split_qf = "botright", ---@type qf-herder.window.qfSplit
         -- TODO: Remove this as a Cfg option
         silent = false, ---@type boolean
         spk = "topline", ---@type ""|"cursor"|"screen"|"topline"
@@ -576,6 +613,95 @@ end
 function M.window.ll_resize(opts)
     local _, _, ctx = cfg_get_from_opts(opts, "window")
     require("qf-herder._window").ll_resize(0, vim.v.count, ctx)
+end
+
+M.nav = {}
+
+---@class qf-herder.nav.Opts
+---@field do_zzze? boolean
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.q_prev(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_prev(vim.v.count1, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.q_next(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_next(vim.v.count1, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.q_q(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_q(vim.v.count, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.q_rewind(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_rewind(vim.v.count, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.q_last(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_last(vim.v.count, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.q_pfile(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_pfile(vim.v.count1, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.q_nfile(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_nfile(vim.v.count1, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.l_prev(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").l_prev(win, vim.v.count1, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.l_next(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").l_next(win, vim.v.count1, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.l_l(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").l_l(win, vim.v.count, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.l_rewind(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").l_rewind(win, vim.v.count, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.l_last(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").l_last(win, vim.v.count, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.l_pfile(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").l_pfile(win, vim.v.count1, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.l_nfile(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").l_nfile(win, vim.v.count1, false, cfg)
 end
 
 M.sort = {}

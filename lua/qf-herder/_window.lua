@@ -39,6 +39,17 @@ end
 
 local M = {}
 
+---@param src_win uinteger|nil
+---@param count uinteger
+---@param cfg qf-herder.window.Cfg
+function M.list_open(src_win, count, cfg)
+    if src_win == nil then
+        M.qf_open(count, cfg)
+    else
+        M.ll_open(count, cfg)
+    end
+end
+
 ---@param tabpages uinteger[]
 ---@param qf_id uinteger
 ---@return uinteger|nil
@@ -209,7 +220,7 @@ function M.qf_open(count, cfg)
 
     local cfg_spk = cfg.spk
     M.ll_wins_close_with_spk({ 0 }, cfg_spk)
-    return copen_with_spk(cfg_spk, height_resolve(nil, count, cfg.auto_height), cfg.qf_split)
+    return copen_with_spk(cfg_spk, height_resolve(nil, count, cfg.auto_height), cfg.split_qf)
 end
 
 ---@class qf-herder.window.quickfixClose.Cfg
@@ -228,7 +239,7 @@ function M.qf_toggle(count, cfg)
     local cfg_spk = cfg.spk
     if qf_win == nil then
         M.ll_wins_close_with_spk({ 0 }, cfg_spk)
-        copen_with_spk(cfg_spk, height_resolve(nil, count, cfg.auto_height), cfg.qf_split)
+        copen_with_spk(cfg_spk, height_resolve(nil, count, cfg.auto_height), cfg.split_qf)
     else
         M.win_close_one_with_spk(qf_win, 0, cfg_spk)
     end
@@ -275,14 +286,14 @@ end
 function M.ll_open(count, cfg)
     local src_win = api.nvim_get_current_win()
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
-    if not _util.qf_id_valid_or_echo_no_ll(qf_id, cfg.silent) then
+    if not _util.ll_ensure_qf_id_or_echo(qf_id, cfg.silent) then
         return
     end
 
     if M.ll_win_find_one_by_qf_id({ 0 }, qf_id) ~= nil then
         local cfg_spk = cfg.spk
         M.qf_wins_close_with_spk({ 0 }, cfg_spk)
-        lopen_with_spk(cfg_spk, height_resolve(src_win, count, cfg.auto_height), cfg.ll_split)
+        lopen_with_spk(cfg_spk, height_resolve(src_win, count, cfg.auto_height), cfg.split_ll)
     end
 end
 
@@ -293,7 +304,7 @@ end
 ---@param cfg qf-herder.window.Cfg
 function M.ll_close(src_win, cfg)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
-    if not _util.qf_id_valid_or_echo_no_ll(qf_id, cfg.silent) then
+    if not _util.ll_ensure_qf_id_or_echo(qf_id, cfg.silent) then
         return
     end
 
@@ -309,7 +320,7 @@ end
 function M.ll_toggle(count, cfg)
     local src_win = api.nvim_get_current_win()
     local qf_id = fn.getloclist(src_win, { id = 0 }).id ---@type uinteger
-    if not _util.qf_id_valid_or_echo_no_ll(qf_id, cfg.silent) then
+    if not _util.ll_ensure_qf_id_or_echo(qf_id, cfg.silent) then
         return
     end
 
@@ -318,7 +329,7 @@ function M.ll_toggle(count, cfg)
     if ll_win == nil then
         M.qf_wins_close_with_spk({ 0 }, cfg_spk)
         local height = height_resolve(src_win, count, cfg.auto_height)
-        return lopen_with_spk(cfg_spk, height, cfg.ll_split)
+        return lopen_with_spk(cfg_spk, height, cfg.split_ll)
     else
         return M.win_close_one_with_spk(ll_win, 0, cfg_spk)
     end
@@ -333,7 +344,7 @@ end
 ---@param cfg qf-herder.window.ll_resize.Cfg
 function M.ll_resize(src_win, count, cfg)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id ---@type uinteger
-    if not _util.qf_id_valid_or_echo_no_ll(qf_id, cfg.silent) then
+    if not _util.ll_ensure_qf_id_or_echo(qf_id, cfg.silent) then
         return
     end
 

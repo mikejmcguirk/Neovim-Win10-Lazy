@@ -29,7 +29,7 @@ end
 
 ---@param qf_id uinteger
 ---@return boolean
-function M.qf_id_valid_or_echo_no_ll(qf_id, silent)
+function M.ll_ensure_qf_id_or_echo(qf_id, silent)
     if qf_id > 0 then
         return true
     end

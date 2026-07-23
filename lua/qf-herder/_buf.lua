@@ -29,7 +29,7 @@ function M.qf_vsplit(keep_focus)
     local spr = api.nvim_get_option_value("spr", { scope = "global" })
     vim.cmd("wincmd \r | noautocmd wincmd " .. (spr and "L" or "H"))
 
-    local qf_split = require("qf-herder")._config_get().window.qf_split
+    local qf_split = require("qf-herder")._config_get().window.split_qf
     local qf_move = (qf_split == "to" or qf_split == "topleft") and "K" or "J"
     if keep_focus then
         api.nvim_set_current_win(qf_win)

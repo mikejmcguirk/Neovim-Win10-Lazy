@@ -1,6 +1,7 @@
 local api = vim.api
 
 -- TODO: Rename the prefix back to QF_RANCHER for specificity
+QFR_NO_ERRS = "No errors"
 QFR_NO_LL = "No location list"
 
 local herder = require("qf-herder")

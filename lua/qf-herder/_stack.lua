@@ -201,7 +201,7 @@ end
 ---@param cfg qf-herder.stack.Cfg
 function M.l_clear(src_win, count, silent, cfg)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id ---@type uinteger
-    if not _util.qf_id_valid_or_echo_no_ll(qf_id, silent) then
+    if not _util.ll_ensure_qf_id_or_echo(qf_id, silent) then
         return
     end
 
@@ -215,7 +215,7 @@ end
 ---@param cfg qf-herder.stack.Cfg
 function M.l_free(src_win, silent, cfg)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id ---@type uinteger
-    if not _util.qf_id_valid_or_echo_no_ll(qf_id, silent) then
+    if not _util.ll_ensure_qf_id_or_echo(qf_id, silent) then
         return
     end
 
