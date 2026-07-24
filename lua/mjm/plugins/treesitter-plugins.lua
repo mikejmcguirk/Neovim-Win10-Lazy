@@ -6,31 +6,32 @@ local langs = {
     -- Update built-ins
     "c",
     "lua",
+    "markdown",
+    "markdown_inline",
+    "query",
     "vim",
     "vimdoc",
-    "query",
-    "markdown_inline",
-    "markdown",
     -- Others
     "bash",
     "c_sharp",
     "css",
     "diff",
-    "javascript",
-    "json",
+    "git_rebase",
     "gitattributes",
     "gitcommit",
     "gitignore",
-    "git_rebase",
     "go",
     "html",
+    "javascript",
+    "json",
+    "odin",
     "perl",
     "python",
     "rust",
     "sql",
-    -- "tmux", -- Errors on things that are correct
     "typescript",
     "typst",
+    -- "tmux", -- Errors on things that are correct
 }
 
 local fts = vim.deepcopy(langs) ---@type string[]
