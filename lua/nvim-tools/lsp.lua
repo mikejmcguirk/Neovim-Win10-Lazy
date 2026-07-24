@@ -179,7 +179,6 @@ function M.rename_range_get(response, buf, encoding)
     local resp_start = response.start
     local resp_end = response["end"]
     if resp_start ~= nil and resp_end ~= nil then
-        print("doing response start thing")
         local range = { start = resp_start, ["end"] = resp_end }
         return ntr.lsp_to_api(buf, range, encoding)
     end
