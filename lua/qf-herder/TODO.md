@@ -75,6 +75,8 @@
 
 ## MID:
 
+- [ ] For modules like diagnostics and grep, the user should be able to configure a custom `what` table as an opt, so they can use a custom qftf or whatever else. Would need to be careful about what is allowed in though, as we don't want values like nr getting corrupted.
+
 #### WINDOW:
 
 - [ ] Make resizing work off of bulk operations like everything else does.

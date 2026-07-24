@@ -61,7 +61,7 @@ end
 ---@param result -1|0
 ---@param src_win integer|nil
 ---@param nr integer|"$"
----@param action qf-rancher.types.Action
+---@param action "a"|"f"|"r"|"u"|" "
 ---@return integer
 function M.set_result_resolve(result, src_win, nr, action)
     if result == -1 then
@@ -87,7 +87,7 @@ function M.set_result_resolve(result, src_win, nr, action)
 end
 
 ---@param src_win integer|nil
----@param action qf-rancher.types.Action
+---@param action "a"|"f"|"r"|"u"|" "
 ---@param what table
 ---@return integer
 function M.set_list_checked(src_win, action, what)

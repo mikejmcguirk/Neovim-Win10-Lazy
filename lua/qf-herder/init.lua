@@ -181,6 +181,12 @@ local schema = {
     auto_open_changes = "boolean",
     default_cmds_set = "boolean",
     default_keymaps_set = "boolean",
+    diagnostics = {
+        clear_on_empty = "boolean",
+        open_results = "boolean",
+        reuse_title = "boolean",
+        title = "string",
+    },
     keymap = {
         key_diags = is_lower_string,
         key_filename = is_lower_string,
@@ -233,6 +239,12 @@ local schema = {
 local default_config = {
     default_cmds_set = true, ---@type boolean -- Only checked on startup.
     default_keymaps_set = true, ---@type boolean -- Only checked on startup.
+    diagnostics = {
+        clear_on_empty = true, ---@type boolean
+        open_results = true, ---@type boolean
+        reuse_title = true, ---@type boolean
+        title = "Diagnostics", ---@type string
+    },
     -- Only checked on startup
     ---@class qf-herder.keymap.Cfg
     keymap = {
@@ -616,6 +628,114 @@ function M.window.ll_resize(opts)
     local _, _, ctx = cfg_get_from_opts(opts, "window")
     require("qf-herder._window").ll_resize(0, vim.v.count, ctx)
 end
+
+M.diagnostics = {}
+
+---@class qf-herder.diagnostics.Opts
+---@field clear_on_empty? boolean
+---@field open_results? boolean
+---@field reuse_title? boolean
+---@field title? string
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.qf_all_bufs_errors(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(nil, { severity = 1 }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.qf_all_bufs_min_warnings(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(nil, { severity = { 1, 2 } }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.qf_all_bufs_only_warnings(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(nil, { severity = { 2 } }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.qf_all_bufs_min_info(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(nil, { severity = { 1, 2, 3 } }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.qf_all_bufs_only_info(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(nil, { severity = { 3 } }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.qf_all_bufs_min_hint(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(nil, { severity = { 1, 2, 3, 4 } }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.qf_all_bufs_only_hints(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(nil, { severity = { 4 } }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.ll_cur_buf_errors(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(win, { severity = 1 }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.ll_cur_buf_min_warnings(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(win, { severity = { 1, 2 } }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.ll_cur_buf_only_warnings(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(win, { severity = { 2 } }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.ll_cur_buf_min_info(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(win, { severity = { 1, 2, 3 } }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.ll_cur_buf_only_info(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(win, { severity = { 3 } }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.ll_cur_buf_min_hint(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(win, { severity = { 1, 2, 3, 4 } }, sort_fun, cfg)
+end
+
+---@param opts qf-herder.diagnostics.Opts
+function M.diagnostics.ll_cur_buf_only_hints(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(win, { severity = { 4 } }, sort_fun, cfg)
+end
+
+-- TODO: Should the plurals be based on english grammar rules as they currently are?
 
 M.nav = {}
 
