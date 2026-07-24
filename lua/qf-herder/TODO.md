@@ -19,6 +19,9 @@
 - [ ] nav
   - [ ] keymaps
 
+  - [ ] https://github.com/neovim/neovim/commit/f95bd7393584e96152e1a2f68736c634ed8de614
+    - Might solve a lot of my preview issues. The nightly gate is not relevant.
+
 - [ ] Once all APIs and keymaps are up, disable old rancher so these can be used.
 
 - [ ] The stack location list cmds should actually tell you if there is no location list.

@@ -13,8 +13,6 @@
 
 - TODO > MID > LOW
 - Plugin ordering
-  - farsight
-  - Grep plugin?
   - rancher
   - nvim-tools
   - docgen
@@ -24,15 +22,15 @@
 - For all plugins:
   * Update config modules to how rancher is now done
   * Rename ctx > cfg for sub-lists
+- EmmyLua conversion
+  * Go through all config files and handle diagnostics
+  * Change `integer` > `uinteger` where needed
 
 ## TODO-DEP:
 
-* If, after a week of using Emmylua_Ls, it actually works, remove LazyDev and begin the process of converting the repo over to it.
-* If we can use EmmyLua_Ls for a week without issues:
-  + Remove LazyDev
-  + Convert repo to EmmyLua annotations
-  + Fix EmmyLua diags
-  + Emmylua_Ls loads stably at this commit: https://github.com/EmmyLuaLs/emmylua-analyzer-rust/commit/fbc11afde0e5dffcec0073af91273c6dce580f00
+- [ ] If we start using Odin more often and seriously: https://github.com/cephei8/odin.nvim
+  * This plugin should be installed or its features ported.
+    + The compiler stuff might be useful for Rancher
 - [ ] When we have plugins to push to Github:
   - [ ] Figure out how to push plugin updates to feature branches without every update showing up in lazy.nvim
   - [ ] How do you block direct pushes to master?
