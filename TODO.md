@@ -19,6 +19,7 @@
 
 ## TODO:
 
+- Rename TODO files so they can link to each other
 - For all plugins:
   * Update config modules to how rancher is now done
   * Rename ctx > cfg for sub-lists
