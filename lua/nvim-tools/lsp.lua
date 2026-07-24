@@ -172,13 +172,16 @@ end
 function M.rename_range_get(response, buf, encoding)
     local response_range = response.range
     local ntr = require("nvim-tools.range")
-    if response_range then
+    if response_range ~= nil then
         return ntr.lsp_to_api(buf, response_range, encoding)
     end
 
-    local response_start = response.start
-    if response_start then
-        return ntr.lsp_to_api(buf, response_start, encoding)
+    local resp_start = response.start
+    local resp_end = response["end"]
+    if resp_start ~= nil and resp_end ~= nil then
+        print("doing response start thing")
+        local range = { start = resp_start, ["end"] = resp_end }
+        return ntr.lsp_to_api(buf, range, encoding)
     end
 
     -- Likely a PrepareRenameDefaultBehavior response.
