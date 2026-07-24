@@ -25,20 +25,6 @@ require("qf-herder.plugin")
 keymap.set({ "n", "x" }, "gw", "gq")
 keymap.set("n", "gww", "gqq")
 
-local qfh__buf = require("qf-herder._buf")
-keymap.set("n", "<leader>v", function()
-    qfh__buf.qf_vsplit(false)
-    -- qfh__buf.ll_vsplit()
-end)
-
-keymap.set("n", "<leader>s", function()
-    qfh__buf.split(false)
-end)
-
-keymap.set("n", "<leader>x", function()
-    qfh__buf.tabnew(false)
-end)
-
 --------------
 
 require("annotator.plugin")

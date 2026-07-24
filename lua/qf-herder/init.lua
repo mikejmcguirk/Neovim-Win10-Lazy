@@ -195,6 +195,7 @@ local schema = {
     },
     nav = {
         do_zzze = "boolean",
+        split_qf = qf_split_validate,
     },
     sort = {
         goto_after = "boolean",
@@ -249,6 +250,7 @@ local default_config = {
     ---@class qf-herder.nav.Cfg
     nav = {
         do_zzze = true, ---@type boolean
+        split_qf = "botright", ---@type qf-herder.window.qfSplit
     },
     ---@class qf-herder.sort.Cfg
     sort = {
