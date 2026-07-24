@@ -1,6 +1,29 @@
 local api = vim.api
 local set = vim.keymap.set
 
+---------------------------------
+-- MARK: Default ftplugin code --
+---------------------------------
+
+-- Needed since I have the default disabled.
+
+-- Copied from Nvim's ftplugin file
+set("n", "]]", function()
+    require("vim.treesitter._headings").jump({ count = 1 })
+end, { buf = 0, silent = false, desc = "Jump to next section" })
+
+set("n", "[[", function()
+    require("vim.treesitter._headings").jump({ count = -1 })
+end, { buf = 0, silent = false, desc = "Jump to previous section" })
+
+local buf_0 = { buf = 0 }
+api.nvim_set_option_value("comments", "fb:*,fb:-,fb:+,n:>", buf_0)
+api.nvim_set_option_value("commentstring", "<!-- %s -->", buf_0)
+
+-------------------
+-- MARK: My Code --
+-------------------
+
 require("mjm.utils").set_buf_space_indent(0, 2)
 
 -- "r" in Markdown treats lines like "- some text" as comments and indents them
@@ -13,7 +36,6 @@ api.nvim_set_option_value("sidescrolloff", 12, local_scope)
 api.nvim_set_option_value("spell", true, local_scope)
 api.nvim_set_option_value("wrap", true, local_scope)
 
-local buf_0 = { buf = 0 }
 set("i", ",", ",<C-g>u", buf_0)
 set("i", ".", ".<C-g>u", buf_0)
 set("i", ":", ":<C-g>u", buf_0)
