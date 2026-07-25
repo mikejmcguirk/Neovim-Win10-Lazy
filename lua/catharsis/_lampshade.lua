@@ -345,6 +345,11 @@ local M = {
             desc = "Update the lamp on diagnostic changes",
             callback = vim.schedule_wrap(function(ev)
                 req_debounced(ev.buf, function(_, buf, pos_ext)
+                    if type(ev.data.diagnostics) ~= "table" then
+                        -- MID: Unsure why this happens. Could use more robust handling.
+                        return false, false, false
+                    end
+
                     local lamp = state_buf_lamps[buf]
                     if lamp == nil then
                         return true, false, false
