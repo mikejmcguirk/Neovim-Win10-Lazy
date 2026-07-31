@@ -12,40 +12,32 @@ local ns_basename = "farsight.static"
 local state_ns_dims = {} ---@type uinteger[]
 local state_ns_dynamics = {} ---@type uinteger[]
 
+local function state_ns_get_at(idx, ns_list, ns_name)
+    local ns_len = #ns_list
+    if ns_len >= idx then
+        return ns_list[idx]
+    end
+
+    local diff = idx - ns_len
+    for i = 1, diff do
+        local ns_num = ns_len + i
+        local new_name = ns_basename .. "." .. ns_name .. "." .. tostring(ns_num)
+        ns_list[ns_num] = api.nvim_create_namespace(new_name)
+    end
+
+    return ns_list[idx]
+end
+
 ---@param idx uinteger
 ---@return uinteger
 local function state_ns_dim_get_at(idx)
-    local state_ns_dims_len = #state_ns_dims
-    if state_ns_dims_len >= idx then
-        return state_ns_dims[idx]
-    end
-
-    local diff = idx - state_ns_dims_len
-    for _ = 1, diff do
-        local ns_num = #state_ns_dims + 1
-        local new_name = ns_basename .. ".dim." .. tostring(ns_num)
-        state_ns_dims[ns_num] = api.nvim_create_namespace(new_name)
-    end
-
-    return state_ns_dims[idx]
+    return state_ns_get_at(idx, state_ns_dims, "dim")
 end
 
 ---@param idx uinteger
 ---@return uinteger
 local function state_ns_dynamic_get_at(idx)
-    local state_ns_dynamics_len = #state_ns_dynamics
-    if state_ns_dynamics_len >= idx then
-        return state_ns_dynamics[idx]
-    end
-
-    local diff = idx - state_ns_dynamics_len
-    for _ = 1, diff do
-        local ns_num = #state_ns_dynamics + 1
-        local new_name = ns_basename .. ".dynamic." .. tostring(ns_num)
-        state_ns_dynamics[ns_num] = api.nvim_create_namespace(new_name)
-    end
-
-    return state_ns_dynamics[idx]
+    return state_ns_get_at(idx, state_ns_dynamics, "dynamic")
 end
 
 local hl_error = api.nvim_get_hl_id_by_name("ErrorMsg")
@@ -56,13 +48,6 @@ local hl_target = api.nvim_get_hl_id_by_name("farsightStaticTargetLabel")
 
 local hl_priority_dim = vim.hl.priorities.user + 50
 local hl_priority_label = hl_priority_dim + 1
-
----@param win_matches table<uinteger, farsight.static.MatchData>
-local function win_matches_ns_set(win_matches)
-    for win, matches in pairs(win_matches) do
-        api.nvim__ns_set(matches.ns_dynamic, { wins = { win } })
-    end
-end
 
 ---@param win_matches table<uinteger, farsight.static.MatchData>
 ---@param dim boolean
@@ -149,9 +134,10 @@ end
 
 ---@param win_matches table<uinteger, farsight.static.MatchData> Modified in place!
 local function matches_vtext_clear(win_matches)
+    local i_clear = ntt.i_clear
     for _, matches in pairs(win_matches) do
         for _, target in ipairs(matches.targets) do
-            ntt.i_clear(target[4])
+            i_clear(target[4])
         end
     end
 end
@@ -254,31 +240,6 @@ end
 ----------------------
 -- MARK: Jump Setup --
 ----------------------
-
--- ---@param win_matches table<uinteger, farsight.static.MatchData>
--- ---@param dim boolean
--- local function win_matches_extmarks_dim_set(win_matches, dim)
---     if not dim then
---         return
---     end
---
---     ---@type vim.api.keyset.set_extmark
---     local extmark_opts = {
---         hl_group = hl_dim,
---         priority = hl_priority_dim,
---         strict = false,
---     }
---
---     -- We go through the trouble of setting the dim highlights by line because Neovim does not
---     -- consistently draw multi-line highlight extmarks only within namespace window scope.
---     for _, matches in pairs(win_matches) do
---         local match_range = matches.match_range
---         for i = match_range[1], match_range[3] do
---             extmark_opts.end_row = i + 1
---             api.nvim_buf_set_extmark(matches.buf, matches.ns_dim, i, 0, extmark_opts)
---         end
---     end
--- end
 
 ---@param win_matches table<uinteger, farsight.static.MatchData>
 ---@param dim boolean
@@ -423,32 +384,40 @@ end
 
 ---@param ctx farsight.static.MatchCtx
 ---@param win uinteger
----@param idx uinteger Assumes that ns_ensure has been run for the relevant indexes.
+---@param idx uinteger
 ---@return uinteger, farsight.static.MatchData
 local function match_data_mapper(ctx, win, idx)
     local buf = api.nvim_win_get_buf(win)
     local match_range, ranges, lines = _match.static_ranges_get(win, buf, ctx.regex, ctx.folds)
 
     local start_end = split_point_get(ctx, ranges)
-    local start_ranges, end_ranges = ntt.i_split_at(ranges, start_end)
-    local targets = ntt.i_filter_map_to(start_ranges, function(range)
-        return { range[1], range[2], {}, {} }
-    end)
+    local targets = ntt.new(#ranges, 0)
+    local j = 1
+    for i = 1, start_end do
+        local range = ranges[i]
+        targets[j] = { range[1], range[2], {}, {} }
+        j = j + 1
+    end
 
-    local targets_end = ntt.i_filter_map_to(end_ranges, function(range)
+    for i = start_end + 1, #ranges do
+        local range = ranges[i]
         local end_row = range[3]
         local end_col = range[4]
         local diff = vim.str_utf_start(lines[end_row], end_col)
-        return { end_row, end_col - 1 - diff, {}, {} }
-    end)
 
+        targets[j] = { end_row, end_col - 1 - diff, {}, {} }
+        j = j + 1
+    end
+
+    local win_dynamic_ns = state_ns_dynamic_get_at(idx)
+    api.nvim__ns_set(win_dynamic_ns, { wins = { win } })
     return win,
         {
             buf = buf,
             match_range = match_range,
             ns_dim = state_ns_dim_get_at(idx),
-            ns_dynamic = state_ns_dynamic_get_at(idx),
-            targets = ntt.i_append(targets, targets_end),
+            ns_dynamic = win_dynamic_ns,
+            targets = targets,
         }
 end
 
@@ -527,7 +496,6 @@ function M.static(cur_win, ctx)
 
     win_targets_labels_add(win_matches, wins, ctx.tokens)
     local dim = ctx.dim
-    win_matches_ns_set(win_matches)
     win_matches_extmarks_dim_set(win_matches, dim)
     ok, win, row, col = jump_pos_get_from_prompt(win_matches)
     namespaces_dim_clear(win_matches, dim)
