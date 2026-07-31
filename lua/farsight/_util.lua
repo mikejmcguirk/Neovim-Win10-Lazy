@@ -78,7 +78,7 @@ function M.dim_set_ns_and_extmarks(ns, win, group, priority, range, buf)
     api.nvim_buf_set_extmark(buf, ns, end_row, 0, extmark_opts)
 
     extmark_opts.hl_eol = true
-    extmark_opts.end_row = nil
+    extmark_opts.end_row = start_row + 1
     extmark_opts.end_col = nil
     api.nvim_buf_set_extmark(buf, ns, start_row, range[2], extmark_opts)
 
