@@ -35,7 +35,6 @@ return {
             callback = function(ev)
                 local buf = ev.buf
                 local conform = require("conform")
-                local expr = "v:lua.require'conform'.formatexpr()"
                 local function do_conform()
                     conform.format({
                         bufnr = buf,
@@ -46,23 +45,16 @@ return {
                 end
 
                 set("n", Mjm_Format_Lhs, do_conform, { buf = buf })
-                api.nvim_set_option_value("formatexpr", expr, { buf = buf })
                 local buf_group_str = group_prefix .. tostring(buf)
                 api.nvim_create_autocmd("BufWritePre", {
                     group = api.nvim_create_augroup(buf_group_str, {}),
                     buffer = buf,
                     callback = do_conform,
                 })
-            end,
-        })
 
-        local info_toggle = "<leader>ci"
-        set("n", info_toggle, "<cmd>ConformInfo<cr>")
-        api.nvim_create_autocmd("FileType", {
-            group = group,
-            pattern = "conform-info",
-            callback = function(ev)
-                set("n", info_toggle, "<cmd>close<cr>", { buf = ev.buf })
+                api.nvim_set_option_value("formatexpr", function()
+                    conform.formatexpr()
+                end, { buf = buf })
             end,
         })
     end,

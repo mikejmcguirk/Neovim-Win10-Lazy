@@ -226,15 +226,20 @@ return {
         branch = "main",
         build = ":TSUpdate",
         config = function()
-            require("nvim-treesitter").install(langs)
-
+            local ts = require("nvim-treesitter")
+            ts.install(langs)
             api.nvim_create_autocmd({ "FileType" }, {
                 group = api.nvim_create_augroup("mjm-ts-start", {}),
                 pattern = fts,
                 callback = function(ev)
-                    vim.treesitter.start(ev.buf)
-                    local expr = "v:lua.require'nvim-treesitter'.indentexpr()" ---@type string
-                    api.nvim_set_option_value("indentexpr", expr, { buf = ev.buf })
+                    local buf = ev.buf
+                    vim.treesitter.start(buf)
+                    local expr = "v:lua.require'nvim-treesitter'.indentexpr()"
+                    api.nvim_set_option_value("indentexpr", expr, { buf = buf })
+                    -- MID: Does not work for whatever reason.
+                    -- api.nvim_set_option_value("indentexpr", function()
+                    --     ts.indentexpr()
+                    -- end, { buf = buf })
                 end,
             })
         end,
