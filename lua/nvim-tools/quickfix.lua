@@ -5,7 +5,7 @@ local M = {}
 ---@param src_win integer|nil
 ---@param title string
 ---@return integer|nil
-function M._find_list_with_title(src_win, title)
+function M.find_list_with_title(src_win, title)
     local max_nr = M.get_list(src_win, { nr = "$" }).nr
     if src_win then
         for i = max_nr, 1, -1 do

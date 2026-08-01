@@ -1,6 +1,8 @@
 local api = vim.api
+local fn = vim.fn
 
 local ntq = require("nvim-tools.quickfix")
+local _util = require("qf-herder._util")
 
 local M = {}
 
@@ -10,9 +12,8 @@ local M = {}
 ---@param cfg qf-herder.sort.Cfg
 function M.sort(src_win, count, f, cfg)
     if src_win ~= nil then
-        local qf_id = vim.call("getloclist", src_win, { id = 0 }).id ---@type uinteger
-        if qf_id == 0 then
-            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        local qf_id = fn.getloclist(src_win, { id = 0 }).id ---@type uinteger
+        if not _util.ll_ensure_qf_id_or_echo(qf_id, false) then
             return
         end
     end

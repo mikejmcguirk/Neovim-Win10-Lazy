@@ -64,6 +64,7 @@
       * [ ] `)2iw` means rotate the current and next two inner words
       - [ ] `2)2iw` means rotate those inner words twice. Position 1 moves to position 3, 2 to 1, and 3 to 2.
         - This means that `2)iw` would do nothing. There should be some kind of built-in hl_on display so that the user knows a swap happened, even if it has no actual outcome.
+- https://github.com/neovim/neovim/pull/40948 - Implement this as a map for Oil (`1-` to open cwd. Higher counts go upward)
 
 ## LOW:
 

@@ -1,4 +1,5 @@
 local api = vim.api
+local fn = vim.fn
 -- TODO: When cutting this plugin off, inline any functions that are only used here. We want to
 -- require as few exterior modules as possible for plugin init. Exterior util functions should be
 -- consolidated into as few modules as is reasonable.
@@ -239,11 +240,18 @@ local schema = {
 local default_config = {
     default_cmds_set = true, ---@type boolean -- Only checked on startup.
     default_keymaps_set = true, ---@type boolean -- Only checked on startup.
+    ---@class qf-herder.diagnostics.Cfg
     diagnostics = {
         clear_on_empty = true, ---@type boolean
         open_results = true, ---@type boolean
         reuse_title = true, ---@type boolean
         title = "Diagnostics", ---@type string
+    },
+    ---@class qf-herder.grep.Cfg
+    grep = {
+        case = "smart", ---@type "smart"|"ignore"|""
+        reuse_title = true, ---@type boolean
+        sync = true, ---@type boolean
     },
     -- Only checked on startup
     ---@class qf-herder.keymap.Cfg
@@ -303,6 +311,11 @@ local default_config = {
 ---@field win_close? string
 ---@field win_open? string
 
+---@class qf-herder.grep.Opts
+---@field case? string "smart"|"ignore"|""
+---@field reuse_title? boolean
+---@field sync? boolean
+
 ---@class qf-herder.sort.cfg.Partial
 ---@field goto_after? boolean
 
@@ -317,12 +330,26 @@ local default_config = {
 ---@field silent? boolean
 ---@field spk? ""|"cursor"|"screen"|"topline"
 
+---@class qf-herder.system.cfg.Partial
+---@field  auto_height? boolean
+---@field  open_results? boolean
+---@field  silent? boolean
+---@field  spk? ""|"cursor"|"screen"|"topline"
+---@field  split_ll? qf-herder.window.llSplit
+---@field  split_qf? qf-herder.window.qfSplit
+---@field  timeout? uinteger
+---@field  update_list_wins? boolean
+
+-- TODO: Update with the various sub-tables/opts classes
 ---@class qf-herder.config.Partial
 ---@field default_cmds_set? boolean
 ---@field default_keymaps_set? boolean
 ---@field ll_map_prefix? string
 ---@field qf_map_prefix? string
 ---@field window? qf-herder.window.cfg.Partial
+
+-- TODO: Don't you just keep the top level config as Partial and then use opts tables to fill in
+-- the rest? For the window functions, you can just make sub-opts tables.
 
 ------------------
 -- MARK: Config --
@@ -637,107 +664,186 @@ M.diagnostics = {}
 ---@field reuse_title? boolean
 ---@field title? string
 
----@param opts qf-herder.diagnostics.Opts
+---@param get_opts vim.diagnostic.GetOpts
+---@param opts? qf-herder.diagnostics.Opts
+local function qf_diags_do(get_opts, opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(nil, get_opts, sort_fun, cfg)
+end
+
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.qf_all_bufs_errors(opts)
-    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(nil, { severity = 1 }, sort_fun, cfg)
+    qf_diags_do({ severity = 1 }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.qf_all_bufs_min_warnings(opts)
-    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(nil, { severity = { 1, 2 } }, sort_fun, cfg)
+    qf_diags_do({ severity = { 1, 2 } }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.qf_all_bufs_only_warnings(opts)
-    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(nil, { severity = { 2 } }, sort_fun, cfg)
+    qf_diags_do({ severity = { 2 } }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.qf_all_bufs_min_info(opts)
-    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(nil, { severity = { 1, 2, 3 } }, sort_fun, cfg)
+    qf_diags_do({ severity = { 1, 2, 3 } }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.qf_all_bufs_only_info(opts)
-    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(nil, { severity = { 3 } }, sort_fun, cfg)
+    qf_diags_do({ severity = { 3 } }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.qf_all_bufs_min_hint(opts)
-    local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(nil, { severity = { 1, 2, 3, 4 } }, sort_fun, cfg)
+    qf_diags_do({ severity = { 1, 2, 3, 4 } }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.qf_all_bufs_only_hints(opts)
-    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(nil, { severity = { 4 } }, sort_fun, cfg)
+    qf_diags_do({ severity = { 4 } }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param get_opts vim.diagnostic.GetOpts
+---@param opts? qf-herder.diagnostics.Opts
+local function ll_diags_do(get_opts, opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
+    local sort_fun = require("qf-herder._sort").severity_asc
+    require("qf-herder._diag").diags_to_list(win, get_opts, sort_fun, cfg)
+end
+
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.ll_cur_buf_errors(opts)
-    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(win, { severity = 1 }, sort_fun, cfg)
+    ll_diags_do({ severity = 1 }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.ll_cur_buf_min_warnings(opts)
-    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(win, { severity = { 1, 2 } }, sort_fun, cfg)
+    ll_diags_do({ severity = { 1, 2 } }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.ll_cur_buf_only_warnings(opts)
-    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(win, { severity = { 2 } }, sort_fun, cfg)
+    ll_diags_do({ severity = { 2 } }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.ll_cur_buf_min_info(opts)
-    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(win, { severity = { 1, 2, 3 } }, sort_fun, cfg)
+    ll_diags_do({ severity = { 1, 2, 3 } }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.ll_cur_buf_only_info(opts)
-    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(win, { severity = { 3 } }, sort_fun, cfg)
+    ll_diags_do({ severity = { 3 } }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.ll_cur_buf_min_hint(opts)
-    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(win, { severity = { 1, 2, 3, 4 } }, sort_fun, cfg)
+    ll_diags_do({ severity = { 1, 2, 3, 4 } }, opts)
 end
 
----@param opts qf-herder.diagnostics.Opts
+---@param opts? qf-herder.diagnostics.Opts
 function M.diagnostics.ll_cur_buf_only_hints(opts)
-    local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
-    local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(win, { severity = { 4 } }, sort_fun, cfg)
+    ll_diags_do({ severity = { 4 } }, opts)
 end
 
 -- TODO: Should the plurals be based on english grammar rules as they currently are?
 
 M.nav = {}
+
+M.grep = {}
+
+---@param regex boolean
+---@param opts? qf-herder.grep.Opts
+local function grep_ll_cur_buf(regex, opts)
+    local win, buf, cfg = cfg_get_from_opts(opts, "grep")
+    local locations = { api.nvim_buf_get_name(buf) }
+    local sort_fun = require("qf-herder._sort").fname_asc
+    require("qf-herder._grep").rg(win, locations, "Cur Buf", regex, "", sort_fun, cfg)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.grep.ll_cur_buf_fixed(opts)
+    grep_ll_cur_buf(false, opts)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.grep.ll_cur_buf_regex(opts)
+    grep_ll_cur_buf(true, opts)
+end
+
+---@param regex boolean
+---@param opts? qf-herder.grep.Opts
+local function grep_ll_help(regex, opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "grep")
+    local locations = api.nvim_get_runtime_file("doc/*.txt", true)
+    local sort_fun = require("qf-herder._sort").fname_asc
+    require("qf-herder._grep").rg(win, locations, "Cur Buf", regex, "", sort_fun, cfg)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.grep.ll_help_fixed(opts)
+    grep_ll_help(false, opts)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.grep.ll_help_regex(opts)
+    grep_ll_help(true, opts)
+end
+
+---@return string[]
+local function bufs_get_std_listed()
+    local bufs = ntt.i_keep(api.nvim_list_bufs(), function(buf)
+        return bt == "" and api.nvim_get_option_value("bl", { buf = buf })
+    end)
+
+    ---@diagnostic disable-next-line: return-type-mismatch
+    return ntt.i_filter_map_to(bufs, function(buf)
+        local bufname = api.nvim_buf_get_name(buf)
+        return bufname
+    end)
+end
+
+---@param regex boolean
+---@param opts? qf-herder.grep.Opts
+local function grep_qf_bufs(regex, opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "grep")
+    local locations = bufs_get_std_listed()
+    local sort_fun = require("qf-herder._sort").fname_asc
+    require("qf-herder._grep").rg(nil, locations, "Cur Buf", regex, "", sort_fun, cfg)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.grep.qf_bufs_fixed(opts)
+    grep_qf_bufs(false, opts)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.grep.qf_bufs_regex(opts)
+    grep_qf_bufs(true, opts)
+end
+
+---@param regex boolean
+---@param opts? qf-herder.grep.Opts
+local function grep_qf_tcd(regex, opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "grep")
+    local locations = { fn.getcwd(-1, 0) }
+    local sort_fun = require("qf-herder._sort").fname_asc
+    require("qf-herder._grep").rg(nil, locations, "Cur Buf", regex, "", sort_fun, cfg)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.grep.qf_tcd_fixed(opts)
+    grep_qf_tcd(false, opts)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.grep.qf_tcd_regex(opts)
+    grep_qf_tcd(true, opts)
+end
 
 ---@class qf-herder.nav.Opts
 ---@field do_zzze? boolean

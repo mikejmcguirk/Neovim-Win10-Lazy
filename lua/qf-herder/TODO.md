@@ -53,11 +53,17 @@
 
 ## MID:
 
-- [ ] Add cmds for the various modules:
-  - [ ] Have a set of defaults that cannot be removed
-  - [ ] Allow the user to register new args for each one
-- [ ] Add preview win
-  - [ ] Need to develop simple primitives for getting the position, even if they're a bit slower
+- [ ] Case should have a "vim" mode that checks smartcase and ignorecase
+
+- [ ] For modules like diagnostics and grep, the user should be able to configure a custom `what` table as an opt, so they can use a custom qftf or whatever else. Would need to be careful about what is allowed in though, as we don't want values like nr getting corrupted.
+
+#### DIAGS:
+
+- [ ] It should be possible to configure the default sort
+
+#### GREP:
+
+- [ ] Should count say what stack nr to put the results in?
 
 #### WINDOW:
 
@@ -66,22 +72,15 @@
   - [ ] Problem: Closing all location wins to open a qf list requires calling a helper function that sets spk, closes the windows, then resets spk. This means spk has to be set/unset twice to open a qf win. It also adds redundant code between open/toggle.
     - [ ] Possible solution: Just outline closing the windows and put it under the same spk set as the win open
       - [ ] Problem: This would spread window close spk logic into multiple places.
+- [ ] Make resizing work off of bulk operations like everything else does.
 
 ## TODO-DEP:
 
-#### WINDOW:
-
-- [ ] Make specifig `cfg` defs for the exposed functions as needed.
-
-## MID:
-
-- [ ] For modules like diagnostics and grep, the user should be able to configure a custom `what` table as an opt, so they can use a custom qftf or whatever else. Would need to be careful about what is allowed in though, as we don't want values like nr getting corrupted.
-
-#### WINDOW:
-
-- [ ] Make resizing work off of bulk operations like everything else does.
-
 ## LOW:
+
+#### GREP:
+
+- For help grep, include the logic fzf-lua uses to check lazy.nvim unloaded plugins
 
 #### NAV:
 

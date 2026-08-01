@@ -343,34 +343,47 @@ local M = {
             group = buf_group,
             buffer = bufnr,
             desc = "Update the lamp on diagnostic changes",
-            callback = vim.schedule_wrap(function(ev)
-                req_debounced(ev.buf, function(_, buf, pos_ext)
-                    if type(ev.data.diagnostics) ~= "table" then
-                        -- MID: Unsure why this happens. Could use more robust handling.
-                        return false, false, false
-                    end
+            callback = function(ev)
+                -- Scenario:
+                -- - ev.data.diagnostics is passed by reference
+                -- - The check here is scheduled
+                -- - Before the next event loop tick, the underlying data is changed to
+                -- something invalid, causing an error during processing (seen with ols)
+                -- Fix: Deepcopy the known valid data before scheduling
+                -- MID: The deepcopied data might be stale and deepcopy is expensive.
+                local ntt = require("nvim-tools.table")
+                local ev_diags = ntt.deepcopy(ev.data.diagnostics)
+                vim.schedule(function()
+                    req_debounced(ev.buf, function(_, buf, pos_ext)
+                        local lamp = state_buf_lamps[buf]
+                        if lamp == nil then
+                            return true, false, false
+                        end
 
-                    local lamp = state_buf_lamps[buf]
-                    if lamp == nil then
-                        return true, false, false
-                    end
+                        -- The old diagnostics might be out of date.
+                        if lamp.has_diagnostics then
+                            return true, true, false
+                        end
 
-                    -- We cannot assume the old lamp is valid.
-                    if lamp.has_diagnostics then
-                        return true, true, false
-                    end
+                        local row = pos_ext[1]
+                        local col = pos_ext[2]
 
-                    local ntt = require("nvim-tools.table")
-                    local row = pos_ext[1]
-                    local col = pos_ext[2]
-                    local diags_contain_pos = ntt.any(ev.data.diagnostics, function(diagnostic)
-                        return diagnostic_contains_pos(row, col, diagnostic)
+                        -- TODO: Remove this once we know what's going on
+                        for _, d in ipairs(ev_diags) do
+                            if type(d) ~= "table" then
+                                error(vim.inspect(ev_diags))
+                            end
+                        end
+
+                        local diags_contain_pos = ntt.any(ev_diags, function(diagnostic)
+                            return diagnostic_contains_pos(row, col, diagnostic)
+                        end)
+
+                        -- No diags > no diags means no change is necessary.
+                        return diags_contain_pos, diags_contain_pos, false
                     end)
-
-                    -- No diags > no diags means no change is necessary.
-                    return diags_contain_pos, diags_contain_pos, false
                 end)
-            end),
+            end,
         })
 
         api.nvim_create_autocmd("InsertEnter", {

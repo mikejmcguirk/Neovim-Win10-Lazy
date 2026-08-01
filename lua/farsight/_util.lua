@@ -47,6 +47,8 @@ local function setup_repeat_tracking()
     did_setup_repeat_tracking = true
 end
 
+setup_repeat_tracking()
+
 ---@param ns uinteger
 ---@param win uinteger
 ---@param group uinteger
@@ -66,17 +68,14 @@ function M.dim_set_ns_and_extmarks(ns, win, group, priority, range, buf)
     -- consistently draw multi-line highlight extmarks only within namespace window scope.
     local start_row = range[1]
     local end_row = range[3]
+    extmark_opts.end_row = end_row
+    extmark_opts.end_col = range[4]
     if start_row == end_row then
-        extmark_opts.end_row = end_row
-        extmark_opts.end_col = range[4]
         api.nvim_buf_set_extmark(buf, ns, start_row, range[2], extmark_opts)
         return
     end
 
-    extmark_opts.end_row = end_row
-    extmark_opts.end_col = range[4]
     api.nvim_buf_set_extmark(buf, ns, end_row, 0, extmark_opts)
-
     extmark_opts.hl_eol = true
     extmark_opts.end_row = start_row + 1
     extmark_opts.end_col = nil
@@ -87,8 +86,6 @@ function M.dim_set_ns_and_extmarks(ns, win, group, priority, range, buf)
         api.nvim_buf_set_extmark(buf, ns, i, 0, extmark_opts)
     end
 end
-
-setup_repeat_tracking()
 
 ---@param win uinteger Assumes `win` is current win.
 ---@param buf uinteger

@@ -20,9 +20,9 @@ local function state_try_res_cache_as_current()
     if res_cached ~= nil then
         state_res_current = res_cached
         return true
+    else
+        return false
     end
-
-    return false
 end
 
 ---@param text string
@@ -420,9 +420,7 @@ function M.live(win, buf, upward, ctx)
         api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
     end
 
-    pos_ext[1], pos_ext[2] =
-        require("farsight._util").ensure_state_for_omode(win, buf, pos_ext[1], pos_ext[2])
-
+    pos_ext[1], pos_ext[2] = _util.ensure_state_for_omode(win, buf, pos_ext[1], pos_ext[2])
     local pos = require("nvim-tools.pos").ext_to_mark_pos(pos_ext)
     api.nvim_win_set_cursor(win, pos)
     local unfold = ctx.unfold

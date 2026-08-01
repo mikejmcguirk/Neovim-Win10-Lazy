@@ -84,6 +84,11 @@
 
 - [ ] API to re-enter previous continuation mode
 
+- [ ] The current continuation mode exit conditions poorly support cases where you want to jump to a result, make a small edit, then go to the next one.
+  - [ ] Problem: If you allow making changes in continuation mode, you would have to potentially rebuild the whole display
+  - [ ] Problem: Even if you could support breaking continutation mode wtih `i` but not `r`, that might be a confusing behavior
+  - You could have a resume continuation mode key, but then you have to do that then the single character, which is the same amount of keystrokes as redoing the search. So you either need to be more specific about when you leave continuation mode or you need a "resume and jump to next" function.
+
 #### LIVE:
 
 - [ ] Handle buf versioning in case autocmds change the buffer

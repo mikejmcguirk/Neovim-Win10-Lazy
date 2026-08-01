@@ -2885,7 +2885,6 @@ function M.i_filter_map_to(t, f, limit)
     require("nvim-tools._table").i_filter_map_do(#t, t, f, ret, limit)
     return ret
 end
--- LOW: Add limit.
 
 ---If `t1` is longer than `t2`, any additional items in `t1` will be ignored.
 ---@generic T, U

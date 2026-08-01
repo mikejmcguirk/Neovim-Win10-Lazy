@@ -21,3 +21,6 @@
     * This idea also feels fundamentally goofy
 
 - [ ] The gF text-tool function needs to be able to handle multiple lines in visual mode
+
+- [ ] Function to create new markdown tables. Should be able to specify rows and cols. Should also be able to work as a double-count operator (`3<foo>3j` or something, though it's hard with horizontal and vertical motions to keep it straight. Would be perfectly find as a cmd or something taking user input)
+- [ ] Convert between csv and markdown tables

@@ -40,5 +40,24 @@ function M.ll_ensure_qf_id_or_echo(qf_id, silent)
 
     return false
 end
+-- TODO: yeet. Failed experiment. Harder to reason about than the extra line of code.
+
+---@param reuse_title boolean
+---@param src_win uinteger?
+---@param title string
+---@return ("a"|"f"|"r"|"u"|" "), uinteger
+function M.set_nr_resolve(reuse_title, src_win, title)
+    local ntq = require("nvim-tools.quickfix")
+    if not reuse_title then
+        return " ", ntq.get_list(src_win, { nr = "$" }).nr
+    end
+
+    local diag_nr = ntq.find_list_with_title(src_win, title)
+    if diag_nr then
+        return "u", diag_nr
+    else
+        return " ", ntq.get_list(src_win, { nr = "$" }).nr
+    end
+end
 
 return M

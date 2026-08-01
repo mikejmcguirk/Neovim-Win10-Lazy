@@ -53,7 +53,6 @@ end
 ---@class qf-rancher.system.Ctx
 ---@field action "a"|"f"|"r"|"u"|" "
 ---@field item_type string
----@field reuse_title boolean
 ---@field sort fun(a:vim.quickfix.entry, b:vim.quickfix.entry): boolean
 
 ---@param src_win integer|nil
