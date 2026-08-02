@@ -367,15 +367,7 @@ local M = {
 
                         local row = pos_ext[1]
                         local col = pos_ext[2]
-
-                        -- TODO: Remove this once we know what's going on
-                        for _, d in ipairs(ev_diags) do
-                            if type(d) ~= "table" then
-                                error(vim.inspect(ev_diags))
-                            end
-                        end
-
-                        local diags_contain_pos = ntt.any(ev_diags, function(diagnostic)
+                        local diags_contain_pos = ntt.i_any(ev_diags, function(diagnostic)
                             return diagnostic_contains_pos(row, col, diagnostic)
                         end)
 
