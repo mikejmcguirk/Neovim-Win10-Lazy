@@ -1,3 +1,4 @@
+local api = vim.api
 local fn = vim.fn
 
 local M = {}
@@ -147,6 +148,19 @@ function M.clear_list(src_win, list_nr)
     local what = { nr = nr, context = {}, items = {}, quickfixtextfunc = "", title = "" }
     local action = "r"
     return M.set_result_resolve(M.set_list(src_win, action, what), src_win, nr, action)
+end
+
+---Assumes the cursor is in a list win.
+---@param src_win integer|nil
+---@return boolean, string, vim.quickfix.entry
+function M.get_item_under_cursor(src_win)
+    local idx = api.nvim_win_get_cursor(0)[1]
+    local items = M.get_list(src_win, { nr = 0, idx = idx, items = true }).items
+    if #items >= 1 then
+        return true, "", items[1]
+    else
+        return false, "List is empty", {}
+    end
 end
 
 return M

@@ -232,6 +232,19 @@ function M.cmp_(a, b)
     return e_e * -4
 end
 
+---Converts an evex range (1,1,1,1 end-exclusive) to API (0,0,0,0 end-exclusive)
+---@param range [uinteger, uinteger, uinteger, uinteger] Modified in place!
+---@return [uinteger, uinteger, uinteger, uinteger] Reference to `range`.
+function M.evex_to_api(range)
+    range[1] = range[1] - 1
+    range[2] = range[2] - 1
+    range[3] = range[3] - 1
+    range[4] = range[4] - 1
+    return range
+end
+-- TODO: Need consistent naming convention between pos and range to distinguish an output that
+-- produces something new vs. a function that edits a table in place.
+
 ---@param pos_1 string
 ---@param pos_2 string
 ---@param mode? string
@@ -288,70 +301,80 @@ function M.eval_to_ts(eval_range, buf)
     eval_range[3] = fin_row_0
 end
 
----@param lnum integer 1 indexed
----@param col integer 0 for omitted, or 1 indexed, inclusive
----@param end_lnum integer 0 for omitted, or 1 indexed
----@param end_col integer 0 for omitted, or 1 indexed, exclusive
----@param vcol 0|1
----@param bufnr integer
----@return Range4 1,1,1,1 indexed, end exclusive
-function M.resolve_raw_qf(lnum, col, end_lnum, end_col, vcol, bufnr)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("lnum", lnum, is_uint)
-    vim.validate("col", col, is_uint)
-    vim.validate("end_lnum", end_lnum, is_uint)
-    vim.validate("end_col", end_col, is_uint)
-    vim.validate("bufnr", bufnr, is_uint)
-    vim.validate("vcol", vcol, function()
-        return vcol == 0 or vcol == 1
-    end)
+---@param end_col uinteger 0 for omitted, or 1 indexed, exclusive
+---@param end_line string
+---@param row_1 uinteger
+---@param end_row_1 uinteger
+---@param charlen uinteger
+---@param col_1 uinteger
+---@return uinteger 1 indexed, exclusive
+local function qf_end_col_get(end_col, end_line, row_1, end_row_1, charlen, col_1)
+    local end_line_len = #end_line
+    if end_line_len == 0 then
+        return 1
+    end
 
-    local line_count = api.nvim_buf_line_count(bufnr)
+    local end_idx_ = #end_line + 1
+    if end_col == 0 then
+        return end_idx_
+    end
+
+    local end_col_1_ = math.min(end_col, end_idx_)
+    if row_1 ~= end_row_1 then
+        return end_col_1_
+    end
+
+    local charidx = vim.call("charidx", end_line, col_1 - 1, 1)
+    local next_byteidx = charidx < charlen and vim.call("byteidx", end_line, charidx + 1)
+        or #end_line
+
+    return math.max(end_col_1_, next_byteidx + 1)
+end
+
+---@param col uinteger 0 for omitted, or 1 indexed, inclusive
+---@param vcol 0|1
+---@param line string
+---@param charlen uinteger
+---@return uinteger 1 indexed
+local function qf_col_get(col, vcol, line, charlen)
+    if col == 0 then
+        return 1
+    end
+
+    if vcol == 0 then
+        return math.min(col, #line)
+    end
+
+    local ntv = require("nvim-tools.vcol")
+    local col_0, _, _ = ntv.vcol_to_byte_bounds(line, col, charlen)
+    return col_0 + 1
+end
+
+---Treat qf ranges as end exclusive because:
+---- Vimgrep does this
+---- LSP diagnostics are end exclusive
+---@param lnum uinteger 1 indexed
+---@param col uinteger 0 for omitted, or 1 indexed, inclusive
+---@param end_lnum uinteger 0 for omitted, or 1 indexed
+---@param end_col uinteger 0 for omitted, or 1 indexed, exclusive
+---@param vcol 0|1
+---@param buf uinteger
+---@return [uinteger, uinteger, uinteger, uinteger] 1,1,1,1 indexed, end exclusive
+function M.qf_to_evex(lnum, col, end_lnum, end_col, vcol, buf)
+    local line_count = api.nvim_buf_line_count(buf)
     local row_1 = math.min(lnum, line_count)
 
-    local line = api.nvim_buf_get_lines(bufnr, row_1 - 1, row_1, false)[1]
-    local col_1
-    local charlen
-    local charidx
+    local line = api.nvim_buf_get_lines(buf, row_1 - 1, row_1, false)[1]
+    local charlen = vim.call("strcharlen", line)
+    local col_1 = qf_col_get(col, vcol, line, charlen)
 
-    if col > 0 then
-        if vcol == 0 then
-            col_1 = math.min(col, #line)
-        else
-            charlen = vim.call("strcharlen", line)
-            local ntv = require("nvim-tools.vcol")
-            local col_0
-            col_0, _, charidx = ntv.vcol_to_byte_bounds(line, col, charlen)
-            col_1 = col_0 + 1
-        end
-    else
-        col_1 = 1
-    end
+    local end_row_1 = math.min(math.max(end_lnum, row_1), line_count)
+    local end_line = end_row_1 == row_1 and line
+        or api.nvim_buf_get_lines(buf, end_row_1 - 1, end_row_1, false)[1]
 
-    local fin_row_1 = math.min(math.max(end_lnum, row_1), line_count)
-    local fin_line = fin_row_1 == row_1 and line
-        or api.nvim_buf_get_lines(bufnr, fin_row_1 - 1, fin_row_1, false)[1]
-
-    local fin_col_1_
-    if end_col > 0 then
-        fin_col_1_ = math.min(end_col, #fin_line + 1)
-        if row_1 == fin_row_1 then
-            charlen = charlen or vim.call("strcharlen", line)
-            charidx = charidx or vim.call("charidx", fin_line, col_1 - 1, 1)
-            local next_byteidx = charidx < charlen and vim.call("byteidx", fin_line, charidx + 1)
-                or #fin_line
-
-            fin_col_1_ = math.max(fin_col_1_, next_byteidx + 1)
-        end
-    else
-        fin_col_1_ = #fin_line + 1
-    end
-
-    return { row_1, col_1, fin_row_1, fin_col_1_ }
+    local end_col_1_ = qf_end_col_get(end_col, end_line, row_1, end_row_1, charlen, col_1)
+    return { row_1, col_1, end_row_1, end_col_1_ }
 end
--- TODO: Document why qf ranges are exclusive. I think if you go in the code for like vimgrep
--- it does that. And I think diagnostics are end-exclusive because they're LSP indexing. But
--- I keep forgetting why this is so it's better noted down.
 
 ---@param ranges nvim-tools.Range[]
 ---@return table<uinteger, true>

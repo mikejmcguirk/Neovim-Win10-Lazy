@@ -218,6 +218,9 @@ local schema = {
         do_zzze = "boolean",
         split_qf = qf_split_validate,
     },
+    preview = {
+        do_zzze = "boolean",
+    },
     sort = {
         goto_after = "boolean",
     },
@@ -285,6 +288,10 @@ local default_config = {
     nav = {
         do_zzze = true, ---@type boolean
         split_qf = "botright", ---@type qf-herder.window.qfSplit
+    },
+    ---@class qf-herder.preview.Cfg
+    preview = {
+        do_zzze = true, ---@type boolean
     },
     ---@class qf-herder.sort.Cfg
     sort = {

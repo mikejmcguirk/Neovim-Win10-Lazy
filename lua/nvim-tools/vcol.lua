@@ -15,11 +15,6 @@ local M = {}
 ---- Char idx
 ---@return integer, integer, integer
 function M.vcol_to_byte_bounds(line, vcol, charlen)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("line", line, "string")
-    vim.validate("vcol", vcol, is_uint)
-    vim.validate("charlen", charlen, is_uint)
-
     if #line == 0 then
         -- charidx 0 on a 0 length line returns 0
         return 0, 0, 0

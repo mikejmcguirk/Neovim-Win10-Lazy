@@ -28,12 +28,6 @@ local M = {}
 ---(default: `true`)
 ---@return integer
 function M.create_temp_buf(bh, bl, bt, ft, ma)
-    vim.validate("bh", bh, "string")
-    vim.validate("bl", bl, "boolean")
-    vim.validate("bt", bt, "string", true)
-    vim.validate("ft", ft, "string", true)
-    vim.validate("noma", ma, "boolean", true)
-
     local buf = api.nvim_create_buf(false, false)
     local buf_scope = { buf = buf }
 
