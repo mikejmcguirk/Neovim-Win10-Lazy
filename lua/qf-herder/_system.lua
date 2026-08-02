@@ -87,7 +87,8 @@ local function output_set_to_list(src_win, obj, what, ctx, cfg)
         end
     end
 
-    local what_set = ntt.merge_deep_right(what, entries)
+    local what_set = ntt.deepcopy(what)
+    what_set.items = entries
     local dest_nr = require("nvim-tools.quickfix").set_list_checked(src_win, ctx.action, what_set)
     if dest_nr < 1 then
         api.nvim_echo({ { "Unable to set list", "ErrorMsg" } }, true, {})
@@ -96,7 +97,8 @@ local function output_set_to_list(src_win, obj, what, ctx, cfg)
 
     local cfg_spk = cfg.spk
     local history_cfg = { spk = cfg_spk, update_list_wins = cfg.update_list_wins }
-    require("qf-herder._stack")._history(src_win, false, dest_nr, history_cfg)
+    local hist_silent = cfg.open_results and true or false
+    require("qf-herder._stack")._history(src_win, hist_silent, dest_nr, history_cfg)
     if cfg.open_results then
         if src_win ~= nil and orig_src_win ~= src_win then
             api.nvim_set_current_win(src_win)
@@ -114,13 +116,14 @@ local function output_set_to_list(src_win, obj, what, ctx, cfg)
     -- TODO: I think this is the right behavior but this is a disorganized way to do it,
     -- because we don't need the win_call if we opened results. I think we make a nav abstraction
     -- that does an optional win_call. Or maybe we accept that the abstraction always does it.
-    if src_win ~= nil then
-        api.nvim_win_call(src_win, function()
-            api.nvim_cmd({ cmd = "ll", count = 1, silent = true }, {})
-        end)
-    else
-        api.nvim_cmd({ cmd = "cc", count = 1, silent = true }, {})
-    end
+    -- TODO: This should be behind "open_results" and open list should be separate
+    -- if src_win ~= nil then
+    --     api.nvim_win_call(src_win, function()
+    --         api.nvim_cmd({ cmd = "ll", count = 1, mods = { silent = true } }, {})
+    --     end)
+    -- else
+    --     api.nvim_cmd({ cmd = "cc", count = 1, mods = { silent = true } }, {})
+    -- end
 end
 
 ---@param src_win uinteger|nil

@@ -63,17 +63,16 @@ local function pattern_visual_get(short_mode)
     return false, "Empty selection"
 end
 
+---@param is_vmode boolean
 ---@param mode string
 ---@param name string
 ---@param regex boolean
----@return boolean, string, boolean
-local function pattern_get(mode, name, regex)
-    if require("nvim-tools.misc").is_vmode(mode) then
-        local ok, err = pattern_visual_get(string.sub(mode, 1, 1))
-        return ok, err, true
+---@return boolean, string
+local function pattern_get(is_vmode, mode, name, regex)
+    if is_vmode then
+        return pattern_visual_get(string.sub(mode, 1, 1))
     else
-        local ok, err = require("nvim-tools.ui").input({ prompt = prompt_resolve(name, regex) })
-        return ok, err, false
+        return require("nvim-tools.ui").input({ prompt = prompt_resolve(name, regex) })
     end
 end
 
@@ -87,6 +86,11 @@ local M = {}
 ---@param f fun(a:vim.quickfix.entry, b:vim.quickfix.entry): boolean
 ---@param cfg qf-herder.grep.Cfg
 function M.rg(src_win, locations, name, regex, item_type, f, cfg)
+    if fn.executable("rg") ~= 1 then
+        api.nvim_echo({ { "rg is not executable", "WarningMsg" } }, false, {})
+        return
+    end
+
     if src_win ~= nil and fn.getloclist(src_win, { id = 0 }).id == 0 then
         api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
         return
@@ -97,7 +101,9 @@ function M.rg(src_win, locations, name, regex, item_type, f, cfg)
         return
     end
 
-    local ok_p, pattern, is_vmode = pattern_get(api.nvim_get_mode().mode, name, regex)
+    local mode = api.nvim_get_mode().mode
+    local is_vmode = require("nvim-tools.misc").is_vmode(mode)
+    local ok_p, pattern = pattern_get(is_vmode, mode, name, regex)
     if not (ok_p and #pattern > 0) then
         api.nvim_echo({ { pattern, "WarningMsg" } }, true, {})
         return
@@ -105,10 +111,7 @@ function M.rg(src_win, locations, name, regex, item_type, f, cfg)
 
     local grep_parts = get_full_parts_rg(pattern, cfg.case, regex, locations)
     local herder = require("qf-herder")
-    local _, _, ok, sys_cfg, err = herder._config_merged_from_win(src_win or 0, "system")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-    end
+    local _, _, sys_cfg = herder._config_merged_from_win(src_win or 0, "system")
 
     local what = {}
     what.title = name .. " " .. table.concat(base_cmd, " ") .. "  " .. pattern

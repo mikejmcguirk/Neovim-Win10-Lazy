@@ -177,6 +177,15 @@ local function is_lower_string(val)
     return ok, ok and "" or validator_err_make("string", val)
 end
 
+local cases = { "smart", "ignore", "" }
+
+---@param val any
+---@return boolean, string
+local function case_validate(val)
+    local ok = ntt.i_includes(cases, val)
+    return ok, ok and "" or validator_err_make(vim.inspect(cases), val)
+end
+
 ---@class qf-herder.config.Schema
 local schema = {
     auto_open_changes = "boolean",
@@ -187,6 +196,11 @@ local schema = {
         open_results = "boolean",
         reuse_title = "boolean",
         title = "string",
+    },
+    grep = {
+        case = case_validate,
+        reuse_title = "boolean",
+        sync = "boolean",
     },
     keymap = {
         key_diags = is_lower_string,
@@ -797,13 +811,14 @@ end
 ---@return string[]
 local function bufs_get_std_listed()
     local bufs = ntt.i_keep(api.nvim_list_bufs(), function(buf)
-        return bt == "" and api.nvim_get_option_value("bl", { buf = buf })
+        local buf_scope = { buf = buf }
+        local bt = api.nvim_get_option_value("bt", buf_scope)
+        return bt == "" and api.nvim_get_option_value("bl", buf_scope)
     end)
 
     ---@diagnostic disable-next-line: return-type-mismatch
     return ntt.i_filter_map_to(bufs, function(buf)
-        local bufname = api.nvim_buf_get_name(buf)
-        return bufname
+        return api.nvim_buf_get_name(buf)
     end)
 end
 
