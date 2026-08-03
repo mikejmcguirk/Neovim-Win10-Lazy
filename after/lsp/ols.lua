@@ -28,7 +28,52 @@ local checker_args = {
     "-vet-using-stmt",
 }
 
+local util = require("lspconfig.util")
+
+local function default_odin_root()
+    local odin_root = os.getenv("ODIN_ROOT")
+    if odin_root and odin_root ~= "" then
+        return vim.fs.normalize(odin_root)
+    end
+
+    local result = vim.system({ "odin", "root" }, { text = true }):wait()
+    if result.code == 0 and result.stdout then
+        local stdout = vim.trim(result.stdout)
+        if stdout ~= "" then
+            return vim.fs.normalize(stdout)
+        end
+    end
+
+    return nil
+end
+
+local function is_library(fname)
+    local odin_root = default_odin_root()
+    if not odin_root then
+        return nil
+    end
+
+    fname = vim.fs.normalize(fname)
+    for _, dir in ipairs({ "base", "core", "vendor" }) do
+        local item = vim.fs.joinpath(odin_root, dir)
+        if vim.fs.relpath(item, fname) then
+            local clients = vim.lsp.get_clients({ name = "ols" })
+            return #clients > 0 and clients[#clients].config.root_dir or nil
+        end
+    end
+end
+
 return {
+    root_dir = function(bufnr, on_dir)
+        local fname = vim.api.nvim_buf_get_name(bufnr)
+        local reused_dir = is_library(fname)
+        if reused_dir then
+            on_dir(reused_dir)
+            return
+        end
+
+        on_dir(util.root_pattern("ols.json", ".git", "*.odin")(fname))
+    end,
     init_options = {
         checker_args = table.concat(checker_args, " "),
         checker_skip_packages = {},
