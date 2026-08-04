@@ -2,6 +2,8 @@ local api = vim.api
 local fn = vim.fn
 local uv = vim.uv
 
+local ntt = require("nvim-tools.table")
+
 -----------------
 -- MARK: State --
 -----------------
@@ -22,8 +24,6 @@ end
 ---------------------
 -- MARK: Old Stuff --
 ---------------------
-
-local ru = Qfr_Defer_Require("qf-rancher.util") ---@type qf-rancher.Util
 
 local set_opt = api.nvim_set_option_value
 
@@ -67,20 +67,17 @@ end
 
 ---@return boolean
 local function has_list_wins()
-    local tabpages = api.nvim_list_tabpages()
-    local qf_wins = ru._find_qf_wins(tabpages)
-    if #qf_wins > 0 then
-        return true
-    end
-
-    local ll_wins = ru._find_ll_wins({ tabpages = tabpages })
-    return #ll_wins > 0
+    return ntt.i_any(api.nvim_list_tabpages(), function(tabpage)
+        return ntt.i_any(api.nvim_tabpage_list_wins(tabpage), function(win)
+            local wintype = vim.call("win_gettype", win)
+            return wintype == "quickfix" or wintype == "loclist"
+        end)
+    end)
 end
 
 ---@return nil
 local function checked_session_clear()
-    local has_lists = has_list_wins()
-    if not has_lists then
+    if not has_list_wins() then
         clear_session_data()
     end
 end
