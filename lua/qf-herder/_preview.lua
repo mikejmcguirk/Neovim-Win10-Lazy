@@ -2,67 +2,100 @@ local api = vim.api
 local fn = vim.fn
 local uv = vim.uv
 
+local ntb = require("nvim-tools.buf")
 local ntt = require("nvim-tools.table")
+local ntq = require("nvim-tools.quickfix")
 
 -----------------
 -- MARK: State --
 -----------------
 
-local state_pvw_win = -1
+local state_bufs = {} ---@type table<uinteger, uinteger>
+local state_extmarks = {} ---@type table<uinteger, uinteger>
 local state_list_win = -1
-local state_timer = assert(uv.new_timer)
+local state_pvw_win = -1
+local state_queued_update = false
+---@diagnostic disable-next-line: unnecessary-assert, call-non-callable
+local state_timer = assert(uv.new_timer())
 
+---@return uinteger|nil
 local function pvw_win_find()
-    local ntt = require("nvim-tools.table")
-    local pvw_win = ntt.i_find(api.nvim_tabpage_list_wins(0), function(win)
+    local pvw_win, _ = ntt.i_find(api.nvim_tabpage_list_wins(0), function(win)
         return api.nvim_get_option_value("pvw", { win = win })
     end)
 
-    state_pvw_win = pvw_win ~= nil and pvw_win or -1
+    return pvw_win
 end
 
----------------------
--- MARK: Old Stuff --
----------------------
-
-local set_opt = api.nvim_set_option_value
-
-local bufs = {} ---@type table<uinteger, uinteger>
-local extmarks = {}
-local parsers = {}
-
--- TODO: change back to rancher
-local GROUP_NAME = "qf-herder-preview"
-local group = api.nvim_create_augroup(GROUP_NAME, {})
-
-local hl_ns = api.nvim_create_namespace("qfr-preview-hl")
-local HL_GROUP_STR = "QfRancherPreviewRange"
-local cur_hl = api.nvim_get_hl(0, { name = HL_GROUP_STR })
-local cur_hl_keys = vim.tbl_keys(cur_hl)
-if (not cur_hl) or #cur_hl_keys == 0 then
-    api.nvim_set_hl(0, HL_GROUP_STR, { link = "CurSearch" })
-end
-
-local timer = nil ---@type uv.uv_timer_t|nil
-local queued_update = false
-
----@return nil
-local function clear_session_data()
-    -- MID: Could be useful to have an opt to keep caches for bufs over X integer file size
-    for _, buf in pairs(bufs) do
-        api.nvim_buf_delete(buf, { force = true })
+---@param buf uinteger
+---@return uinteger?
+local function cached_buf_get(buf)
+    local cached_buf = state_bufs[buf]
+    if cached_buf == nil then
+        return
     end
 
-    bufs = {}
-    extmarks = {}
+    if not api.nvim_buf_is_valid(cached_buf) then
+        state_bufs[buf] = nil
+    else
+        return cached_buf
+    end
+end
+
+local function has_valid_pvw_win_state()
+    if state_pvw_win < 100 then
+        return false
+    end
+
+    local is_in_list_win = api.nvim_get_current_win() == state_list_win
+    return api.nvim_win_is_valid(state_pvw_win) and is_in_list_win
+end
+
+---------------------------------
+-- MARK: Namespaces and Groups --
+---------------------------------
+
+-- TODO: change back to rancher
+local group = api.nvim_create_augroup("qf-herder-preview", {})
+-- TODO: change back to rancher
+local PVW_FT = "qf-herder-preview"
+
+-- TODO: change back to rancher
+local hl_ns = api.nvim_create_namespace("qf-herder.preview")
+local HL_GROUP_STR = "QfRancherPreviewRange"
+do
+    -- TODO: Do this in `/plugin`
+    api.nvim_set_hl(0, HL_GROUP_STR, { default = true, link = "CurSearch" })
+end
+
+local entry_hl = api.nvim_get_hl_id_by_name(HL_GROUP_STR)
+
+----------------------------
+-- MARK: State Management --
+----------------------------
+
+local function state_clear()
+    state_queued_update = false
+    if uv.is_active(state_timer) then
+        uv.timer_stop(state_timer)
+    end
 
     local autocmds = api.nvim_get_autocmds({ group = group })
     for _, autocmd in ipairs(autocmds) do
         local id = autocmd.id
         if id ~= nil then
-            api.nvim_del_autocmd(autocmd.id)
+            api.nvim_del_autocmd(id)
         end
     end
+
+    state_list_win = -1
+    state_pvw_win = -1
+    for _, buf in pairs(state_bufs) do
+        api.nvim_buf_delete(buf, { force = true })
+    end
+
+    ntt.clear(state_bufs)
+    ntt.clear(state_extmarks)
 end
 
 ---@return boolean
@@ -76,24 +109,25 @@ local function has_list_wins()
 end
 
 ---@return nil
-local function checked_session_clear()
+local function state_clear_checked()
     if not has_list_wins() then
-        clear_session_data()
+        state_clear()
     end
 end
 
+--------------------------------
+-- MARK: Preview Buf Creation --
+--------------------------------
+
 ---@return uinteger
 local function create_fallback_buf()
-    local ntb = require("nvim-tools.buf")
-    local buf = ntb.create_temp_buf("wipe", false, "nofile", "qf-rancher-preview", true)
-    local lines = { "No valid bufnr for this list entry" }
-    api.nvim_buf_set_lines(buf, 0, 0, false, lines)
-    set_opt("ma", false, { buf = buf })
-
+    local buf = ntb.create_temp_buf("wipe", false, "nofile", PVW_FT, true)
+    api.nvim_buf_set_lines(buf, 0, 0, false, { "No valid bufnr for this list entry" })
+    api.nvim_set_option_value("ma", false, { buf = buf })
     return buf
 end
 
----@param buf integer
+---@param buf uinteger
 ---@return string[]
 local function buf_get_lines(buf)
     if not api.nvim_buf_is_valid(buf) then
@@ -109,17 +143,17 @@ local function buf_get_lines(buf)
     if ok and text ~= nil then
         return vim.split(text, "\n")
     else
-        return { "Unable to read lines for bufnr " .. buf }
+        return { "Unable to read lines for buffer " .. buf }
     end
 end
 
----@param item_buf integer
----@param preview_buf integer
-local function buf_update_lines(item_buf, preview_buf)
+---@param item_buf uinteger
+---@param preview_buf uinteger
+local function preview_buf_set_lines_from_item_buf(item_buf, preview_buf)
     local lines = buf_get_lines(item_buf)
-    set_opt("modifiable", true, { buf = preview_buf })
+    api.nvim_set_option_value("modifiable", true, { buf = preview_buf })
     api.nvim_buf_set_lines(preview_buf, 0, -1, false, lines)
-    set_opt("modifiable", false, { buf = preview_buf })
+    api.nvim_set_option_value("modifiable", false, { buf = preview_buf })
 end
 
 ---@param buf uinteger
@@ -129,75 +163,84 @@ local function buf_mtime_get(buf)
     return stat and stat.mtime.sec or 0
 end
 
----@param item_buf integer
----@param preview_buf integer
----@return nil
-local function update_preview_buf_version(item_buf, preview_buf)
-    local src_changedtick = api.nvim_buf_get_changedtick(item_buf)
-    api.nvim_buf_set_var(preview_buf, "src_changedtick", src_changedtick)
-    local src_mtime = buf_mtime_get(item_buf)
-    api.nvim_buf_set_var(preview_buf, "src_mtime", src_mtime)
+---@param item_buf uinteger
+---@param preview_buf uinteger
+---@param item_buf_version uinteger?
+---@param item_buf_mtime uinteger?
+local function preview_buf_set_version(item_buf, preview_buf, item_buf_version, item_buf_mtime)
+    item_buf_version = item_buf_version or vim.lsp.util.buf_versions[item_buf]
+    api.nvim_buf_set_var(preview_buf, "src_version", item_buf_version)
+    item_buf_mtime = item_buf_mtime or buf_mtime_get(item_buf)
+    api.nvim_buf_set_var(preview_buf, "src_mtime", item_buf_mtime)
 end
--- TODO: Should use buf_version instead of changedtick
 
 ---@param ft string
 ---@return string|nil
 local function get_parsable_lang(ft)
-    local lang = vim.treesitter.language.get_lang(ft) or ft
-    if parsers[lang] then
-        return lang
-    end
-
-    -- Credit fzflua for this method
-    local has_parser = vim.treesitter.language.add(lang)
-    if has_parser then
-        parsers[lang] = true
-        return lang
-    end
+    local ts_language = vim.treesitter.language
+    -- Credit fzf-lua for this method
+    local lang = ts_language.get_lang(ft) or ft
+    return ts_language.add(lang) and lang or nil
 end
 
----@param item_buf integer
+---@param item_buf uinteger
 ---@return string
 local function get_item_buf_ft(item_buf)
     local item_ft = api.nvim_get_option_value("ft", { buf = item_buf })
-    if item_ft ~= "" then
-        return item_ft
-    else
-        return vim.filetype.match({ buf = item_buf }) or ""
-    end
+    return item_ft ~= "" and item_ft or vim.filetype.match({ buf = item_buf }) or ""
 end
 
----@param item_buf integer
----@return integer
-local function create_preview_buf_from_item(item_buf)
-    local lines = buf_get_lines(item_buf)
-    local ntb = require("nvim-tools.buf")
+---@param item_buf uinteger
+---@return uinteger
+local function preview_buf_from_item_create(item_buf)
     local preview_buf = ntb.create_temp_buf(nil, false, "nofile", "qf-rancher-preview", true)
-    api.nvim_buf_set_lines(preview_buf, 0, 0, false, lines)
-    set_opt("ma", false, { buf = preview_buf })
-
-    update_preview_buf_version(item_buf, preview_buf)
+    preview_buf_set_lines_from_item_buf(item_buf, preview_buf)
+    preview_buf_set_version(item_buf, preview_buf)
 
     local item_ft = get_item_buf_ft(item_buf)
     local lang = get_parsable_lang(item_ft)
     if lang then
         vim.treesitter.start(preview_buf, lang)
     else
-        set_opt("syntax", item_ft, { buf = preview_buf })
+        api.nvim_set_option_value("syntax", item_ft, { buf = preview_buf })
     end
 
     return preview_buf
 end
 
----@param preview_buf integer
+---@param item_buf uinteger?
+---@return uinteger
+local function get_preview_create(item_buf)
+    if item_buf == nil or not api.nvim_buf_is_valid(item_buf) then
+        return create_fallback_buf()
+    end
+
+    local cached_buf = cached_buf_get(item_buf)
+    if cached_buf == nil then
+        local preview_buf = preview_buf_from_item_create(item_buf)
+        state_bufs[item_buf] = preview_buf
+        return preview_buf
+    end
+
+    local item_buf_version = vim.lsp.util.buf_versions[item_buf]
+    local item_buf_mtime = buf_mtime_get(item_buf)
+    local pvw_buf_version = api.nvim_buf_get_var(cached_buf, "src_version")
+    local pvw_buf_mtime = api.nvim_buf_get_var(cached_buf, "src_mtime")
+    if item_buf_version > pvw_buf_version or item_buf_mtime > pvw_buf_mtime then
+        preview_buf_set_version(item_buf, cached_buf, item_buf_version, item_buf_mtime)
+        preview_buf_set_lines_from_item_buf(item_buf, cached_buf)
+    end
+
+    return cached_buf
+end
+
+---@param preview_buf uinteger
 ---@param range_api [uinteger, uinteger, uinteger, uinteger] 0,0,0,0 indexed, end-exclusive
----@return nil
 local function set_err_range_extmark(preview_buf, range_api)
-    extmarks[preview_buf] =
+    state_extmarks[preview_buf] =
         api.nvim_buf_set_extmark(preview_buf, hl_ns, range_api[1], range_api[2], {
-            -- TODO: store an int variable in the file for this. Also use herder naming for now
-            hl_group = "QfRancherPreviewRange",
-            id = extmarks[preview_buf],
+            hl_group = entry_hl,
+            id = state_extmarks[preview_buf],
             end_row = range_api[3],
             end_col = range_api[4],
             priority = 200,
@@ -205,98 +248,90 @@ local function set_err_range_extmark(preview_buf, range_api)
         })
 end
 
----@param item vim.quickfix.entry
----@return integer
-local function get_preview_buf(item)
-    local item_buf = item.bufnr
-    if (not item_buf) or not api.nvim_buf_is_valid(item_buf) then
-        return create_fallback_buf()
-    end
-
-    local cache_buf = bufs[item_buf]
-    if cache_buf then
-        if not api.nvim_buf_is_valid(cache_buf) then
-            return create_fallback_buf()
-        end
-
-        local src_changedtick = api.nvim_buf_get_changedtick(item_buf)
-        local old_changedtick = vim.b[cache_buf].src_changedtick
-        local changedtick_updated = src_changedtick ~= old_changedtick
-        local src_mtime = buf_mtime_get(item_buf)
-        local old_mtime = vim.b[cache_buf].src_mtime
-        local mtime_updated = src_mtime ~= old_mtime
-
-        if changedtick_updated or mtime_updated then
-            api.nvim_buf_set_var(cache_buf, "src_changedtick", src_changedtick)
-            api.nvim_buf_set_var(cache_buf, "src_mtime", src_mtime)
-            buf_update_lines(item_buf, cache_buf)
-        end
-    else
-        cache_buf = create_preview_buf_from_item(item_buf)
-        bufs[item_buf] = cache_buf
-    end
-
-    return bufs[item_buf]
-end
--- TODO: This feels disorganized.
-
 ---@param entry vim.quickfix.entry
----@param preview_buf uinteger
 ---@return [uinteger, uinteger, uinteger, uinteger] 0,0,0,0 indexed, end-exclusive
-local function entry_range_api_get(entry, preview_buf)
-    local lnum = entry.lnum
-    local col = entry.col
-    local end_lnum = entry.end_lnum
-    local end_col = entry.end_col
-    local vcol = entry.vcol
-
+local function entry_range_api_get(entry)
     local ntr = require("nvim-tools.range")
     ---@diagnostic disable-next-line: param-type-mismatch
-    return ntr.evex_to_api(ntr.qf_to_evex(lnum, col, end_lnum, end_col, vcol, preview_buf))
+    return ntr.qf_to_api(ntr.qf_from_entry(entry))
 end
 
--- TODO: Make sure all calls of this get the correct cfg somehow
----@param cfg qf-herder.preview.Cfg
-local function update_preview_win_buf(cfg)
-    if timer and timer:get_due_in() > 0 then
-        queued_update = true
-        return
-    end
-
-    if state_pvw_win < 1000 then
-        return
-    end
-
-    local cur_win = api.nvim_get_current_win()
-    if cur_win ~= state_list_win then
-        -- TODO: Should probably do teardown
-        return
-    end
-
-    local wintype = fn.win_gettype(state_list_win)
-    local src_win = wintype == "loclist" and state_list_win or nil
-    local ok, err, entry = require("nvim-tools.quickfix").get_item_under_cursor(src_win)
-    if not ok then
-        api.nvim_echo({ { err, "WarningMsg" } }, false, {})
-        return
-    end
-
-    local preview_buf = get_preview_buf(entry)
-    local qf_range_api = entry_range_api_get(entry, preview_buf)
+---@param entry vim.quickfix.entry
+---@return uinteger, [uinteger, uinteger, uinteger, uinteger]
+local function preview_buf_get(entry)
+    local preview_buf = get_preview_create(entry.bufnr)
+    local qf_range_api = entry_range_api_get(entry)
     set_err_range_extmark(preview_buf, qf_range_api)
+    return preview_buf, qf_range_api
+end
 
-    api.nvim_win_set_buf(state_pvw_win, preview_buf)
+-------------------------------
+-- MARK: Preview Win Opening --
+-------------------------------
 
+---@param preview_win integer
+local function set_preview_win_opts(preview_win)
+    local preview_scope = { win = preview_win }
+
+    api.nvim_set_option_value("cc", "", preview_scope)
+    api.nvim_set_option_value("cul", true, preview_scope)
+
+    api.nvim_set_option_value("fdc", "0", preview_scope)
+    api.nvim_set_option_value("fdm", "manual", preview_scope)
+
+    api.nvim_set_option_value("list", false, preview_scope)
+
+    api.nvim_set_option_value("nu", true, preview_scope)
+    api.nvim_set_option_value("rnu", false, preview_scope)
+    api.nvim_set_option_value("scl", "no", preview_scope)
+    api.nvim_set_option_value("stc", "", preview_scope)
+
+    api.nvim_set_option_value("spell", false, preview_scope)
+
+    api.nvim_set_option_value("so", 6, preview_scope)
+    api.nvim_set_option_value("siso", 6, preview_scope)
+
+    api.nvim_win_set_config(preview_win, { focusable = false })
+end
+
+---@param qf_range_api [uinteger, uinteger, uinteger, uinteger]
+---@param cfg qf-herder.preview.Cfg
+local function pvw_pos_set(qf_range_api, cfg)
     local ntw = require("nvim-tools.win")
     ntw.protected_set_cursor(state_pvw_win, { qf_range_api[1] + 1, qf_range_api[2] })
     if cfg.do_zzze then
         api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
         api.nvim_cmd({ cmd = "normal", args = { "ze" }, bang = true }, {})
     end
+end
+
+---@param cfg qf-herder.preview.Cfg
+local function update_preview_win_buf(cfg)
+    if state_timer:get_due_in() > 0 then
+        state_queued_update = true
+        return
+    end
+
+    if not has_valid_pvw_win_state() then
+        state_clear_checked()
+        return
+    end
+
+    local wintype = fn.win_gettype(state_list_win)
+    local src_win = wintype == "loclist" and state_list_win or nil
+    local ok, err, entry = ntq.get_item_under_cursor(src_win)
+    if not ok then
+        api.nvim_echo({ { err, "WarningMsg" } }, false, {})
+        return
+    end
+
+    local preview_buf, qf_range_api = preview_buf_get(entry)
+    api.nvim_win_set_buf(state_pvw_win, preview_buf)
+    pvw_pos_set(qf_range_api, cfg)
 
     uv.timer_start(state_timer, 150, 0, function()
-        if queued_update then
-            queued_update = false
+        if state_queued_update then
+            state_queued_update = false
             vim.schedule(function()
                 update_preview_win_buf(cfg)
             end)
@@ -328,16 +363,17 @@ local function create_autocmds(cfg)
         callback = function()
             M.close_preview_win()
             vim.schedule(function()
-                checked_session_clear()
+                state_clear_checked()
             end)
         end,
     })
 
     api.nvim_create_autocmd("WinClosed", {
         group = group,
+        buffer = list_win_buf,
         callback = function()
             vim.schedule(function()
-                checked_session_clear()
+                state_clear_checked()
             end)
         end,
     })
@@ -364,29 +400,6 @@ local function create_autocmds(cfg)
     })
 end
 
----@param preview_win integer
-local function set_preview_win_opts(preview_win)
-    local preview_scope = { win = preview_win }
-
-    set_opt("cc", "", preview_scope)
-    set_opt("cul", true, preview_scope)
-
-    set_opt("fdc", "0", preview_scope)
-    set_opt("fdm", "manual", preview_scope)
-
-    set_opt("list", false, preview_scope)
-
-    set_opt("nu", true, preview_scope)
-    set_opt("rnu", false, preview_scope)
-    set_opt("scl", "no", preview_scope)
-    set_opt("stc", "", preview_scope)
-
-    set_opt("spell", false, preview_scope)
-
-    set_opt("so", 6, preview_scope)
-    set_opt("siso", 6, preview_scope)
-end
-
 ---@param cfg qf-herder.preview.Cfg
 local function pvw_open(cfg)
     local list_win = api.nvim_get_current_win()
@@ -396,54 +409,66 @@ local function pvw_open(cfg)
         return
     end
 
-    local src_win = wintype == "loclist" and list_win or nil
-    local ok, err, entry = require("nvim-tools.quickfix").get_item_under_cursor(src_win)
+    local ok, err, entry = ntq.get_item_under_cursor(wintype == "loclist" and list_win or nil)
     if not ok then
         api.nvim_echo({ { err, "WarningMsg" } }, false, {})
         return
     end
 
-    local preview_buf = get_preview_buf(entry)
-    local qf_range_api = entry_range_api_get(entry, preview_buf)
-    set_err_range_extmark(preview_buf, qf_range_api)
-
-    api.nvim_cmd({ cmd = "pbuf", args = { preview_buf } }, {})
-    pvw_win_find()
-    if state_pvw_win < 1000 then
-        -- TODO: Should provide a useful error
+    local preview_buf, qf_range_api = preview_buf_get(entry)
+    api.nvim_cmd({ cmd = "pbuf", args = { tostring(preview_buf) } }, {})
+    local pvw_win = pvw_win_find()
+    if pvw_win == nil or pvw_win < 1000 then
+        -- TODO: Should provide a meaningful error
         return
+    else
+        state_pvw_win = pvw_win
     end
 
     state_list_win = list_win
     -- MID: Should be possible to title the preview win here as well
     set_preview_win_opts(state_pvw_win)
-    local ntw = require("nvim-tools.win")
-    ntw.protected_set_cursor(state_pvw_win, { qf_range_api[1] + 1, qf_range_api[2] })
+    pvw_pos_set(qf_range_api, cfg)
+    create_autocmds(cfg)
 
-    if cfg.do_zzze then
-        api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
-        api.nvim_cmd({ cmd = "normal", args = { "ze" }, bang = true }, {})
-    end
-
-    create_autocmds()
     uv.timer_start(state_timer, 150, 0, function()
-        if queued_update then
-            queued_update = false
-            vim.schedule(update_preview_win_buf)
+        if state_queued_update then
+            state_queued_update = false
+            vim.schedule(function()
+                update_preview_win_buf(cfg)
+            end)
         end
     end)
 end
--- TODO: Lots of overlap with the update function.
 
----@param opts? qf-rancher.preview.OpenOpts
-function M.open_preview_win(opts)
-    if state_pvw_win < 1000 then
-        return pvw_open(opts)
+--------------------
+-- MARK: External --
+--------------------
+
+---@param cfg qf-herder.preview.Cfg
+function M.open_preview_win(cfg)
+    if state_pvw_win >= 1000 then
+        if api.nvim_win_is_valid(state_pvw_win) then
+            return
+        else
+            state_pvw_win = -1
+            state_list_win = -1
+        end
     end
+
+    local cur_pvw_win = pvw_win_find()
+    if cur_pvw_win ~= nil then
+        api.nvim_win_close(cur_pvw_win, true)
+    end
+
+    return pvw_open(cfg)
 end
 
 local function pvw_close()
-    api.nvim_win_close(state_pvw_win, true)
+    if state_pvw_win >= 1000 and api.nvim_win_is_valid(state_pvw_win) then
+        api.nvim_win_close(state_pvw_win, true)
+    end
+
     state_pvw_win = -1
     state_list_win = -1
 end
@@ -465,7 +490,8 @@ end
 
 return M
 
----@export Preview
+-- TODO: Since this opens an actual preview window, gotta account for that at all steps. Open I
+-- think does, but close and the other internals need to as well.
 
 -- PR: in win_config:
 -- - border does not contain bold

@@ -867,6 +867,36 @@ function M.grep.qf_tcd_regex(opts)
     grep_qf_tcd(true, opts)
 end
 
+---@param buf uinteger
+---@return string[]
+local function bcd_get(buf)
+    -- TODO-DEP: Remove `has()` when 0.14 comes out.
+    if fn.has("nvim-0.13") == 1 then
+        return { fn.getcwd(-1, -1, buf) }
+    else
+        return { fn.fnamemodify(api.nvim_buf_get_name(buf), ":h") }
+    end
+end
+
+---@param regex boolean
+---@param opts? qf-herder.grep.Opts
+local function grep_ll_bcd(regex, opts)
+    local _, buf, cfg = cfg_get_from_opts(opts, "grep")
+    local locations = bcd_get(buf)
+    local sort_fun = require("qf-herder._sort").fname_asc
+    require("qf-herder._grep").rg(nil, locations, "Cur Buf", regex, "", sort_fun, cfg)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.grep.ll_bcd_fixed(opts)
+    grep_ll_bcd(false, opts)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.grep.ll_bcd_regex(opts)
+    grep_ll_bcd(true, opts)
+end
+
 ---@class qf-herder.nav.Opts
 ---@field do_zzze? boolean
 

@@ -50,6 +50,7 @@ api.nvim_set_option_value("sel", "old", scope_global)
 
 api.nvim_set_option_value("ic", true, scope_global)
 api.nvim_set_option_value("is", false, scope_global)
+api.nvim_set_option_value("pvp", "height:21,width:107,border:bold")
 api.nvim_set_option_value("scs", true, scope_global)
 
 api.nvim_set_option_value("et", true, scope_global)

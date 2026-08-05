@@ -235,7 +235,7 @@ end
 ---Converts an evex range (1,1,1,1 end-exclusive) to API (0,0,0,0 end-exclusive)
 ---@param range [uinteger, uinteger, uinteger, uinteger] Modified in place!
 ---@return [uinteger, uinteger, uinteger, uinteger] Reference to `range`.
-function M.evex_to_api(range)
+function M.qf_to_api(range)
     range[1] = range[1] - 1
     range[2] = range[2] - 1
     range[3] = range[3] - 1
@@ -353,14 +353,23 @@ end
 ---Treat qf ranges as end exclusive because:
 ---- Vimgrep does this
 ---- LSP diagnostics are end exclusive
----@param lnum uinteger 1 indexed
----@param col uinteger 0 for omitted, or 1 indexed, inclusive
----@param end_lnum uinteger 0 for omitted, or 1 indexed
----@param end_col uinteger 0 for omitted, or 1 indexed, exclusive
----@param vcol 0|1
----@param buf uinteger
+---@param entry vim.quickfix.entry
 ---@return [uinteger, uinteger, uinteger, uinteger] 1,1,1,1 indexed, end exclusive
-function M.qf_to_evex(lnum, col, end_lnum, end_col, vcol, buf)
+function M.qf_from_entry(entry)
+    local lnum = entry.lnum or 1
+    local col = entry.col or 0
+    local end_lnum = entry.end_lnum or 0
+    local end_col = entry.end_col or 0
+    local buf = entry.bufnr
+    if buf == nil or buf < 1 then
+        col = math.max(col, 1)
+        end_lnum = math.max(end_lnum, lnum)
+        end_col = math.max(end_col, 1)
+        return { lnum, col, end_lnum, end_col }
+    end
+
+    local vcol = entry.vcol or 0
+    ---@cast vcol (0|1)
     local line_count = api.nvim_buf_line_count(buf)
     local row_1 = math.min(lnum, line_count)
 
