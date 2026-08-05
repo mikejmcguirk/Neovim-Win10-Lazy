@@ -197,6 +197,9 @@ local schema = {
         reuse_title = "boolean",
         title = "string",
     },
+    filter = {
+        goto_after = "boolean",
+    },
     grep = {
         case = case_validate,
         reuse_title = "boolean",
@@ -263,6 +266,10 @@ local default_config = {
         open_results = true, ---@type boolean
         reuse_title = true, ---@type boolean
         title = "Diagnostics", ---@type string
+    },
+    ---@class qf-herder.filter.Cfg
+    filter = {
+        goto_after = true, ---@type boolean
     },
     ---@class qf-herder.grep.Cfg
     grep = {
@@ -773,7 +780,68 @@ end
 
 -- TODO: Should the plurals be based on english grammar rules as they currently are?
 
-M.nav = {}
+M.filter = {}
+
+---@class qf-herder.filter.Opts
+---@field goto_after? boolean
+
+---@param count uinteger
+---@param name string
+---@param f fun(entry:vim.quickfix.entry, regex:vim.regex): boolean
+---@param opts? qf-herder.filter.Opts
+local function qf_filter_do(count, name, f, opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "filter")
+    require("qf-herder._filter").filter(nil, count, name, f, cfg)
+end
+
+---@param count uinteger
+---@param name string
+---@param f fun(entry:vim.quickfix.entry, regex:vim.regex): boolean
+---@param opts? qf-herder.filter.Opts
+local function ll_filter_do(count, name, f, opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "filter")
+    require("qf-herder._filter").filter(win, count, name, f, cfg)
+end
+
+---@param opts? qf-herder.filter.Opts
+function M.filter.qf_fname_keep(opts)
+    qf_filter_do(vim.v.count, "Fname", require("qf-herder._filter").fname_keep, opts)
+end
+
+---@param opts? qf-herder.filter.Opts
+function M.filter.qf_fname_discard(opts)
+    qf_filter_do(vim.v.count, "Fname", require("qf-herder._filter").fname_discard, opts)
+end
+
+---@param opts? qf-herder.filter.Opts
+function M.filter.ll_fname_keep(opts)
+    ll_filter_do(vim.v.count, "Fname", require("qf-herder._filter").fname_keep, opts)
+end
+
+---@param opts? qf-herder.filter.Opts
+function M.filter.ll_fname_discard(opts)
+    ll_filter_do(vim.v.count, "Fname", require("qf-herder._filter").fname_discard, opts)
+end
+
+---@param opts? qf-herder.filter.Opts
+function M.filter.qf_text_keep(opts)
+    qf_filter_do(vim.v.count, "Text", require("qf-herder._filter").text_keep, opts)
+end
+
+---@param opts? qf-herder.filter.Opts
+function M.filter.qf_text_discard(opts)
+    qf_filter_do(vim.v.count, "Text", require("qf-herder._filter").text_discard, opts)
+end
+
+---@param opts? qf-herder.filter.Opts
+function M.filter.ll_text_keep(opts)
+    ll_filter_do(vim.v.count, "Text", require("qf-herder._filter").text_keep, opts)
+end
+
+---@param opts? qf-herder.filter.Opts
+function M.filter.ll_text_discard(opts)
+    ll_filter_do(vim.v.count, "Text", require("qf-herder._filter").text_discard, opts)
+end
 
 M.grep = {}
 
@@ -896,6 +964,8 @@ end
 function M.grep.ll_bcd_regex(opts)
     grep_ll_bcd(true, opts)
 end
+
+M.nav = {}
 
 ---@class qf-herder.nav.Opts
 ---@field do_zzze? boolean

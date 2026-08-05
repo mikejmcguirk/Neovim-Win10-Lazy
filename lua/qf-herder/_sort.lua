@@ -11,11 +11,9 @@ local M = {}
 ---@param f fun(a:vim.quickfix.entry, b:vim.quickfix.entry): boolean
 ---@param cfg qf-herder.sort.Cfg
 function M.sort(src_win, count, f, cfg)
-    if src_win ~= nil then
-        local qf_id = fn.getloclist(src_win, { id = 0 }).id ---@type uinteger
-        if not _util.ll_ensure_qf_id_or_echo(qf_id, false) then
-            return
-        end
+    if src_win ~= nil and fn.getloclist(src_win, { id = 0 }).id == 0 then
+        api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        return
     end
 
     local nr = ntq.resolve_list_nr(src_win, count)
@@ -104,6 +102,7 @@ function M.fname_desc(a, b)
     return M.fname_asc(b, a)
 end
 
+-- TODO: This is redundant with the diag module.
 local diag_err = vim.diagnostic.severity.ERROR
 local diag_warn = vim.diagnostic.severity.WARN
 local diag_info = vim.diagnostic.severity.INFO

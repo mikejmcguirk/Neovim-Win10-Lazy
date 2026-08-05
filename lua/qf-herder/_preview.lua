@@ -359,6 +359,7 @@ local function create_autocmds(cfg)
 
     api.nvim_create_autocmd("BufLeave", {
         group = group,
+        ---TODO: When 0.14 comes out, change to `buf`
         buffer = list_win_buf,
         callback = function()
             M.close_preview_win()
