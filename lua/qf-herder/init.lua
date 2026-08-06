@@ -210,8 +210,18 @@ local schema = {
         sync = "boolean",
     },
     keymap = {
-        key_diags = is_lower_string,
+        diag_err = is_lower_string,
+        diag_hint = is_lower_string,
+        diag_info = is_lower_string,
+        diag_warn = is_lower_string,
+        key_buf = is_lower_string,
+        key_diag = is_lower_string,
+        key_dir = is_lower_string,
         key_filename = is_lower_string,
+        key_filter = "string",
+        key_fname = is_lower_string,
+        key_help = is_lower_string,
+        key_text = is_lower_string,
         prefix_ll = is_lower_string,
         prefix_qf = is_lower_string,
         sort_key = "string",
@@ -289,8 +299,18 @@ local default_config = {
     -- Only checked on startup
     ---@class qf-herder.keymap.Cfg
     keymap = {
-        key_diags = "i", ---@type string -- Must be lowercase
-        key_filename = "f", ---@type string -- Must be lowercase
+        diag_err = "e", ---@type string -- Must be lowercase
+        diag_hint = "n", ---@type string -- Must be lowercase
+        diag_info = "o", ---@type string -- Must be lowercase
+        diag_warn = "w", ---@type string -- Must be lowercase
+        fname = "f", ---@type string -- Must be lowercase
+        key_buf = "u", ---@type string
+        key_diag = "i", ---@type string -- Must be lowercase
+        key_dir = "d", ---@type string
+        key_filter = "r", ---@type string
+        key_help = "h", ---@type string
+        key_text = "e", ---@type string -- Must be lowercase
+        prefix_grep = "g", ---@type string
         prefix_ll = "<leader>l", ---@type string -- Must be lowercase
         prefix_qf = "<leader>q", ---@type string -- Must be lowercase
         sort_key = "t", ---@type string
@@ -300,6 +320,7 @@ local default_config = {
         win_close = "o", ---@type string
         win_open = "p", ---@type string
     },
+    -- TODO: Review these for overlap
     ---@class qf-herder.nav.Cfg
     nav = {
         do_zzze = true, ---@type boolean
@@ -706,7 +727,7 @@ function M.del.visual()
     require("qf-herder._del").visual()
 end
 
-M.diagnostics = {}
+M.diags = {}
 
 ---@class qf-herder.diagnostics.Opts
 ---@field clear_on_empty? boolean
@@ -723,37 +744,40 @@ local function qf_diags_do(get_opts, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.qf_all_bufs_errors(opts)
+function M.diags.qf_all_bufs_err(opts)
     qf_diags_do({ severity = 1 }, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.qf_all_bufs_min_warnings(opts)
+function M.diags.qf_all_bufs_min_warnings(opts)
     qf_diags_do({ severity = { 1, 2 } }, opts)
 end
 
+-- TODO: Does doing the severities in a list this way work with how the no diags printing works?
+-- That function should be changed to accomodate this.
+
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.qf_all_bufs_only_warnings(opts)
+function M.diags.qf_all_bufs_only_warnings(opts)
     qf_diags_do({ severity = { 2 } }, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.qf_all_bufs_min_info(opts)
+function M.diags.qf_all_bufs_min_info(opts)
     qf_diags_do({ severity = { 1, 2, 3 } }, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.qf_all_bufs_only_info(opts)
+function M.diags.qf_all_bufs_only_info(opts)
     qf_diags_do({ severity = { 3 } }, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.qf_all_bufs_min_hint(opts)
+function M.diags.qf_all_bufs_min_hint(opts)
     qf_diags_do({ severity = { 1, 2, 3, 4 } }, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.qf_all_bufs_only_hints(opts)
+function M.diags.qf_all_bufs_only_hint(opts)
     qf_diags_do({ severity = { 4 } }, opts)
 end
 
@@ -766,37 +790,37 @@ local function ll_diags_do(get_opts, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.ll_cur_buf_errors(opts)
+function M.diags.ll_cur_buf_errors(opts)
     ll_diags_do({ severity = 1 }, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.ll_cur_buf_min_warnings(opts)
+function M.diags.ll_cur_buf_min_warn(opts)
     ll_diags_do({ severity = { 1, 2 } }, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.ll_cur_buf_only_warnings(opts)
+function M.diags.ll_cur_buf_only_warn(opts)
     ll_diags_do({ severity = { 2 } }, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.ll_cur_buf_min_info(opts)
+function M.diags.ll_cur_buf_min_info(opts)
     ll_diags_do({ severity = { 1, 2, 3 } }, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.ll_cur_buf_only_info(opts)
+function M.diags.ll_cur_buf_only_info(opts)
     ll_diags_do({ severity = { 3 } }, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.ll_cur_buf_min_hint(opts)
+function M.diags.ll_cur_buf_min_hint(opts)
     ll_diags_do({ severity = { 1, 2, 3, 4 } }, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diagnostics.ll_cur_buf_only_hints(opts)
+function M.diags.ll_cur_buf_only_hints(opts)
     ll_diags_do({ severity = { 4 } }, opts)
 end
 
@@ -863,128 +887,6 @@ end
 ---@param opts? qf-herder.filter.Opts
 function M.filter.ll_text_discard(opts)
     ll_filter_do(vim.v.count, "Text", require("qf-herder._filter").text_discard, opts)
-end
-
-M.grep = {}
-
----@param regex boolean
----@param opts? qf-herder.grep.Opts
-local function grep_ll_cur_buf(regex, opts)
-    local win, buf, cfg = cfg_get_from_opts(opts, "grep")
-    local locations = { api.nvim_buf_get_name(buf) }
-    local sort_fun = require("qf-herder._sort").fname_asc
-    require("qf-herder._grep").rg(win, locations, "Cur Buf", regex, "", sort_fun, cfg)
-end
-
----@param opts? qf-herder.grep.Opts
-function M.grep.ll_cur_buf_fixed(opts)
-    grep_ll_cur_buf(false, opts)
-end
-
----@param opts? qf-herder.grep.Opts
-function M.grep.ll_cur_buf_regex(opts)
-    grep_ll_cur_buf(true, opts)
-end
-
----@param regex boolean
----@param opts? qf-herder.grep.Opts
-local function grep_ll_help(regex, opts)
-    local win, _, cfg = cfg_get_from_opts(opts, "grep")
-    local locations = api.nvim_get_runtime_file("doc/*.txt", true)
-    local sort_fun = require("qf-herder._sort").fname_asc
-    require("qf-herder._grep").rg(win, locations, "Cur Buf", regex, "", sort_fun, cfg)
-end
-
----@param opts? qf-herder.grep.Opts
-function M.grep.ll_help_fixed(opts)
-    grep_ll_help(false, opts)
-end
-
----@param opts? qf-herder.grep.Opts
-function M.grep.ll_help_regex(opts)
-    grep_ll_help(true, opts)
-end
-
----@return string[]
-local function bufs_get_std_listed()
-    local bufs = ntt.i_keep(api.nvim_list_bufs(), function(buf)
-        local buf_scope = { buf = buf }
-        local bt = api.nvim_get_option_value("bt", buf_scope)
-        return bt == "" and api.nvim_get_option_value("bl", buf_scope)
-    end)
-
-    ---@diagnostic disable-next-line: return-type-mismatch
-    return ntt.i_filter_map_to(bufs, function(buf)
-        return api.nvim_buf_get_name(buf)
-    end)
-end
-
----@param regex boolean
----@param opts? qf-herder.grep.Opts
-local function grep_qf_bufs(regex, opts)
-    local _, _, cfg = cfg_get_from_opts(opts, "grep")
-    local locations = bufs_get_std_listed()
-    local sort_fun = require("qf-herder._sort").fname_asc
-    require("qf-herder._grep").rg(nil, locations, "Cur Buf", regex, "", sort_fun, cfg)
-end
-
----@param opts? qf-herder.grep.Opts
-function M.grep.qf_bufs_fixed(opts)
-    grep_qf_bufs(false, opts)
-end
-
----@param opts? qf-herder.grep.Opts
-function M.grep.qf_bufs_regex(opts)
-    grep_qf_bufs(true, opts)
-end
-
----@param regex boolean
----@param opts? qf-herder.grep.Opts
-local function grep_qf_tcd(regex, opts)
-    local _, _, cfg = cfg_get_from_opts(opts, "grep")
-    local locations = { fn.getcwd(-1, 0) }
-    local sort_fun = require("qf-herder._sort").fname_asc
-    require("qf-herder._grep").rg(nil, locations, "Cur Buf", regex, "", sort_fun, cfg)
-end
-
----@param opts? qf-herder.grep.Opts
-function M.grep.qf_tcd_fixed(opts)
-    grep_qf_tcd(false, opts)
-end
-
----@param opts? qf-herder.grep.Opts
-function M.grep.qf_tcd_regex(opts)
-    grep_qf_tcd(true, opts)
-end
-
----@param buf uinteger
----@return string[]
-local function bcd_get(buf)
-    -- TODO-DEP: Remove `has()` when 0.14 comes out.
-    if fn.has("nvim-0.13") == 1 then
-        return { fn.getcwd(-1, -1, buf) }
-    else
-        return { fn.fnamemodify(api.nvim_buf_get_name(buf), ":h") }
-    end
-end
-
----@param regex boolean
----@param opts? qf-herder.grep.Opts
-local function grep_ll_bcd(regex, opts)
-    local _, buf, cfg = cfg_get_from_opts(opts, "grep")
-    local locations = bcd_get(buf)
-    local sort_fun = require("qf-herder._sort").fname_asc
-    require("qf-herder._grep").rg(nil, locations, "Cur Buf", regex, "", sort_fun, cfg)
-end
-
----@param opts? qf-herder.grep.Opts
-function M.grep.ll_bcd_fixed(opts)
-    grep_ll_bcd(false, opts)
-end
-
----@param opts? qf-herder.grep.Opts
-function M.grep.ll_bcd_regex(opts)
-    grep_ll_bcd(true, opts)
 end
 
 M.nav = {}
@@ -1164,6 +1066,128 @@ end
 function M.preview.toggle(opts)
     local _, _, cfg = cfg_get_from_opts(opts, "preview")
     require("qf-herder._preview").pvw_win_toggle(cfg)
+end
+
+M.rg = {}
+
+---@param regex boolean
+---@param opts? qf-herder.grep.Opts
+local function grep_ll_cur_buf(regex, opts)
+    local win, buf, cfg = cfg_get_from_opts(opts, "grep")
+    local locations = { api.nvim_buf_get_name(buf) }
+    local sort_fun = require("qf-herder._sort").fname_asc
+    require("qf-herder._grep").rg(win, locations, "Cur Buf", regex, "", sort_fun, cfg)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.rg.ll_cur_buf_fixed(opts)
+    grep_ll_cur_buf(false, opts)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.rg.ll_cur_buf_regex(opts)
+    grep_ll_cur_buf(true, opts)
+end
+
+---@param regex boolean
+---@param opts? qf-herder.grep.Opts
+local function grep_ll_help(regex, opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "grep")
+    local locations = api.nvim_get_runtime_file("doc/*.txt", true)
+    local sort_fun = require("qf-herder._sort").fname_asc
+    require("qf-herder._grep").rg(win, locations, "Cur Buf", regex, "", sort_fun, cfg)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.rg.ll_help_fixed(opts)
+    grep_ll_help(false, opts)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.rg.ll_help_regex(opts)
+    grep_ll_help(true, opts)
+end
+
+---@return string[]
+local function bufs_get_std_listed()
+    local bufs = ntt.i_keep(api.nvim_list_bufs(), function(buf)
+        local buf_scope = { buf = buf }
+        local bt = api.nvim_get_option_value("bt", buf_scope)
+        return bt == "" and api.nvim_get_option_value("bl", buf_scope)
+    end)
+
+    ---@diagnostic disable-next-line: return-type-mismatch
+    return ntt.i_filter_map_to(bufs, function(buf)
+        return api.nvim_buf_get_name(buf)
+    end)
+end
+
+---@param regex boolean
+---@param opts? qf-herder.grep.Opts
+local function grep_qf_bufs(regex, opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "grep")
+    local locations = bufs_get_std_listed()
+    local sort_fun = require("qf-herder._sort").fname_asc
+    require("qf-herder._grep").rg(nil, locations, "Cur Buf", regex, "", sort_fun, cfg)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.rg.qf_bufs_fixed(opts)
+    grep_qf_bufs(false, opts)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.rg.qf_bufs_regex(opts)
+    grep_qf_bufs(true, opts)
+end
+
+---@param regex boolean
+---@param opts? qf-herder.grep.Opts
+local function grep_qf_tcd(regex, opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "grep")
+    local locations = { fn.getcwd(-1, 0) }
+    local sort_fun = require("qf-herder._sort").fname_asc
+    require("qf-herder._grep").rg(nil, locations, "Cur Buf", regex, "", sort_fun, cfg)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.rg.qf_tcd_fixed(opts)
+    grep_qf_tcd(false, opts)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.rg.qf_tcd_regex(opts)
+    grep_qf_tcd(true, opts)
+end
+
+---@param buf uinteger
+---@return string[]
+local function bcd_get(buf)
+    -- TODO-DEP: Remove `has()` when 0.14 comes out.
+    if fn.has("nvim-0.13") == 1 then
+        return { fn.getcwd(-1, -1, buf) }
+    else
+        return { fn.fnamemodify(api.nvim_buf_get_name(buf), ":h") }
+    end
+end
+
+---@param regex boolean
+---@param opts? qf-herder.grep.Opts
+local function grep_ll_bcd(regex, opts)
+    local _, buf, cfg = cfg_get_from_opts(opts, "grep")
+    local locations = bcd_get(buf)
+    local sort_fun = require("qf-herder._sort").fname_asc
+    require("qf-herder._grep").rg(nil, locations, "Cur Buf", regex, "", sort_fun, cfg)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.rg.ll_bcd_fixed(opts)
+    grep_ll_bcd(false, opts)
+end
+
+---@param opts? qf-herder.grep.Opts
+function M.rg.ll_bcd_regex(opts)
+    grep_ll_bcd(true, opts)
 end
 
 M.sort = {}
