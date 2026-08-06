@@ -104,15 +104,31 @@ end
 
 ---@param src_win uinteger? Location list window context
 ---@param count1 uinteger Wrapping count next entry to navigate to
+---@param cur_win uinteger
+---@param keep_focus boolean
 ---@param silent boolean
 ---@param math fun(x:uinteger, y:uinteger, min:uinteger, max:uinteger): uinteger
 ---@param do_zzze boolean
-local function idx_change(src_win, count1, silent, math, do_zzze)
+local function idx_change(src_win, count1, cur_win, keep_focus, silent, math, do_zzze)
+    if keep_focus then
+        local wintype = fn.win_gettype(cur_win)
+        local expected = src_win ~= nil and "loclist" or "quickfix"
+        if wintype ~= expected then
+            local list_name = expected == "loclist" and "location list" or "quickfix list"
+            local msg = "Current window is not a " .. list_name
+            api.nvim_echo({ { msg, "WarningMsg" } }, false, {})
+            return
+        end
+    end
+
     local list_info = ntq.get_list(src_win, { idx = 0, size = 0 })
     local idx_max = list_info.size
     if ensure_entries_or_echo(idx_max, silent) then
         local cmd = src_win == nil and "cc" or "ll"
         cmd_do(src_win, math(list_info.idx, count1, 1, idx_max), cmd, silent, do_zzze)
+        if keep_focus then
+            api.nvim_set_current_win(cur_win)
+        end
     end
 end
 
@@ -123,40 +139,56 @@ local M = {}
 -------------------------------------
 
 ---@param count1 integer Wrapping count previous entry to navigate to
+---@param cur_win uinteger
+---@param keep_focus boolean
 ---@param silent boolean
 ---@param cfg qf-herder.nav.Cfg
 ---@return nil
-function M.q_prev(count1, silent, cfg)
-    idx_change(nil, count1, silent, require("nvim-tools.math").wrapping_sub, cfg.do_zzze)
+function M.q_prev(count1, cur_win, keep_focus, silent, cfg)
+    local wrap_math = require("nvim-tools.math").wrapping_sub
+    idx_change(nil, count1, cur_win, keep_focus, silent, wrap_math, cfg.do_zzze)
 end
 
 ---@param count1 integer Wrapping count next entry to navigate to
+---@param cur_win uinteger
+---@param keep_focus boolean
 ---@param silent boolean
 ---@param cfg qf-herder.nav.Cfg
 ---@return nil
-function M.q_next(count1, silent, cfg)
-    idx_change(nil, count1, silent, require("nvim-tools.math").wrapping_add, cfg.do_zzze)
+function M.q_next(count1, cur_win, keep_focus, silent, cfg)
+    local wrap_math = require("nvim-tools.math").wrapping_add
+    idx_change(nil, count1, cur_win, keep_focus, silent, wrap_math, cfg.do_zzze)
 end
 
 ---@param src_win integer
 ---@param count1 integer Wrapping count previous entry to navigate to
+---@param keep_focus boolean
+---@param cur_win uinteger
 ---@param silent boolean
 ---@param cfg qf-herder.nav.Cfg
 ---@return nil
-function M.l_prev(src_win, count1, silent, cfg)
-    if _util.ll_ensure_qf_id_or_echo(fn.getloclist(src_win, { id = 0 }).id, silent) then
-        idx_change(src_win, count1, silent, require("nvim-tools.math").wrapping_sub, cfg.do_zzze)
+function M.l_prev(src_win, count1, cur_win, keep_focus, silent, cfg)
+    if fn.getloclist(src_win, { id = 0 }).id == 0 then
+        api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+    else
+        local wrap_math = require("nvim-tools.math").wrapping_sub
+        idx_change(src_win, count1, cur_win, keep_focus, silent, wrap_math, cfg.do_zzze)
     end
 end
 
 ---@param src_win integer
 ---@param count1 integer  Wrapping count previous entry to navigate to
+---@param cur_win uinteger
+---@param keep_focus boolean
 ---@param silent boolean
 ---@param cfg qf-herder.nav.Cfg
 ---@return nil
-function M.l_next(src_win, count1, silent, cfg)
-    if _util.ll_ensure_qf_id_or_echo(fn.getloclist(src_win, { id = 0 }).id, silent) then
-        idx_change(src_win, count1, silent, require("nvim-tools.math").wrapping_add, cfg.do_zzze)
+function M.l_next(src_win, count1, cur_win, keep_focus, silent, cfg)
+    if fn.getloclist(src_win, { id = 0 }).id == 0 then
+        api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+    else
+        local wrap_math = require("nvim-tools.math").wrapping_add
+        idx_change(src_win, count1, cur_win, keep_focus, silent, wrap_math, cfg.do_zzze)
     end
 end
 
@@ -166,9 +198,17 @@ end
 
 ---Runs in current tabpage context.
 ---@param count integer
+---@param cur_win uinteger
+---@param keep_focus boolean
 ---@param silent boolean
 ---@param cfg qf-herder.nav.Cfg
-function M.q_q(count, silent, cfg)
+function M.q_q(count, cur_win, keep_focus, silent, cfg)
+    if keep_focus and fn.win_gettype(cur_win) ~= "loclist" then
+        local msg = "Current window is not a quickfix list"
+        api.nvim_echo({ { msg, "WarningMsg" } }, false, {})
+        return
+    end
+
     local list_info = ntq.get_list(nil, { idx = 0, size = 0 })
     if not ensure_entries_or_echo(list_info.size, silent) then
         return
@@ -186,11 +226,20 @@ end
 ---Runs in `src_win` context.
 ---@param src_win integer
 ---@param count uinteger
+---@param cur_win uinteger
+---@param keep_focus boolean
 ---@param silent boolean
 ---@param cfg qf-herder.nav.Cfg
-function M.l_l(src_win, count, silent, cfg)
+function M.l_l(src_win, count, cur_win, keep_focus, silent, cfg)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
-    if not _util.ll_ensure_qf_id_or_echo(qf_id, silent) then
+    if qf_id == 0 then
+        api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        return
+    end
+
+    if keep_focus and fn.win_gettype(cur_win) ~= "loclist" then
+        local msg = "Current window is not a location list"
+        api.nvim_echo({ { msg, "WarningMsg" } }, false, {})
         return
     end
 
@@ -299,8 +348,29 @@ end
 
 -- Credit https://github.com/romainl/vim-qf
 ---@param keep_focus boolean
+function M.split(keep_focus)
+    local list_win = api.nvim_get_current_win()
+    local wintype = fn.win_gettype(list_win)
+    if wintype ~= "quickfix" and wintype ~= "loclist" then
+        api.nvim_echo({ { "Current window is not an error list", "WarningMsg" } }, false, {})
+        return
+    end
+
+    vim.cmd("wincmd \r | noautocmd wincmd =")
+    if keep_focus then
+        api.nvim_set_current_win(list_win)
+    end
+end
+
+-- Credit https://github.com/romainl/vim-qf
+---@param keep_focus boolean
 function M.ll_vsplit(keep_focus)
     local ll_win = api.nvim_get_current_win()
+    if fn.win_gettype(ll_win) ~= "loclist" then
+        api.nvim_echo({ { "Current window is not a quickfix list", "WarningMsg" } }, false, {})
+        return
+    end
+
     local spr = api.nvim_get_option_value("spr", { scope = "global" })
     vim.cmd("wincmd \r | noautocmd wincmd " .. (spr and "L" or "H"))
     if keep_focus then
@@ -313,9 +383,13 @@ end
 ---@param cfg qf-herder.nav.Cfg
 function M.qf_vsplit(keep_focus, cfg)
     local qf_win = api.nvim_get_current_win()
+    if fn.win_gettype(qf_win) ~= "quickfix" then
+        api.nvim_echo({ { "Current window is not a quickfix list", "WarningMsg" } }, false, {})
+        return
+    end
+
     local spr = api.nvim_get_option_value("spr", { scope = "global" })
     vim.cmd("wincmd \r | noautocmd wincmd " .. (spr and "L" or "H"))
-
     local split_qf = cfg.split_qf
     local qf_move = (split_qf == "to" or split_qf == "topleft") and "K" or "J"
 
@@ -331,18 +405,14 @@ end
 
 -- Credit https://github.com/romainl/vim-qf
 ---@param keep_focus boolean
-function M.split(keep_focus)
-    local list_win = api.nvim_get_current_win()
-    vim.cmd("wincmd \r | noautocmd wincmd =")
-    if keep_focus then
-        api.nvim_set_current_win(list_win)
-    end
-end
-
--- Credit https://github.com/romainl/vim-qf
----@param keep_focus boolean
 function M.tabnew(keep_focus)
     local list_win = api.nvim_get_current_win()
+    local wintype = fn.win_gettype(list_win)
+    if wintype ~= "quickfix" and wintype ~= "loclist" then
+        api.nvim_echo({ { "Current window is not an error list", "WarningMsg" } }, false, {})
+        return
+    end
+
     vim.cmd("wincmd \r | noautocmd wincmd T")
     if keep_focus then
         api.nvim_set_current_win(list_win)
@@ -355,20 +425,20 @@ end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args
 function M.q_prev_cmd(cargs)
-    local _, _, cfg = require("qf-herder")._config_merged_from_win(0, "nav")
-    M.q_prev(math.max(cargs.count, 1), cargs.smods.silent or false, cfg)
+    local cur_win, _, cfg = require("qf-herder")._config_merged_from_win(0, "nav")
+    M.q_prev(math.max(cargs.count, 1), cur_win, false, cargs.smods.silent or false, cfg)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args
 function M.q_next_cmd(cargs)
-    local _, _, cfg = require("qf-herder")._config_merged_from_win(0, "nav")
-    M.q_next(math.max(cargs.count, 1), cargs.smods.silent or false, cfg)
+    local cur_win, _, cfg = require("qf-herder")._config_merged_from_win(0, "nav")
+    M.q_next(math.max(cargs.count, 1), cur_win, false, cargs.smods.silent or false, cfg)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args
 function M.q_q_cmd(cargs)
-    local _, _, cfg = require("qf-herder")._config_merged_from_win(0, "nav")
-    M.q_q(cargs.count, cargs.smods.silent or false, cfg)
+    local win, _, cfg = require("qf-herder")._config_merged_from_win(0, "nav")
+    M.q_q(cargs.count, win, false, cargs.smods.silent or false, cfg)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args
@@ -398,19 +468,19 @@ end
 ---@param cargs vim.api.keyset.create_user_command.command_args
 function M.l_prev_cmd(cargs)
     local cur_win, _, cfg = require("qf-herder")._config_merged_from_win(0, "nav")
-    M.l_prev(cur_win, math.max(cargs.count, 1), cargs.smods.silent or false, cfg)
+    M.l_prev(cur_win, math.max(cargs.count, 1), cur_win, false, cargs.smods.silent or false, cfg)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args
 function M.l_next_cmd(cargs)
     local cur_win, _, cfg = require("qf-herder")._config_merged_from_win(0, "nav")
-    M.l_next(cur_win, math.max(cargs.count, 1), cargs.smods.silent or false, cfg)
+    M.l_next(cur_win, math.max(cargs.count, 1), cur_win, false, cargs.smods.silent or false, cfg)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args
 function M.l_l_cmd(cargs)
     local cur_win, _, cfg = require("qf-herder")._config_merged_from_win(0, "nav")
-    M.l_l(cur_win, cargs.count, cargs.smods.silent or false, cfg)
+    M.l_l(cur_win, cargs.count, cur_win, false, cargs.smods.silent or false, cfg)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args

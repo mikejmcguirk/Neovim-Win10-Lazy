@@ -200,6 +200,10 @@ local schema = {
     filter = {
         goto_after = "boolean",
     },
+    ftplugin = {
+        maps_set = "boolean",
+        opts_set = "boolean",
+    },
     grep = {
         case = case_validate,
         reuse_title = "boolean",
@@ -270,6 +274,11 @@ local default_config = {
     ---@class qf-herder.filter.Cfg
     filter = {
         goto_after = true, ---@type boolean
+    },
+    ---@class qf-herder.ftplugin.Cfg
+    ftplugin = {
+        maps_set = true, ---@type boolean
+        opts_set = true, ---@type boolean
     },
     ---@class qf-herder.grep.Cfg
     grep = {
@@ -343,6 +352,9 @@ local default_config = {
 ---@field case? string "smart"|"ignore"|""
 ---@field reuse_title? boolean
 ---@field sync? boolean
+
+---@class qf-herder.preview.Opts
+---@field do_zzze? boolean
 
 ---@class qf-herder.sort.cfg.Partial
 ---@field goto_after? boolean
@@ -543,14 +555,13 @@ end
 ---@param usr_config table?
 ---@param ... any
 ---@return table
-local function config_merged_get(buf, usr_config, ...)
-    buf = buf ~= 0 and buf or api.nvim_get_current_buf()
-
+function M._config_merged_get(buf, usr_config, ...)
     local cfg = ntt.deepcopy(ntt.get(config, ...))
     if cfg == nil then
         error("Invalid config path")
     end
 
+    buf = buf ~= 0 and buf or api.nvim_get_current_buf()
     local buf_config = buf_configs[buf]
     if buf_config ~= nil then
         local buf_cfg = ntt.get(buf_config, ...)
@@ -573,14 +584,15 @@ local function config_merged_get(buf, usr_config, ...)
     return cfg
 end
 
----@nodoc
+---@param win uinteger
 ---@param ... any
 ---@return uinteger, uinteger, table
 function M._config_merged_from_win(win, ...)
     win = win ~= 0 and win or api.nvim_get_current_win()
     local buf = api.nvim_win_get_buf(win)
-    return win, buf, config_merged_get(buf, nil, ...)
+    return win, buf, M._config_merged_get(buf, nil, ...)
 end
+-- LOW: This feels like an arbitrary helper.
 
 ---------------
 -- MARK: API --
@@ -595,7 +607,7 @@ local function cfg_get_from_opts(opts, key)
 
     local win = api.nvim_get_current_win()
     local buf = api.nvim_win_get_buf(win)
-    return win, buf, config_merged_get(buf, opts, key)
+    return win, buf, M._config_merged_get(buf, opts, key)
 end
 
 M.window = {}
@@ -682,6 +694,16 @@ end
 function M.window.ll_resize(opts)
     local _, _, ctx = cfg_get_from_opts(opts, "window")
     require("qf-herder._window").ll_resize(0, vim.v.count, ctx)
+end
+
+M.del = {}
+
+function M.del.single()
+    require("qf-herder._del").single()
+end
+
+function M.del.visual()
+    require("qf-herder._del").visual()
 end
 
 M.diagnostics = {}
@@ -972,20 +994,38 @@ M.nav = {}
 
 ---@param opts? qf-herder.nav.Opts
 function M.nav.q_prev(opts)
-    local _, _, cfg = cfg_get_from_opts(opts, "nav")
-    require("qf-herder._nav").q_prev(vim.v.count1, false, cfg)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_prev(vim.v.count1, win, false, false, cfg)
 end
 
 ---@param opts? qf-herder.nav.Opts
 function M.nav.q_next(opts)
-    local _, _, cfg = cfg_get_from_opts(opts, "nav")
-    require("qf-herder._nav").q_next(vim.v.count1, false, cfg)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_next(vim.v.count1, win, false, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.q_prev_keep_focus(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_prev(vim.v.count1, win, true, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.q_next_keep_focus(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_next(vim.v.count1, win, true, false, cfg)
 end
 
 ---@param opts? qf-herder.nav.Opts
 function M.nav.q_q(opts)
-    local _, _, cfg = cfg_get_from_opts(opts, "nav")
-    require("qf-herder._nav").q_q(vim.v.count, false, cfg)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_q(vim.v.count, win, false, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.q_q(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").q_q(vim.v.count, win, true, false, cfg)
 end
 
 ---@param opts? qf-herder.nav.Opts
@@ -1015,19 +1055,37 @@ end
 ---@param opts? qf-herder.nav.Opts
 function M.nav.l_prev(opts)
     local win, _, cfg = cfg_get_from_opts(opts, "nav")
-    require("qf-herder._nav").l_prev(win, vim.v.count1, false, cfg)
+    require("qf-herder._nav").l_prev(win, vim.v.count1, win, false, false, cfg)
 end
 
 ---@param opts? qf-herder.nav.Opts
 function M.nav.l_next(opts)
     local win, _, cfg = cfg_get_from_opts(opts, "nav")
-    require("qf-herder._nav").l_next(win, vim.v.count1, false, cfg)
+    require("qf-herder._nav").l_next(win, vim.v.count1, win, false, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.l_prev_keep_focus(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").l_prev(win, vim.v.count1, win, true, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.l_next_keep_focus(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").l_next(win, vim.v.count1, win, true, false, cfg)
 end
 
 ---@param opts? qf-herder.nav.Opts
 function M.nav.l_l(opts)
     local win, _, cfg = cfg_get_from_opts(opts, "nav")
-    require("qf-herder._nav").l_l(win, vim.v.count, false, cfg)
+    require("qf-herder._nav").l_l(win, vim.v.count, win, false, false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.l_l_keep_focus(opts)
+    local win, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").l_l(win, vim.v.count, win, true, false, cfg)
 end
 
 ---@param opts? qf-herder.nav.Opts
@@ -1052,6 +1110,60 @@ end
 function M.nav.l_nfile(opts)
     local win, _, cfg = cfg_get_from_opts(opts, "nav")
     require("qf-herder._nav").l_nfile(win, vim.v.count1, false, cfg)
+end
+
+function M.nav.split()
+    require("qf-herder._nav").split(false)
+end
+
+function M.nav.split_keep_focus()
+    require("qf-herder._nav").split(true)
+end
+
+function M.nav.tabnew()
+    require("qf-herder._nav").tabnew(false)
+end
+
+function M.nav.tabnew()
+    require("qf-herder._nav").tabnew(true)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.qf_vsplit(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").qf_vsplit(false, cfg)
+end
+
+---@param opts? qf-herder.nav.Opts
+function M.nav.qf_vsplit_keep_focus(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "nav")
+    require("qf-herder._nav").qf_vsplit(true, cfg)
+end
+
+function M.nav.ll_vsplit()
+    require("qf-herder._nav").ll_vsplit(false)
+end
+
+function M.nav.ll_vsplit_keep_focus()
+    require("qf-herder._nav").ll_vsplit(true)
+end
+
+M.preview = {}
+
+---@param opts? qf-herder.preview.Opts
+function M.preview.open(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "preview")
+    require("qf-herder._preview").pvw_win_open(cfg)
+end
+
+function M.preview.close()
+    require("qf-herder._preview").pvw_win_close()
+end
+
+---@param opts? qf-herder.preview.Opts
+function M.preview.toggle(opts)
+    local _, _, cfg = cfg_get_from_opts(opts, "preview")
+    require("qf-herder._preview").pvw_win_toggle(cfg)
 end
 
 M.sort = {}

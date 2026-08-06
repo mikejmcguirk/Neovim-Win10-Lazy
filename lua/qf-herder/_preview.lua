@@ -362,7 +362,7 @@ local function create_autocmds(cfg)
         ---TODO: When 0.14 comes out, change to `buf`
         buffer = list_win_buf,
         callback = function()
-            M.close_preview_win()
+            M.pvw_win_close()
             vim.schedule(function()
                 state_clear_checked()
             end)
@@ -385,7 +385,7 @@ local function create_autocmds(cfg)
         callback = function()
             local cur_win = api.nvim_get_current_win()
             if cur_win ~= state_list_win then
-                M.close_preview_win()
+                M.pvw_win_close()
             end
         end,
     })
@@ -395,7 +395,7 @@ local function create_autocmds(cfg)
         callback = function()
             local cur_win = api.nvim_get_current_win()
             if cur_win == state_list_win then
-                M.close_preview_win()
+                M.pvw_win_close()
             end
         end,
     })
@@ -447,7 +447,7 @@ end
 --------------------
 
 ---@param cfg qf-herder.preview.Cfg
-function M.open_preview_win(cfg)
+function M.pvw_win_open(cfg)
     if state_pvw_win >= 1000 then
         if api.nvim_win_is_valid(state_pvw_win) then
             return
@@ -474,14 +474,14 @@ local function pvw_close()
     state_list_win = -1
 end
 
-function M.close_preview_win()
+function M.pvw_win_close()
     if state_pvw_win >= 1000 then
         pvw_close()
     end
 end
 
 ---@param cfg qf-herder.preview.Cfg
-function M.toggle_preview_win(cfg)
+function M.pvw_win_toggle(cfg)
     if state_pvw_win >= 1000 then
         pvw_close()
     else
