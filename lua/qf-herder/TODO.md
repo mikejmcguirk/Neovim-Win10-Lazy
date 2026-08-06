@@ -1,65 +1,37 @@
 ## TODO:
 
-- [ ] ftplugin
-  - [ ] do not build bespoke code here where it can be avoided. `o`/`O` nav should be based on the nav module. Stack changes should be built on the stack module. And so on.
-  - [ ] Each functionality should be connected to a public API surface that the user can remap. I would probably stick the split navigation into the nav module
-  - One aspect of the original code's design, which created a lot of the differences, was that count there was used for destination window selection, which we are forgoing, so that causes a re-think of other aspects of how this is constructed
-- [ ] filter
-  - [ ] cfg data
-  - [ ] apis
-  - [ ] keymaps
-- [ ] diags
-  - [ ] cfg data
-  - [ ] apis
-  - [ ] keymaps
-- [ ] grep
-  - [ ] cfg data
-  - [ ] apis
-  - [ ] keymaps
-- [ ] nav
-  - [ ] keymaps
-
-  - [ ] https://github.com/neovim/neovim/commit/f95bd7393584e96152e1a2f68736c634ed8de614
-    - Might solve a lot of my preview issues. The nightly gate is not relevant.
-
-- [ ] Once all APIs and keymaps are up, disable old rancher so these can be used.
-
-- [ ] The stack location list cmds should actually tell you if there is no location list.
-
-- [ ] Add a `global` config table with opts like `spk` in it that merges under the module specific configs
-- [ ] Rename lingering mentions of `ctx` to `cfg`
-- [ ] Add cmds for sort, diags, grep, and filter.
-  - [ ] Wait for all four to be done because we need a general parsing shape that accommodates all four rather than hacking stuff together like the old code did
-  - [ ] User-defined commands should not be able to override or remove the built-ins
-
-- [ ] Make relevant cmds take `cargs.smods.silent`
-- [ ] Double check that all cmds that feed functions that use count1 clamp their values
-
 - [ ] Do a project-wide variable ordering consistency check
+  - [ ] src_win always first
+  - [ ] cfg always last
+  - [ ] Unsure
+    - [ ] count
+    - [ ] silent
+    - [ ] ctx
 
+- [ ] Should be a "goto_list_nr" _util func that does the stack change and window open
+
+- [ ] Disable the old rancher so this can be used.
 - [ ] Change all mentions of "herder" back to rancher.
 
-#### DIAGNOSTICS:
+#### PREVIEW:
 
-- [ ] have qin/qiw and so on for general diagnostics by/only severity
-- [ ] have grq and grQ for LSP diagnostics in all buffers or current buffer (loclist)
-- [ ] I'm not sure if this is in diagnostic opts or what, but make sure that there's a way for the user to customize namespaces/diagnostic sources in general
-
-## DOC:
-
-#### NAV:
-
-- [ ] How the wrapping count works for p/nfile
+- [ ] Is the existence of other preview wins + closing the preview win outside of rancher's APIs properly accounted for?
 
 ## MID:
 
-- [ ] Case should have a "vim" mode that checks smartcase and ignorecase
-
 - [ ] For modules like diagnostics and grep, the user should be able to configure a custom `what` table as an opt, so they can use a custom qftf or whatever else. Would need to be careful about what is allowed in though, as we don't want values like nr getting corrupted.
+- [ ] Add cmds for sort, diags, grep, and filter.
+  - [ ] Needs a general parsing shape
+  - [ ] User-defined commands should not be able to override or remove the built-ins
+#### Config:
+
+- [ ] Add a `global` config table with opts like `spk` in it that merges under the module specific configs
+- [ ] Case should have a "vim" mode that checks smartcase and ignorecase
 
 #### DIAGS:
 
 - [ ] It should be possible to configure the default sort
+- [ ] have grq and grQ for LSP diagnostics in all buffers or current buffer (loclist)
 
 #### GREP:
 
@@ -74,7 +46,11 @@
       - [ ] Problem: This would spread window close spk logic into multiple places.
 - [ ] Make resizing work off of bulk operations like everything else does.
 
-## TODO-DEP:
+## PR:
+
+- [ ] win_config
+  - [ ] border does not contain bold
+  - [ ] Title datatype is any
 
 ## LOW:
 

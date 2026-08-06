@@ -55,20 +55,14 @@ end
 -- MARK: Namespaces and Groups --
 ---------------------------------
 
--- TODO: change back to rancher
 local group = api.nvim_create_augroup("qf-herder-preview", {})
 -- TODO: change back to rancher
 local PVW_FT = "qf-herder-preview"
 
--- TODO: change back to rancher
 local hl_ns = api.nvim_create_namespace("qf-herder.preview")
 local HL_GROUP_STR = "QfRancherPreviewRange"
-do
-    -- TODO: Do this in `/plugin`
-    api.nvim_set_hl(0, HL_GROUP_STR, { default = true, link = "CurSearch" })
-end
-
-local entry_hl = api.nvim_get_hl_id_by_name(HL_GROUP_STR)
+-- Set in `/plugin`
+local pvw_range_hl = api.nvim_get_hl_id_by_name(HL_GROUP_STR)
 
 ----------------------------
 -- MARK: State Management --
@@ -239,7 +233,7 @@ end
 local function set_err_range_extmark(preview_buf, range_api)
     state_extmarks[preview_buf] =
         api.nvim_buf_set_extmark(preview_buf, hl_ns, range_api[1], range_api[2], {
-            hl_group = entry_hl,
+            hl_group = pvw_range_hl,
             id = state_extmarks[preview_buf],
             end_row = range_api[3],
             end_col = range_api[4],
@@ -359,7 +353,7 @@ local function create_autocmds(cfg)
 
     api.nvim_create_autocmd("BufLeave", {
         group = group,
-        ---TODO: When 0.14 comes out, change to `buf`
+        ---TODO-DEP: When 0.14 comes out, change to `buf`
         buffer = list_win_buf,
         callback = function()
             M.pvw_win_close()
@@ -420,7 +414,7 @@ local function pvw_open(cfg)
     api.nvim_cmd({ cmd = "pbuf", args = { tostring(preview_buf) } }, {})
     local pvw_win = pvw_win_find()
     if pvw_win == nil or pvw_win < 1000 then
-        -- TODO: Should provide a meaningful error
+        api.nvim_echo({ { "Preview window did not open", "ErrorMsg" } }, false, {})
         return
     else
         state_pvw_win = pvw_win
@@ -490,15 +484,3 @@ function M.pvw_win_toggle(cfg)
 end
 
 return M
-
--- TODO: Since this opens an actual preview window, gotta account for that at all steps. Open I
--- think does, but close and the other internals need to as well.
-
--- PR: in win_config:
--- - border does not contain bold
--- - title is not correct (any instead of string|[string,string|integer?][])
--- If doing a PR for these, double check that my annotation for title is correct. Also, check and
--- see if anything else is incorrect.
--- Also see if the type annotation is written in the C code or something, rather than having to
--- submit an issue for type annotations
--- PR: Kind of a long-shot feature request, but window local autocmds.

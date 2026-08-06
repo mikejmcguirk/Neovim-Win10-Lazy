@@ -248,6 +248,7 @@ local schema = {
     system = {
         auto_height = "boolean",
         open_results = "boolean",
+        -- TODO: This should be a param or a ctx field not an opt
         silent = "boolean",
         spk = spk_validate,
         split_ll = ll_split_validate,
@@ -261,7 +262,6 @@ local schema = {
         auto_height = "boolean",
         split_ll = ll_split_validate,
         split_qf = qf_split_validate,
-        silent = "boolean",
         spk = spk_validate,
     },
 }
@@ -357,60 +357,87 @@ local default_config = {
         auto_height = true, ---@type boolean
         split_ll = "belowright", ---@type qf-herder.window.llSplit
         split_qf = "botright", ---@type qf-herder.window.qfSplit
-        -- TODO: Remove this as a Cfg option
-        silent = false, ---@type boolean
         spk = "topline", ---@type ""|"cursor"|"screen"|"topline"
     },
 }
 
----@class qf-herder.keymap.cfg.Partial
----@field ll_prefix? string
----@field qf_prefix? string
----@field win_close? string
----@field win_open? string
+---@class qf-herder.filter.Opts
+---@field goto_after? boolean
+
+---@class qf-herder.ftplugin.Opts
+---@field maps_set? boolean
+---@field opts_set? boolean
 
 ---@class qf-herder.grep.Opts
 ---@field case? string "smart"|"ignore"|""
 ---@field reuse_title? boolean
 ---@field sync? boolean
 
+---@class qf-herder.keymap.Opts
+---@field diag_err?  string
+---@field diag_hint?  string
+---@field diag_info?  string
+---@field diag_warn?  string
+---@field fname?  string
+---@field key_buf?  string
+---@field key_diag?  string
+---@field key_dir?  string
+---@field key_filter?  string
+---@field key_help?  string
+---@field key_text?  string
+---@field prefix_grep?  string
+---@field prefix_ll?  string
+---@field prefix_qf?  string
+---@field sort_key?  string
+---@field stack_clear?  string
+---@field stack_newer?  string
+---@field stack_older?  string
+---@field win_close?  string
+---@field win_open?  string
+
+---@class qf-herder.nav.Opts
+---@field do_zzze? boolean
+---@field split_qf? qf-herder.window.qfSplit
+
 ---@class qf-herder.preview.Opts
 ---@field do_zzze? boolean
 
----@class qf-herder.sort.cfg.Partial
+---@class qf-herder.sort.Opts
 ---@field goto_after? boolean
 
----@class qf-herder.stack.cfg.Partial
----@field autosize_changes? boolean
+---@class qf-herder.stack.Opts
+---@field update_list_wins? boolean
 ---@field spk? ""|"cursor"|"screen"|"topline"
 
----@class qf-herder.window.cfg.Partial
+---@class qf-herder.system.Opts
+---@field auto_height? boolean
+---@field open_results? boolean
+---@field spk? ""|"cursor"|"screen"|"topline"
+---@field split_ll? qf-herder.window.llSplit
+---@field split_qf? qf-herder.window.qfSplit
+---@field timeout? uinteger
+---@field update_list_wins? boolean
+
+---@class qf-herder.window.Opts
 ---@field auto_height? boolean
 ---@field ll_split? qf-herder.window.llSplit
 ---@field qf_split? qf-herder.window.qfSplit
----@field silent? boolean
 ---@field spk? ""|"cursor"|"screen"|"topline"
 
----@class qf-herder.system.cfg.Partial
----@field  auto_height? boolean
----@field  open_results? boolean
----@field  silent? boolean
----@field  spk? ""|"cursor"|"screen"|"topline"
----@field  split_ll? qf-herder.window.llSplit
----@field  split_qf? qf-herder.window.qfSplit
----@field  timeout? uinteger
----@field  update_list_wins? boolean
-
--- TODO: Update with the various sub-tables/opts classes
 ---@class qf-herder.config.Partial
 ---@field default_cmds_set? boolean
 ---@field default_keymaps_set? boolean
----@field ll_map_prefix? string
----@field qf_map_prefix? string
----@field window? qf-herder.window.cfg.Partial
-
--- TODO: Don't you just keep the top level config as Partial and then use opts tables to fill in
--- the rest? For the window functions, you can just make sub-opts tables.
+---@field diagnostics? qf-herder.diagnostics.Opts
+---@field filter? qf-herder.filter.Opts
+---@field ftplugin? qf-herder.ftplugin.Opts
+---@field grep? qf-herder.grep.Opts
+---@field keymap? qf-herder.keymap.Opts
+---@field nav? qf-herder.nav.Opts
+---@field preview? qf-herder.preview.Opts
+---@field sort? qf-herder.sort.Opts
+---@field stack? qf-herder.stack.Opts
+---@field system? qf-herder.system.Opts
+---@field window? qf-herder.window.Opts
 
 ------------------
 -- MARK: Config --
@@ -613,7 +640,12 @@ function M._config_merged_from_win(win, ...)
     local buf = api.nvim_win_get_buf(win)
     return win, buf, M._config_merged_get(buf, nil, ...)
 end
--- LOW: This feels like an arbitrary helper.
+-- TODO: For qf ops, this produces buf 0, which is no different from just calling
+-- _config_merged_get with buf 0. For ll ops, this uses the buf of the src_win. Is this
+-- desirable behavior? This function also obscures the question of, for stack ops especially,
+-- do we want to use the buf opts of where we are going or where we are coming from? (Almost
+-- certainly the latter, since it's more clear. But then we need to actually guarantee that
+-- behavior)
 
 ---------------
 -- MARK: API --
@@ -640,8 +672,8 @@ M.window = {}
 
 ---@param opts? qf-herder.window.qfOpen.Opts
 function M.window.qf_open(opts)
-    local _, _, ctx = cfg_get_from_opts(opts, "window")
-    require("qf-herder._window").qf_open(vim.v.count, ctx)
+    local _, _, cfg = cfg_get_from_opts(opts, "window")
+    require("qf-herder._window").qf_open(vim.v.count, cfg)
 end
 
 ---@class qf-herder.window.qfClose.Opts
@@ -649,8 +681,8 @@ end
 
 ---@param opts? qf-herder.window.qfClose.Opts
 function M.window.qf_close(opts)
-    local _, _, ctx = cfg_get_from_opts(opts, "window")
-    require("qf-herder._window").qf_close({ 0 }, ctx)
+    local _, _, cfg = cfg_get_from_opts(opts, "window")
+    require("qf-herder._window").qf_close({ 0 }, cfg)
 end
 
 ---@class qf-herder.window.qfToggle.Opts
@@ -660,8 +692,8 @@ end
 
 ---@param opts? qf-herder.window.qfToggle.Opts
 function M.window.qf_toggle(opts)
-    local _, _, ctx = cfg_get_from_opts(opts, "window")
-    require("qf-herder._window").qf_toggle(vim.v.count, ctx)
+    local _, _, cfg = cfg_get_from_opts(opts, "window")
+    require("qf-herder._window").qf_toggle(vim.v.count, cfg)
 end
 
 ---@class qf-herder.window.qfResize.Opts
@@ -669,8 +701,8 @@ end
 
 ---@param opts? qf-herder.window.qfResize.Opts
 function M.window.qf_resize(opts)
-    local _, _, ctx = cfg_get_from_opts(opts, "window")
-    require("qf-herder._window").qf_resize(0, vim.v.count, ctx)
+    local _, _, cfg = cfg_get_from_opts(opts, "window")
+    require("qf-herder._window").qf_resize(0, vim.v.count, cfg)
 end
 
 ---@class qf-herder.window.llOpen.Opts
@@ -681,8 +713,8 @@ end
 
 ---@param opts? qf-herder.window.llOpen.Opts
 function M.window.ll_open(opts)
-    local _, _, ctx = cfg_get_from_opts(opts, "window")
-    require("qf-herder._window").ll_open(vim.v.count, ctx)
+    local _, _, cfg = cfg_get_from_opts(opts, "window")
+    require("qf-herder._window").ll_open(vim.v.count, false, cfg)
 end
 
 ---@class qf-herder.window.llClose.Opts
@@ -691,20 +723,19 @@ end
 
 ---@param opts? qf-herder.window.llClose.Opts
 function M.window.ll_close(opts)
-    local _, _, ctx = cfg_get_from_opts(opts, "window")
-    require("qf-herder._window").ll_close(api.nvim_get_current_win(), ctx)
+    local _, _, cfg = cfg_get_from_opts(opts, "window")
+    require("qf-herder._window").ll_close(api.nvim_get_current_win(), false, cfg)
 end
 
 ---@class qf-herder.window.llToggle.Opts
 ---@field auto_height? boolean
 ---@field ll_split? qf-herder.window.llSplit
----@field silent? boolean
 ---@field spk? "cursor"|"screen"|"topline"|""
 
 ---@param opts? qf-herder.window.llToggle.Opts
 function M.window.ll_toggle(opts)
-    local _, _, ctx = cfg_get_from_opts(opts, "window")
-    require("qf-herder._window").ll_toggle(vim.v.count, ctx)
+    local _, _, cfg = cfg_get_from_opts(opts, "window")
+    require("qf-herder._window").ll_toggle(vim.v.count, false, cfg)
 end
 
 ---@class qf-herder.window.llResize.Opts
@@ -713,8 +744,8 @@ end
 
 ---@param opts? qf-herder.window.llResize.Opts
 function M.window.ll_resize(opts)
-    local _, _, ctx = cfg_get_from_opts(opts, "window")
-    require("qf-herder._window").ll_resize(0, vim.v.count, ctx)
+    local _, _, cfg = cfg_get_from_opts(opts, "window")
+    require("qf-herder._window").ll_resize(0, vim.v.count, false, cfg)
 end
 
 M.del = {}
@@ -828,9 +859,6 @@ end
 
 M.filter = {}
 
----@class qf-herder.filter.Opts
----@field goto_after? boolean
-
 ---@param count uinteger
 ---@param name string
 ---@param f fun(entry:vim.quickfix.entry, regex:vim.regex): boolean
@@ -890,9 +918,6 @@ function M.filter.ll_text_discard(opts)
 end
 
 M.nav = {}
-
----@class qf-herder.nav.Opts
----@field do_zzze? boolean
 
 ---@param opts? qf-herder.nav.Opts
 function M.nav.q_prev(opts)
@@ -1192,9 +1217,6 @@ end
 
 M.sort = {}
 
----@class qf-herder.sort.Opts
----@field goto_after? boolean
-
 ---@param opts? qf-herder.sort.Opts
 function M.sort.qf_fname_asc(opts)
     local _, _, cfg = cfg_get_from_opts(opts, "sort")
@@ -1266,10 +1288,6 @@ function M.sort.ll_by(f, opts)
 end
 
 M.stack = {}
-
----@class qf-herder.stack.Opts
----@field autosize_changes? boolean
----@field spk? ""|"cursor"|"screen"|"topline"
 
 ---@param opts? qf-herder.stack.Opts
 function M.stack.q_older(opts)

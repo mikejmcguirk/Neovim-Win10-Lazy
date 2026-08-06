@@ -30,25 +30,29 @@ end
 ---@param do_zzze boolean
 ---@return boolean, string
 local function cmd_do(src_win, count, cmd, silent, do_zzze)
+    ---@return { [1]:boolean, [2]:string }
     local function cmd_call()
         local ok, err = pcall(api.nvim_cmd, { cmd = cmd, count = count, silent = silent }, {})
         if ok and do_zzze then
             api.nvim_cmd({ cmd = "norm", args = { "zzze" }, bang = true }, {})
         end
 
-        return ok, err
+        return { ok, err }
     end
 
     if src_win == nil then
-        return cmd_call()
+        return unpack(cmd_call())
     else
-        ---@diagnostic disable-next-line: missing-return-value
-        return api.nvim_win_call(src_win, function()
+        ---@type { [1]:boolean, [2]:string }
+        local packed_res = api.nvim_win_call(src_win, function()
             return cmd_call()
         end)
+
+        return unpack(packed_res)
     end
 end
--- TODO: I'm not sure this nvim_win_call multi-return works in v11 or v12.
+-- TODO-DEP: When 0.14 comes out, remove the packing/unpacking logic, since 0.13 supports multiple
+-- returns from `nvim_win_call`
 
 ---@param src_win integer|nil
 ---@param count1 integer
@@ -342,9 +346,6 @@ end
 ----------------------
 -- MARK: Split Open --
 ----------------------
-
--- TODO: Let things bake in before figuring out what APIs to expose for these.
--- TODO: Add some way to enable the `{`/`}` focus keeping item navigation.
 
 -- Credit https://github.com/romainl/vim-qf
 ---@param keep_focus boolean

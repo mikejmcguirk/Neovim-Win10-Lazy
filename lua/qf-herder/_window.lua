@@ -46,7 +46,7 @@ function M.list_open(src_win, count, cfg)
     if src_win == nil then
         M.qf_open(count, cfg)
     else
-        M.ll_open(count, cfg)
+        M.ll_open(count, true, cfg)
     end
 end
 
@@ -223,9 +223,6 @@ function M.qf_open(count, cfg)
     return copen_with_spk(cfg_spk, height_resolve(nil, count, cfg.auto_height), cfg.split_qf)
 end
 
----@class qf-herder.window.quickfixClose.Cfg
----@field spk "cursor"|"screen"|"topline"|""
-
 ---@param tabpages uinteger[]
 ---@param cfg qf-herder.window.Cfg
 function M.qf_close(tabpages, cfg)
@@ -245,12 +242,9 @@ function M.qf_toggle(count, cfg)
     end
 end
 
----@class qf-herder.window.qf_resize.Cfg
----@field spk "cursor"|"screen"|"topline"|""
-
 ---@param tabpage uinteger
 ---@param count uinteger
----@param cfg qf-herder.window.qf_resize.Cfg
+---@param cfg qf-herder.window.Cfg
 function M.qf_resize(tabpage, count, cfg)
     local qf_win = M.qf_win_find_one({ tabpage })
     if qf_win ~= nil then
@@ -283,10 +277,10 @@ end
 
 ---@param count uinteger
 ---@param cfg qf-herder.window.Cfg
-function M.ll_open(count, cfg)
+function M.ll_open(count, silent, cfg)
     local src_win = api.nvim_get_current_win()
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
-    if not _util.ll_ensure_qf_id_or_echo(qf_id, cfg.silent) then
+    if not _util.ll_ensure_qf_id_or_echo(qf_id, silent) then
         return
     end
 
@@ -297,14 +291,12 @@ function M.ll_open(count, cfg)
     end
 end
 
----@class qf-herder.window.locationListClose.Cfg : qf-herder.window.quickfixClose.Cfg
----@field silent boolean
-
 ---@param src_win uinteger
+---@param silent boolean
 ---@param cfg qf-herder.window.Cfg
-function M.ll_close(src_win, cfg)
+function M.ll_close(src_win, silent, cfg)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
-    if not _util.ll_ensure_qf_id_or_echo(qf_id, cfg.silent) then
+    if not _util.ll_ensure_qf_id_or_echo(qf_id, silent) then
         return
     end
 
@@ -316,11 +308,12 @@ function M.ll_close(src_win, cfg)
 end
 
 ---@param count uinteger
+---@param silent boolean
 ---@param cfg qf-herder.window.Cfg
-function M.ll_toggle(count, cfg)
+function M.ll_toggle(count, silent, cfg)
     local src_win = api.nvim_get_current_win()
     local qf_id = fn.getloclist(src_win, { id = 0 }).id ---@type uinteger
-    if not _util.ll_ensure_qf_id_or_echo(qf_id, cfg.silent) then
+    if not _util.ll_ensure_qf_id_or_echo(qf_id, silent) then
         return
     end
 
@@ -335,16 +328,13 @@ function M.ll_toggle(count, cfg)
     end
 end
 
----@class qf-herder.window.ll_resize.Cfg
----@field silent boolean
----@field spk "cursor"|"screen"|"topline"|""
-
 ---@param src_win uinteger
 ---@param count uinteger
----@param cfg qf-herder.window.ll_resize.Cfg
-function M.ll_resize(src_win, count, cfg)
+---@param silent boolean
+---@param cfg qf-herder.window.Cfg
+function M.ll_resize(src_win, count, silent, cfg)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id ---@type uinteger
-    if not _util.ll_ensure_qf_id_or_echo(qf_id, cfg.silent) then
+    if not _util.ll_ensure_qf_id_or_echo(qf_id, silent) then
         return
     end
 
@@ -385,24 +375,25 @@ end
 ---@param cargs vim.api.keyset.create_user_command.command_args
 function M.l_open_cmd(cargs)
     local _, _, cfg = require("qf-herder")._config_merged_from_win(0, "window")
-    M.ll_open(cargs.count, cfg)
+    M.ll_open(cargs.count, cargs.smods.silent or false, cfg)
 end
 
-function M.l_close_cmd()
+---@param cargs vim.api.keyset.create_user_command.command_args
+function M.l_close_cmd(cargs)
     local src_win, _, cfg = require("qf-herder")._config_merged_from_win(0, "window")
-    M.ll_close(src_win, cfg)
+    M.ll_close(src_win, cargs.smods.silent or false, cfg)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args
 function M.l_toggle_cmd(cargs)
     local _, _, cfg = require("qf-herder")._config_merged_from_win(0, "window")
-    M.ll_toggle(cargs.count, cfg)
+    M.ll_toggle(cargs.count, cargs.smods.silent or false, cfg)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args
 function M.l_resize_cmd(cargs)
     local src_win, _, cfg = require("qf-herder")._config_merged_from_win(0, "window")
-    M.ll_resize(src_win, cargs.count, cfg)
+    M.ll_resize(src_win, cargs.count, cargs.smods.silent or false, cfg)
 end
 
 return M

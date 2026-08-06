@@ -104,13 +104,10 @@ local function output_set_to_list(src_win, obj, what, ctx, cfg)
             api.nvim_set_current_win(src_win)
         end
 
-        require("qf-herder._window").list_open(src_win, 0, {
-            auto_height = cfg.auto_height,
-            split_ll = cfg.split_ll,
-            split_qf = cfg.split_qf,
-            silent = false, -- TODO: Should be removed
-            spk = cfg_spk,
-        })
+        -- TODO: Do we need to pull the original buf into here?
+        ---@type qf-herder.window.Cfg
+        local win_cfg = require("qf-herder")._config_merged_get(0, nil, "window")
+        require("qf-herder._window").list_open(src_win, 0, win_cfg)
     end
 
     -- TODO: I think this is the right behavior but this is a disorganized way to do it,

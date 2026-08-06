@@ -1,8 +1,17 @@
 local api = vim.api
 
+local hls = {
+    { "QfRancherPreviewRange", "CurSearch" },
+}
+
+for _, hl in ipairs(hls) do
+    api.nvim_set_hl(0, hl[1], { default = true, link = hl[2] })
+end
+
 -- TODO: Rename the prefix back to QF_RANCHER for specificity
 QFR_NO_ERRS = "No errors"
 QFR_NO_LL = "No location list"
+QFR_NOT_LIST = "Current win is not an error list"
 
 local herder = require("qf-herder")
 local config = herder._config_get()
@@ -277,7 +286,7 @@ M.cmds = {
 { "Lnewer",  function(cargs) require("qf-herder._stack").l_newer_cmd(cargs) end, { count = 0, desc = "Go to a [wrapping count] newer location list" } },
 { "Lhistory",  function(cargs) require("qf-herder._stack").l_history_cmd(cargs) end, { count = 0, desc = "Go to the [count] location list or view the entire stack" } },
 { "Lclear",  function(cargs) require("qf-herder._stack").l_clear_cmd(cargs) end, { count = 0, desc = "Clear the [count] location list" } },
-{ "Lfree",  function() require("qf-herder._stack").l_free_cmd() end, { desc = "Free the location list stack" } },
+{ "Lfree",  function(cargs) require("qf-herder._stack").l_free_cmd(cargs) end, { desc = "Free the location list stack" } },
 
 }
 

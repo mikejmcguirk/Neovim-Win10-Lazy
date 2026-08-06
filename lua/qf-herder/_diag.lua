@@ -33,9 +33,14 @@ local function convert_diag(diag)
         nr = code ~= nil and tonumber(code) or nil,
         text = (diag_source and (diag_source .. ": ") or "") .. (diag.message or ""),
         type = severity_map[diag.severity] or "E",
-        valid = true, -- TODO: I had this as 1 in the old code. Was that correct?
+        ---@diagnostic disable-next-line: assign-type-mismatch
+        valid = 1,
     }
 end
+-- PR: Valid in getqflist() shows as 1 or 0, but the annotation here wants a boolean. Two
+-- action items:
+-- - Is boolean true acceptable here?
+-- - Send a PR to include 0|1 in the typedef for entry
 
 local severity_plural = {
     [ds.ERROR] = "errors",
@@ -129,5 +134,3 @@ function M.diags_to_list(src_win, get_opts, f, cfg)
 end
 
 return M
-
--- TODO: re-check the old code to make sure nothing was missed

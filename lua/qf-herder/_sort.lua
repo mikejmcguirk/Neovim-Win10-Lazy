@@ -34,7 +34,6 @@ function M.sort(src_win, count, f, cfg)
         return
     end
 
-    -- TODO: Does this opt really make sense?
     if not cfg.goto_after then
         return
     end
@@ -102,7 +101,6 @@ function M.fname_desc(a, b)
     return M.fname_asc(b, a)
 end
 
--- TODO: This is redundant with the diag module.
 local diag_err = vim.diagnostic.severity.ERROR
 local diag_warn = vim.diagnostic.severity.WARN
 local diag_info = vim.diagnostic.severity.INFO

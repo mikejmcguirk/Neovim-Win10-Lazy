@@ -9,7 +9,7 @@ function M.single()
     local list_win = api.nvim_get_current_win() ---@type integer
     local wintype = fn.win_gettype(list_win)
     if not (wintype == "quickfix" or wintype == "loclist") then
-        api.nvim_echo({ { "Current win is not an error list", "" } }, false, {})
+        api.nvim_echo({ { QFR_NOT_LIST, "" } }, false, {})
         return
     end
 
@@ -35,7 +35,7 @@ function M.visual()
     local list_win = api.nvim_get_current_win() ---@type integer
     local wintype = fn.win_gettype(list_win)
     if not (wintype == "quickfix" or wintype == "loclist") then
-        api.nvim_echo({ { "Current win is not an error list", "" } }, false, {})
+        api.nvim_echo({ { QFR_NOT_LIST, "" } }, false, {})
         return
     end
 
@@ -51,15 +51,7 @@ function M.visual()
         return
     end
 
-    local cur = fn.getpos(".") ---@type [integer, integer, integer, integer]
-    local fin = fn.getpos("v") ---@type [integer, integer, integer, integer]
-    local selection = api.nvim_get_option_value("selection", { scope = "global" }) ---@type string
-    -- TODO: Isn't there an nvim-tools func for this?
-    --- @type [ [integer, integer, integer, integer], [integer, integer, integer, integer] ][]
-    local region = fn.getregionpos(cur, fin, { type = mode, exclusive = selection == "exclusive" })
-    ---@type Range4
-    local vrange_4 =
-        { region[1][1][2], region[1][1][3], region[#region][2][2], region[#region][2][3] }
+    local vrange_4 = require("nvim-tools.range").get_regionpos4(".", "v", mode)
 
     local cur_idx = ntq.get_list(src_win, { idx = 0 }).idx ---@type integer
     local idx_dist = math.max(cur_idx - vrange_4[1], 0) ---@type integer
@@ -79,5 +71,3 @@ function M.visual()
 end
 
 return M
-
--- TODO: Non-error list message should be a global constant

@@ -77,7 +77,6 @@ function M.filter(src_win, count, name, f, cfg)
         return
     end
 
-    -- TODO: Does this opt really make sense?
     if not cfg.goto_after then
         return
     end
@@ -91,7 +90,6 @@ function M.filter(src_win, count, name, f, cfg)
 
     require("qf-herder._stack")._history(src_win, true, dest_nr, stack_cfg)
 end
--- TODO: A lot of this logic is shared with sort.
 
 ---@param entry vim.quickfix.entry
 ---@param re vim.regex
