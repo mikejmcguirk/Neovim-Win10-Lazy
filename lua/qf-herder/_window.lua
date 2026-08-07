@@ -49,6 +49,7 @@ function M.list_open(src_win, count, cfg)
         M.ll_open(count, true, cfg)
     end
 end
+-- TODO: This should take a silent arg.
 
 ---@param tabpages uinteger[]
 ---@param qf_id uinteger

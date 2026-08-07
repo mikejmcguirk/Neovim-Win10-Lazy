@@ -1,10 +1,28 @@
 local api = vim.api
 local fn = vim.fn
 
-local ntt = require("nvim-tools.table")
 local _util = require("qf-herder._util")
+local ntq = require("nvim-tools.quickfix")
+local ntt = require("nvim-tools.table")
 
 local M = {}
+
+---@param src_win uinteger?
+---@return uinteger?
+local function src_win_resolve(src_win, item_type)
+    if src_win == nil or item_type ~= "\1" then
+        return src_win
+    end
+
+    local src_win_buf = api.nvim_win_get_buf(src_win)
+    if api.nvim_get_option_value("bt", { buf = src_win_buf }) == "help" then
+        return src_win
+    end
+
+    local ntb = require("nvim-tools.buf")
+    local temp_buf = ntb.create_temp_buf("wipe", false, "help", "help", false)
+    return api.nvim_open_win(temp_buf, false, { split = "below", win = src_win })
+end
 
 ---@param stdout string?
 ---@param sort fun(a:vim.quickfix.entry, b:vim.quickfix.entry): boolean
@@ -74,53 +92,28 @@ local function output_set_to_list(src_win, obj, what, ctx, cfg)
         return
     end
 
-    -- TODO: Do we need special case handling here for qf?
-    -- TODO: Maybe outline this as some kind of "ensure_src_win" function but need to know the
-    -- qf case.
-    local orig_src_win = src_win
-    if src_win and item_type == "\1" then
-        local src_win_buf = api.nvim_win_get_buf(src_win)
-        if api.nvim_get_option_value("bt", { buf = src_win_buf }) ~= "help" then
-            local ntb = require("nvim-tools.buf")
-            local temp_buf = ntb.create_temp_buf("wipe", false, "help", "help", false)
-            src_win = api.nvim_open_win(temp_buf, false, { split = "below", win = src_win })
-        end
-    end
-
+    local src_win_res = src_win_resolve(src_win, item_type)
     local what_set = ntt.deepcopy(what)
     what_set.items = entries
-    local dest_nr = require("nvim-tools.quickfix").set_list_checked(src_win, ctx.action, what_set)
+    local dest_nr = ntq.set_list_checked(src_win_res, ctx.action, what_set)
     if dest_nr < 1 then
         api.nvim_echo({ { "Unable to set list", "ErrorMsg" } }, true, {})
         return
     end
 
-    local cfg_spk = cfg.spk
-    local history_cfg = { spk = cfg_spk, update_list_wins = cfg.update_list_wins }
-    local hist_silent = cfg.open_results and true or false
-    require("qf-herder._stack")._history(src_win, hist_silent, dest_nr, history_cfg)
-    if cfg.open_results then
-        if src_win ~= nil and orig_src_win ~= src_win then
-            api.nvim_set_current_win(src_win)
-        end
-
-        -- TODO: Do we need to pull the original buf into here?
-        ---@type qf-herder.window.Cfg
-        local win_cfg = require("qf-herder")._config_merged_get(0, nil, "window")
-        require("qf-herder._window").list_open(src_win, 0, win_cfg)
+    local is_new_ll_win = src_win ~= nil and src_win_res ~= src_win
+    if is_new_ll_win then
+        ---@cast src_win_res uinteger
+        api.nvim_set_current_win(src_win_res)
     end
 
-    -- TODO: I think this is the right behavior but this is a disorganized way to do it,
-    -- because we don't need the win_call if we opened results. I think we make a nav abstraction
-    -- that does an optional win_call. Or maybe we accept that the abstraction always does it.
-    -- TODO: This should be behind "open_results" and open list should be separate
-    -- if src_win ~= nil then
-    --     api.nvim_win_call(src_win, function()
-    --         api.nvim_cmd({ cmd = "ll", count = 1, mods = { silent = true } }, {})
-    --     end)
-    -- else
-    --     api.nvim_cmd({ cmd = "cc", count = 1, mods = { silent = true } }, {})
-    -- end
+    if is_new_ll_win or cfg.open_results then
+        _util.set_nr_and_open(src_win_res, dest_nr, false)
+    end
+
+    if is_new_ll_win then
+        api.nvim_cmd({ cmd = "ll", count = 1, mods = { silent = true } }, {})
+    end
 end
 
 ---@param src_win uinteger|nil
@@ -131,11 +124,10 @@ end
 ---@param ctx qf-rancher.system.Ctx
 ---@param cfg qf-rancher.system.Cfg
 function M.cmd_to_list(src_win, cmd_parts, sync, what, ctx, cfg)
+    local timeout = cfg.timeout
+    local vim_system_opts = { text = true, timeout = timeout } ---@type vim.SystemOpts
     what = ntt.deepcopy(what)
 
-    local timeout = cfg.timeout
-    ---@type vim.SystemOpts
-    local vim_system_opts = { text = true, timeout = timeout }
     if sync then
         local obj = vim.system(cmd_parts, vim_system_opts):wait(timeout)
         output_set_to_list(src_win, obj, what, ctx, cfg)

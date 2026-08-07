@@ -124,12 +124,8 @@ function M.diags_to_list(src_win, get_opts, f, cfg)
         return
     end
 
-    local _, _, stack_cfg = herder._config_merged_from_win(src_win or 0, "stack")
-    require("qf-herder._stack")._history(src_win, true, dest_nr, stack_cfg)
     if cfg.open_results then
-        local _, _, win_cfg = herder._config_merged_from_win(src_win or 0, "window")
-        win_cfg.silent = true
-        require("qf-herder._window").list_open(src_win, 0, win_cfg)
+        _util.set_nr_and_open(src_win, dest_nr, true)
     end
 end
 

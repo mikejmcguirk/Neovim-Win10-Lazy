@@ -198,7 +198,7 @@ local schema = {
         title = "string",
     },
     filter = {
-        goto_after = "boolean",
+        open_results = "boolean",
     },
     ftplugin = {
         maps_set = "boolean",
@@ -239,7 +239,7 @@ local schema = {
         do_zzze = "boolean",
     },
     sort = {
-        goto_after = "boolean",
+        open_results = "boolean",
     },
     stack = {
         update_list_wins = "boolean",
@@ -283,7 +283,7 @@ local default_config = {
     },
     ---@class qf-herder.filter.Cfg
     filter = {
-        goto_after = true, ---@type boolean
+        open_results = true, ---@type boolean
     },
     ---@class qf-herder.ftplugin.Cfg
     ftplugin = {
@@ -331,7 +331,7 @@ local default_config = {
     },
     ---@class qf-herder.sort.Cfg
     sort = {
-        goto_after = true, ---@type boolean
+        open_results = true, ---@type boolean
     },
     ---@class qf-herder.stack.Cfg
     stack = {
@@ -360,7 +360,7 @@ local default_config = {
 }
 
 ---@class qf-herder.filter.Opts
----@field goto_after? boolean
+---@field open_results? boolean
 
 ---@class qf-herder.ftplugin.Opts
 ---@field maps_set? boolean
@@ -401,7 +401,7 @@ local default_config = {
 ---@field do_zzze? boolean
 
 ---@class qf-herder.sort.Opts
----@field goto_after? boolean
+---@field open_results? boolean
 
 ---@class qf-herder.stack.Opts
 ---@field update_list_wins? boolean
@@ -1166,7 +1166,7 @@ local function grep_qf_tcd(regex, opts)
     local _, _, cfg = cfg_get_from_opts(opts, "grep")
     local locations = { fn.getcwd(-1, 0) }
     local sort_fun = require("qf-herder._sort").fname_asc
-    require("qf-herder._grep").rg(nil, locations, "Cur Buf", regex, "", sort_fun, cfg)
+    require("qf-herder._grep").rg(nil, locations, "Tcd", regex, "", sort_fun, cfg)
 end
 
 ---@param opts? qf-herder.grep.Opts

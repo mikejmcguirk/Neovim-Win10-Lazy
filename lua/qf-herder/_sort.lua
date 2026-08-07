@@ -34,18 +34,9 @@ function M.sort(src_win, count, f, cfg)
         return
     end
 
-    if not cfg.goto_after then
-        return
+    if cfg.open_results then
+        _util.set_nr_and_open(src_win, dest_nr, true)
     end
-
-    local herder = require("qf-herder")
-    local _, _, ok, stack_cfg, err = herder._config_merged_from_win(src_win or 0, "stack")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
-    require("qf-herder._stack")._history(src_win, true, dest_nr, stack_cfg)
 end
 
 ---@param a vim.quickfix.entry

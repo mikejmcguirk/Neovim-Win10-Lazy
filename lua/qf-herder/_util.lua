@@ -43,4 +43,16 @@ function M.set_nr_resolve(reuse_title, src_win, title)
     return " ", ntq.get_list(src_win, { nr = "$" }).nr
 end
 
+---@param src_win uinteger?
+---@param nr uinteger
+---@param silent boolean
+function M.set_nr_and_open(src_win, nr, silent)
+    local herder = require("qf-herder")
+    local _, _, stack_cfg = herder._config_merged_from_win(src_win or 0, "stack")
+    require("qf-herder._stack")._history(src_win, silent, nr, stack_cfg)
+
+    local _, _, win_cfg = herder._config_merged_from_win(src_win or 0, "window")
+    require("qf-herder._window").list_open(src_win, 0, win_cfg)
+end
+
 return M
