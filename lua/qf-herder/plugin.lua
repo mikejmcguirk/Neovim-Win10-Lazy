@@ -67,6 +67,7 @@ local win_open = cfg_keymap.win_open
 local resize = string.upper(win_open)
 
 local nmode = { "n" }
+local nxmode = { "n", "x" }
 
 local M = {}
 
@@ -129,16 +130,16 @@ M.maps = {
     -- MARK: Maps - Grep --
     -----------------------
 
-{ nmode, "<Plug>(qf-herder-rg-ll-bcd-fixed)", { prefix_ll .. prefix_grep .. key_buf }, "", "Ripgrep the bcd to the location list (fixed strings)", function() herder.rg.ll_bcd_fixed() end, },
-{ nmode, "<Plug>(qf-herder-rg-ll-bcd-regex)", { prefix_ll .. prefix_grep .. key_buf_re }, "", "Ripgrep the bcd to the location list (regex)", function() herder.rg.ll_bcd_regex() end, },
-{ nmode, "<Plug>(qf-herder-rg-ll-curbuf-fixed)", { prefix_ll .. prefix_grep .. key_buf }, "", "Ripgrep a single buf to the location list (fixed strings)", function() herder.rg.ll_cur_buf_fixed() end, },
-{ nmode, "<Plug>(qf-herder-rg-ll-curbuf-regex)", { prefix_ll .. prefix_grep .. key_buf_re }, "", "Ripgrep a single buf to the location list (regex)", function() herder.rg.ll_cur_buf_regex() end, },
-{ nmode, "<Plug>(qf-herder-rg-ll-help-fixed)", { prefix_ll .. prefix_grep .. key_help }, "", "Ripgrep help dirs to the location list (fixed strings)", function() herder.rg.ll_help_fixed() end, },
-{ nmode, "<Plug>(qf-herder-rg-ll-help-regex)", { prefix_ll .. prefix_grep .. key_help_re }, "", "Ripgrep help dirs to the location list (regex)", function() herder.rg.ll_help_regex() end, },
-{ nmode, "<Plug>(qf-herder-rg-qf-bufs-fixed)", { prefix_qf .. prefix_grep .. key_dir }, "", "Ripgrep all bufs to the quickfix list (fixed strings)", function() herder.rg.qf_bufs_fixed() end, },
-{ nmode, "<Plug>(qf-herder-rg-qf-bufs-regex)", { prefix_qf .. prefix_grep .. key_dir_re }, "", "Ripgrep all bufs to the quickfix list (regex)", function() herder.rg.qf_bufs_regex() end, },
-{ nmode, "<Plug>(qf-herder-rg-qf-tcd-fixed)", { prefix_qf .. prefix_grep .. key_dir }, "", "Ripgrep the tcd to the quickfix list (fixed strings)", function() herder.rg.qf_tcd_fixed() end, },
-{ nmode, "<Plug>(qf-herder-rg-qf-tcd-regex)", { prefix_qf .. prefix_grep .. key_dir_re }, "", "Ripgrep the tcd to the quickfix list (regex)", function() herder.rg.qf_tcd_regex() end, },
+{ nxmode, "<Plug>(qf-herder-rg-ll-bcd-fixed)", { prefix_ll .. prefix_grep .. key_buf }, "", "Ripgrep the bcd to the location list (fixed strings)", function() herder.rg.ll_bcd_fixed() end, },
+{ nxmode, "<Plug>(qf-herder-rg-ll-bcd-regex)", { prefix_ll .. prefix_grep .. key_buf_re }, "", "Ripgrep the bcd to the location list (regex)", function() herder.rg.ll_bcd_regex() end, },
+{ nxmode, "<Plug>(qf-herder-rg-ll-curbuf-fixed)", { prefix_ll .. prefix_grep .. key_buf }, "", "Ripgrep a single buf to the location list (fixed strings)", function() herder.rg.ll_cur_buf_fixed() end, },
+{ nxmode, "<Plug>(qf-herder-rg-ll-curbuf-regex)", { prefix_ll .. prefix_grep .. key_buf_re }, "", "Ripgrep a single buf to the location list (regex)", function() herder.rg.ll_cur_buf_regex() end, },
+{ nxmode, "<Plug>(qf-herder-rg-ll-help-fixed)", { prefix_ll .. prefix_grep .. key_help }, "", "Ripgrep help dirs to the location list (fixed strings)", function() herder.rg.ll_help_fixed() end, },
+{ nxmode, "<Plug>(qf-herder-rg-ll-help-regex)", { prefix_ll .. prefix_grep .. key_help_re }, "", "Ripgrep help dirs to the location list (regex)", function() herder.rg.ll_help_regex() end, },
+{ nxmode, "<Plug>(qf-herder-rg-qf-bufs-fixed)", { prefix_qf .. prefix_grep .. key_buf }, "", "Ripgrep all bufs to the quickfix list (fixed strings)", function() herder.rg.qf_bufs_fixed() end, },
+{ nxmode, "<Plug>(qf-herder-rg-qf-bufs-regex)", { prefix_qf .. prefix_grep .. key_buf_re }, "", "Ripgrep all bufs to the quickfix list (regex)", function() herder.rg.qf_bufs_regex() end, },
+{ nxmode, "<Plug>(qf-herder-rg-qf-tcd-fixed)", { prefix_qf .. prefix_grep .. key_dir }, "", "Ripgrep the tcd to the quickfix list (fixed strings)", function() herder.rg.qf_tcd_fixed() end, },
+{ nxmode, "<Plug>(qf-herder-rg-qf-tcd-regex)", { prefix_qf .. prefix_grep .. key_dir_re }, "", "Ripgrep the tcd to the quickfix list (regex)", function() herder.rg.qf_tcd_regex() end, },
 
     ----------------------
     -- MARK: Maps - Nav --

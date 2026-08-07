@@ -280,7 +280,11 @@ end
 function M.ll_open(count, silent, cfg)
     local src_win = api.nvim_get_current_win()
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
-    if not _util.ll_ensure_qf_id_or_echo(qf_id, silent) then
+    if qf_id == 0 then
+        if not silent then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        end
+
         return
     end
 
@@ -296,7 +300,11 @@ end
 ---@param cfg qf-herder.window.Cfg
 function M.ll_close(src_win, silent, cfg)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
-    if not _util.ll_ensure_qf_id_or_echo(qf_id, silent) then
+    if qf_id == 0 then
+        if not silent then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        end
+
         return
     end
 
@@ -313,7 +321,11 @@ end
 function M.ll_toggle(count, silent, cfg)
     local src_win = api.nvim_get_current_win()
     local qf_id = fn.getloclist(src_win, { id = 0 }).id ---@type uinteger
-    if not _util.ll_ensure_qf_id_or_echo(qf_id, silent) then
+    if qf_id == 0 then
+        if not silent then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        end
+
         return
     end
 
@@ -334,7 +346,11 @@ end
 ---@param cfg qf-herder.window.Cfg
 function M.ll_resize(src_win, count, silent, cfg)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id ---@type uinteger
-    if not _util.ll_ensure_qf_id_or_echo(qf_id, silent) then
+    if qf_id == 0 then
+        if not silent then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        end
+
         return
     end
 

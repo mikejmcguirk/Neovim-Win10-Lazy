@@ -173,7 +173,9 @@ end
 ---@return nil
 function M.l_prev(src_win, count1, cur_win, keep_focus, silent, cfg)
     if fn.getloclist(src_win, { id = 0 }).id == 0 then
-        api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        if not silent then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        end
     else
         local wrap_math = require("nvim-tools.math").wrapping_sub
         idx_change(src_win, count1, cur_win, keep_focus, silent, wrap_math, cfg.do_zzze)
@@ -189,7 +191,9 @@ end
 ---@return nil
 function M.l_next(src_win, count1, cur_win, keep_focus, silent, cfg)
     if fn.getloclist(src_win, { id = 0 }).id == 0 then
-        api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        if not silent then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        end
     else
         local wrap_math = require("nvim-tools.math").wrapping_add
         idx_change(src_win, count1, cur_win, keep_focus, silent, wrap_math, cfg.do_zzze)
@@ -237,7 +241,10 @@ end
 function M.l_l(src_win, count, cur_win, keep_focus, silent, cfg)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
     if qf_id == 0 then
-        api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        if not silent then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        end
+
         return
     end
 
@@ -289,7 +296,11 @@ end
 ---@param silent boolean
 ---@param cfg qf-herder.nav.Cfg
 function M.l_rewind(src_win, count, silent, cfg)
-    if _util.ll_ensure_qf_id_or_echo(fn.getloclist(src_win, { id = 0 }).id, silent) then
+    if fn.getloclist(src_win, { id = 0 }).id == 0 then
+        if not silent then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        end
+    else
         bookends(src_win, silent, count, "lrewind", cfg.do_zzze)
     end
 end
@@ -299,7 +310,11 @@ end
 ---@param silent boolean
 ---@param cfg qf-herder.nav.Cfg
 function M.l_last(src_win, count, silent, cfg)
-    if _util.ll_ensure_qf_id_or_echo(fn.getloclist(src_win, { id = 0 }).id, silent) then
+    if fn.getloclist(src_win, { id = 0 }).id == 0 then
+        if not silent then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        end
+    else
         bookends(src_win, silent, count, "llast", cfg.do_zzze)
     end
 end
@@ -327,7 +342,11 @@ end
 ---@param count1 integer
 ---@param cfg qf-herder.nav.Cfg
 function M.l_pfile(src_win, count1, silent, cfg)
-    if _util.ll_ensure_qf_id_or_echo(fn.getloclist(src_win, { id = 0 }).id, silent) then
+    if fn.getloclist(src_win, { id = 0 }).id == 0 then
+        if not silent then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        end
+    else
         file_nav_wrap(src_win, count1, silent, cfg.do_zzze, "lpfile", "llast")
     end
 end
@@ -338,7 +357,11 @@ end
 ---@param cfg qf-herder.nav.Cfg
 ---@return nil
 function M.l_nfile(src_win, count1, silent, cfg)
-    if _util.ll_ensure_qf_id_or_echo(fn.getloclist(src_win, { id = 0 }).id, silent) then
+    if fn.getloclist(src_win, { id = 0 }).id == 0 then
+        if not silent then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+        end
+    else
         file_nav_wrap(src_win, count1, silent, cfg.do_zzze, "lnfile", "lrewind")
     end
 end

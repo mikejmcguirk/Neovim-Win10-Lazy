@@ -1,3 +1,10 @@
+## TODO:
+
+- [ ] Once the docgen is done, go through here and strip out anything that isn't actually being used.
+  - Large lib. Need to reduce code maintenance burden
+
+----------------
+
 ## General
 
 #### TODO:

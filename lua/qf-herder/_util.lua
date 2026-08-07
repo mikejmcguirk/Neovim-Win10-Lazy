@@ -27,37 +27,20 @@ function M.ensure_spk(win, tabpage, spk)
     return old_spk
 end
 
----@param qf_id uinteger
----@return boolean
-function M.ll_ensure_qf_id_or_echo(qf_id, silent)
-    if qf_id > 0 then
-        return true
-    end
-
-    if not silent then
-        api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
-    end
-
-    return false
-end
--- TODO: yeet. Failed experiment. Harder to reason about than the extra line of code.
-
 ---@param reuse_title boolean
 ---@param src_win uinteger?
 ---@param title string
 ---@return ("a"|"f"|"r"|"u"|" "), uinteger
 function M.set_nr_resolve(reuse_title, src_win, title)
     local ntq = require("nvim-tools.quickfix")
-    if not reuse_title then
-        return " ", ntq.get_list(src_win, { nr = "$" }).nr
+    if reuse_title then
+        local set_nr = ntq.find_list_with_title(src_win, title)
+        if set_nr then
+            return "u", set_nr
+        end
     end
 
-    local diag_nr = ntq.find_list_with_title(src_win, title)
-    if diag_nr then
-        return "u", diag_nr
-    else
-        return " ", ntq.get_list(src_win, { nr = "$" }).nr
-    end
+    return " ", ntq.get_list(src_win, { nr = "$" }).nr
 end
 
 return M

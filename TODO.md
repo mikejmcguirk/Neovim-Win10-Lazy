@@ -14,8 +14,10 @@
 - TODO > MID > LOW
 - Plugin ordering
   - rancher
+  - Re-update of catharsis/farsight based on rancher learnings
   - nvim-tools
   - docgen
+  - nvim-tools reduce
 
 ## TODO:
 
@@ -38,14 +40,6 @@
 
 ## MID:
 
-- [ ] https://github.com/neovim/neovim/issues/39006 - nvim-treesitter upstreaming/alternatives
-  - https://github.com/neovim/neovim/issues/22313 : Master problem statement
-  - https://github.com/neovim/neovim/issues/39006 : Upstream nvim-treesitter work plan
-  - https://github.com/neovim/neovim/issues/39007 : Possible shipping of pre-built parsers
-  - https://github.com/neovim/neovim/issues/39037 : How to address installing non-shipped ts parsers
-  - https://github.com/neovim/neovim/issues/39008 : WASM parser support
-  - https://github.com/neovim/neovim/issues/39009 : Syntax detection/configuration
-    * I have a comment in here
 - [ ] Investigate this: https://github.com/chrisgrieser/nvim-various-textobjs
   - [ ] Is this a plugin worth using? A plugin worth using as the basis for other things?
 - [ ] Are there action items or notes to take on this? https://github.com/neovim/neovim/pull/36261 (PR on cursor style adjustment fixes)

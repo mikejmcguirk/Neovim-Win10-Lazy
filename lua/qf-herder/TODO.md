@@ -23,10 +23,12 @@
 - [ ] Add cmds for sort, diags, grep, and filter.
   - [ ] Needs a general parsing shape
   - [ ] User-defined commands should not be able to override or remove the built-ins
+
 #### Config:
 
 - [ ] Add a `global` config table with opts like `spk` in it that merges under the module specific configs
 - [ ] Case should have a "vim" mode that checks smartcase and ignorecase
+- [ ] Is there a way to add an unset def without just bluntly copying and pasting everything and changing the types to booleans.
 
 #### DIAGS:
 

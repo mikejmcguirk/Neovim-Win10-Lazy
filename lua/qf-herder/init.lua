@@ -320,7 +320,6 @@ local default_config = {
         win_close = "o", ---@type string
         win_open = "p", ---@type string
     },
-    -- TODO: Review these for overlap
     ---@class qf-herder.nav.Cfg
     nav = {
         do_zzze = true, ---@type boolean
@@ -332,7 +331,6 @@ local default_config = {
     },
     ---@class qf-herder.sort.Cfg
     sort = {
-        -- TODO: history_after?
         goto_after = true, ---@type boolean
     },
     ---@class qf-herder.stack.Cfg
@@ -476,8 +474,6 @@ function M.config_reset()
     ---@diagnostic disable-next-line: assign-type-mismatch
     config = ntt.deepcopy(default_config)
 end
-
--- TODO: Add an unset def that just has boolean values for everything.
 
 ---@param keys table
 ---@return qf-herder.Config
@@ -851,11 +847,9 @@ function M.diags.ll_cur_buf_min_hint(opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diags.ll_cur_buf_only_hints(opts)
+function M.diags.ll_cur_buf_only_hint(opts)
     ll_diags_do({ severity = { 4 } }, opts)
 end
-
--- TODO: Should the plurals be based on english grammar rules as they currently are?
 
 M.filter = {}
 
@@ -879,42 +873,42 @@ end
 
 ---@param opts? qf-herder.filter.Opts
 function M.filter.qf_fname_keep(opts)
-    qf_filter_do(vim.v.count, "Fname", require("qf-herder._filter").fname_keep, opts)
+    qf_filter_do(vim.v.count, "Keep Fname", require("qf-herder._filter").fname_keep, opts)
 end
 
 ---@param opts? qf-herder.filter.Opts
 function M.filter.qf_fname_discard(opts)
-    qf_filter_do(vim.v.count, "Fname", require("qf-herder._filter").fname_discard, opts)
+    qf_filter_do(vim.v.count, "Discard Fname", require("qf-herder._filter").fname_discard, opts)
 end
 
 ---@param opts? qf-herder.filter.Opts
 function M.filter.ll_fname_keep(opts)
-    ll_filter_do(vim.v.count, "Fname", require("qf-herder._filter").fname_keep, opts)
+    ll_filter_do(vim.v.count, "Keep Fname", require("qf-herder._filter").fname_keep, opts)
 end
 
 ---@param opts? qf-herder.filter.Opts
 function M.filter.ll_fname_discard(opts)
-    ll_filter_do(vim.v.count, "Fname", require("qf-herder._filter").fname_discard, opts)
+    ll_filter_do(vim.v.count, "Discard Fname", require("qf-herder._filter").fname_discard, opts)
 end
 
 ---@param opts? qf-herder.filter.Opts
 function M.filter.qf_text_keep(opts)
-    qf_filter_do(vim.v.count, "Text", require("qf-herder._filter").text_keep, opts)
+    qf_filter_do(vim.v.count, "Keep Text", require("qf-herder._filter").text_keep, opts)
 end
 
 ---@param opts? qf-herder.filter.Opts
 function M.filter.qf_text_discard(opts)
-    qf_filter_do(vim.v.count, "Text", require("qf-herder._filter").text_discard, opts)
+    qf_filter_do(vim.v.count, "Discard Text", require("qf-herder._filter").text_discard, opts)
 end
 
 ---@param opts? qf-herder.filter.Opts
 function M.filter.ll_text_keep(opts)
-    ll_filter_do(vim.v.count, "Text", require("qf-herder._filter").text_keep, opts)
+    ll_filter_do(vim.v.count, "Keep Text", require("qf-herder._filter").text_keep, opts)
 end
 
 ---@param opts? qf-herder.filter.Opts
 function M.filter.ll_text_discard(opts)
-    ll_filter_do(vim.v.count, "Text", require("qf-herder._filter").text_discard, opts)
+    ll_filter_do(vim.v.count, "Discard Text", require("qf-herder._filter").text_discard, opts)
 end
 
 M.nav = {}

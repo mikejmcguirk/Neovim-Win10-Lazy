@@ -56,7 +56,6 @@ end
 ---------------------------------
 
 local group = api.nvim_create_augroup("qf-herder-preview", {})
--- TODO: change back to rancher
 local PVW_FT = "qf-herder-preview"
 
 local hl_ns = api.nvim_create_namespace("qf-herder.preview")
