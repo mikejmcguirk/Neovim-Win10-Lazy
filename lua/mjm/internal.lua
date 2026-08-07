@@ -130,8 +130,7 @@ api.nvim_create_autocmd("LspAttach", {
         local buf = ev.buf
         local func = action_filters[api.nvim_get_option_value("filetype", { buf = buf })]
         if func ~= nil then
-            ---@diagnostic disable-next-line: undefined-field
-            require("catharsis").buf_config[buf]({ lampshade = { action_filter = func } })
+            require("catharsis").buf_config({ lampshade = { action_filter = func } }, buf)
         end
     end,
 })

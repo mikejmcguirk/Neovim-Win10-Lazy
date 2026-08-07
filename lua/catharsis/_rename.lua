@@ -746,7 +746,7 @@ local M = {}
 
 ---@param cur_win uinteger
 ---@param cur_buf uinteger
----@param rn_ctx catharsis.rename.Ctx
+---@param rn_ctx catharsis.rename.Cfg
 function M._dispatcher(cur_win, cur_buf, rn_ctx)
     local nts = require("nvim-tools.lsp")
     if uv.is_active(state_timer_req_prep_rn) then

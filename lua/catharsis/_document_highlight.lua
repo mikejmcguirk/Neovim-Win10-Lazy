@@ -593,8 +593,8 @@ end
 ---A count greater than zero will jump to the highlight at that index, clamped to max.
 ---@param abs boolean
 ---@param upward boolean
----@param ctx catharsis.documentHighlight.JumpCtx
-function M.jump(win, buf, count, abs, upward, ctx)
+---@param cfg catharsis.documentHighlight.Cfg
+function M.jump(win, buf, count, abs, upward, cfg)
     ---@type nvim-tools.range.DocHl[]
     local hls = require("nvim-tools.table").get(state_results, buf, "highlights")
     if hls == nil or #hls == 0 then
@@ -617,7 +617,7 @@ function M.jump(win, buf, count, abs, upward, ctx)
 
     api.nvim_win_set_cursor(win, { sr + 1, dest[2] })
     api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
-    if off_screen and ctx.zzze then
+    if off_screen and cfg.do_zzze then
         api.nvim_cmd({ cmd = "norm", args = { "zzze" }, bang = true }, {})
     end
 end

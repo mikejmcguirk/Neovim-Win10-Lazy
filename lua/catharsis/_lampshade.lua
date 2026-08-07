@@ -119,7 +119,7 @@ end
 
 ---@param entries table<integer, vim.lsp.CodeActionResultEntry>
 ---@param buf integer
----@param ca_ctx catharsis.lampshade.Ctx
+---@param ca_ctx catharsis.lampshade.Cfg
 ---@return nil
 local function handler(entries, buf, ca_ctx)
     local req = state_buf_reqs[buf]
@@ -222,13 +222,7 @@ local function req_debounced(buf, keep_fn)
         return
     end
 
-    local ok, ca_ctx, err = require("catharsis")._get_merged_config(buf, nil, "lampshade")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
-    local win = api.nvim_get_current_win()
+    local win, _, ca_ctx = require("catharsis")._config_merged_from_win(0, "lampshade")
     local ns_wins = api.nvim__ns_get(state_ns).wins
     if ns_wins == nil or ns_wins[1] ~= win or api.nvim_win_get_buf(win) ~= buf then
         return
