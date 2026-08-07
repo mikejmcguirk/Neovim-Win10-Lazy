@@ -366,18 +366,6 @@ local function client_find_from_top_score(clients, buf, methods)
     return top_client[1], top_client[2]
 end
 
----@param buf uinteger
----@param methods (vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration)[]
----@return uinteger?, vim.lsp.Client?
-function M.client_get_top_scoring(buf, methods)
-    local clients = M.clients_get_supporting_multiple(buf, methods)
-    if #clients == 0 then
-        return
-    end
-
-    return client_find_from_top_score(clients, buf, methods)
-end
-
 ---@param clients vim.lsp.Client[]
 ---@param buf uinteger
 ---@param methods (vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration)[]
@@ -487,6 +475,7 @@ function M.log_unsupported_and_echo(method)
     local msg = string.format(fmt_str, method)
     M.log_and_echo(msg, 3, "WarningMsg", true)
 end
+-- TODO: There are almost certainly places this function should be used.
 
 -----------------------
 -- MARK: Diagnostics --
@@ -510,13 +499,15 @@ local function diags_dynamic_from_client_id_append(client_id, buf, row, ret)
             local reg_opts = cap.registerOptions
             if reg_opts and type(reg_opts) == "table" then
                 local identifier = reg_opts.identifier
+                ---@diagnostic disable-next-line: param-type-mismatch
                 local ns_pull = lsp.diagnostic.get_namespace(client.id, true, identifier)
                 local diags = vim.diagnostic.get(buf, { namespace = ns_pull, lnum = row })
                 ntt.i_append(ret, diags)
             end
         end
     else
-        local static_reg = client.server_capabilities[provider]
+        local cap = client.server_capabilities
+        local static_reg = cap ~= nil and cap[provider] or nil
         if static_reg ~= nil then
             local identifier = static_reg.identifier
             local ns_pull = lsp.diagnostic.get_namespace(client.id, true, identifier)

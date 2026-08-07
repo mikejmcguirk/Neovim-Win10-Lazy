@@ -50,34 +50,6 @@ function M.cursor_ext_get(win)
     return require("nvim-tools.pos").mark_to_ext_pos(api.nvim_win_get_cursor(win or 0))
 end
 
----Credit echasnovski
----@audited 2026-07-03
----@param wins integer[]
-function M.order_wins(wins)
-    local positions = {} ---@type { [1]:integer, [2]:integer, [3]:integer }[]
-    for _, win in ipairs(wins) do
-        local pos = api.nvim_win_get_position(win)
-        local config = api.nvim_win_get_config(win)
-        positions[win] = { pos[1], pos[2], config.zindex or 0 }
-    end
-
-    table.sort(wins, function(a, b)
-        local pos_a = positions[a]
-        local pos_b = positions[b]
-        if pos_a[3] < pos_b[3] then
-            return true
-        elseif pos_a[3] > pos_b[3] then
-            return false
-        elseif pos_a[2] < pos_b[2] then
-            return true
-        elseif pos_a[2] > pos_b[2] then
-            return false
-        else
-            return pos_a[1] < pos_b[1]
-        end
-    end)
-end
-
 ---Win and force params are the same as vim.api.nvim_win_close
 ---The first return value is true if the window was closed, false if not
 ---The second return is the window's buf-ID. This will be nil if the function exited with an

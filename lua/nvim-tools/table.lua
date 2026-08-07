@@ -2896,7 +2896,7 @@ end
 ---Create a new |lua-list| by applying function `f` to the values of `t`.
 ---@generic T, U
 ---@param t T[]
----@param f fun(x:T, idx:uinteger): U|nil `nil` returns are filtered.
+---@param f fun(x:T, idx:uinteger): U `nil` returns are filtered.
 ---@param limit? uinteger
 ---@return U[] New table. Empty if all elements are filtered.
 function M.i_filter_map_to(t, f, limit)

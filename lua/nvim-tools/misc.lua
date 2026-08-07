@@ -2,26 +2,6 @@ local api = vim.api
 
 local M = {}
 
----@param str string
----@param new_items string[]
----@param sep string
----@return string
-function M.append_if_missing(str, new_items, sep)
-    vim.validate("str", str, "string")
-    vim.validate("new_items", new_items, "table")
-    vim.validate("sep", sep, "string")
-
-    local new = { (#str > 0 and str or nil) } ---@type string[]
-    for _, item in ipairs(new_items) do
-        if string.find(str, item, 1, true) == nil then
-            new[#new + 1] = item
-        end
-    end
-
-    return table.concat(new, sep)
-end
--- TODO: Yeet this when the old buf open stuff is gone.
-
 ---`a` and `b` must be in the correct order.
 ---@audited 2026-07-03
 ---@param a any

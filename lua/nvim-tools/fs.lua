@@ -1,17 +1,8 @@
-local fs = vim.fs
 local uv = vim.uv
 
 local DEFAULT_TIMEOUT = 1000
 
 local M = {}
-
----@audited 2026-07-03
----@param path string
----@return string norm_abs_path
-function M.path_norm_abs_get(path)
-    -- vim.fs.abspath might be changed to use fnamemodify :p:h, so use this for stability
-    return fs.normalize(vim.call("fnamemodify", path, ":p"))
-end
 
 ---@param path string
 ---@param err uv.callback.err
@@ -39,9 +30,9 @@ end
 ---@param fd integer|nil
 ---@return boolean ok, string? msg
 function M.fs_open_validate(path, err, fd)
-    if err then
+    if err ~= nil then
         return false, string.format("fs_open error on %s: %s", path, err)
-    elseif not fd then
+    elseif fd == nil then
         local fmt_str = "fs_open failed on %s: no file descriptor returned"
         local msg = string.format(fmt_str, path)
         return false, msg
@@ -90,10 +81,13 @@ local function _fs_stat_list_async(paths, on_complete, opts)
     local timed_out = false -- Only use this for the results return.
     local is_done = false -- `done()` is a busted function.
     ---@type [string,string][]
-    local errs = require("nvim-tools.table").table_new(paths_count, 0)
+    local errs = require("nvim-tools.table").new(paths_count, 0)
 
     local function finish()
-        timer = require("nvim-tools.timers").close_timer(timer)
+        if timer ~= nil and not uv.is_closing(timer) then
+            uv.timer_stop(timer)
+            uv.close(timer)
+        end
 
         local success = #errs == 0 and not timed_out
         is_done = true
@@ -114,7 +108,7 @@ local function _fs_stat_list_async(paths, on_complete, opts)
                 jobs_active = jobs_active - 1
                 local ok, msg = validator(path, stat, err)
                 if not ok then
-                    errs[#errs + 1] = { path, msg }
+                    errs[#errs + 1] = { path, msg or "" }
                 end
 
                 if idx_next <= paths_count then
@@ -132,8 +126,9 @@ local function _fs_stat_list_async(paths, on_complete, opts)
     end
 
     if timeout > 0 then
+        ---@diagnostic disable-next-line: unnecessary-assert, call-non-callable
         timer = assert(uv.new_timer())
-        timer:start(
+        timer--[[@cast -?]]:start(
             timeout,
             0,
             vim.schedule_wrap(function()
@@ -144,33 +139,6 @@ local function _fs_stat_list_async(paths, on_complete, opts)
             end)
         )
     end
-end
-
----@param filepaths string[]
----@param opts nvim-tools.fs.FsStatListOpts
-local function validate_fs_stat_list(filepaths, opts)
-    local nty = require("nvim-tools.types")
-    vim.validate("filepaths", filepaths, function()
-        return nty.valid_list(filepaths, { item_type = "string", min_len = 1 })
-    end)
-
-    vim.validate("opts.max_jobs", opts.jobs_max, nty.is_uint, true)
-    vim.validate("opts.timeout", opts.timeout, nty.is_uint, true)
-    vim.validate("opts.validator", opts.validator, "callable", true)
-end
-
----@async
----@param paths string[]
----@param on_complete fun(success:boolean, timed_out: boolean, errs:[string,string][])
----@param opts nvim-tools.fs.FsStatListOpts?
-function M.fs_stat_list_async(paths, on_complete, opts)
-    opts = opts or {}
-    validate_fs_stat_list(paths, opts)
-    if #paths == 0 then
-        return false, false, nil
-    end
-
-    _fs_stat_list_async(paths, on_complete, opts)
 end
 
 ---@class nvim-tools.fs.FsReadOpts
@@ -189,7 +157,9 @@ local function read_file_async(path, callback)
             return
         end
 
+        ---@cast fd uinteger
         uv.fs_fstat(fd, function(stat_err, stat)
+            ---@diagnostic disable-next-line: param-type-mismatch
             local ok_s, err_s = stat_file_validate(path, stat_err, stat, true)
             if not (ok_s and stat) then
                 uv.fs_close(fd, function() end)
@@ -221,11 +191,14 @@ local function _fs_read_list_async(paths, on_complete, opts)
     local timed_out = false
 
     ---@type table<string, nvim-tools.fs.FsReadListResult>
-    local results = require("nvim-tools.table").table_new(paths_count, 0)
+    local results = require("nvim-tools.table").new(paths_count, 0)
 
     -- Assumes same synchronous context as the caller
     local function finish()
-        timer = require("nvim-tools.timers").close_timer(timer)
+        if timer ~= nil and not uv.is_closing(timer) then
+            uv.timer_stop(timer)
+            uv.close(timer)
+        end
 
         local success = idx_next == (paths_count + 1) and not timed_out
         for _, result in pairs(results) do
@@ -268,8 +241,9 @@ local function _fs_read_list_async(paths, on_complete, opts)
     end
 
     if timeout > 0 then
+        ---@diagnostic disable-next-line: unnecessary-assert, call-non-callable
         timer = assert(uv.new_timer())
-        timer:start(
+        timer--[[@cast -?]]:start(
             timeout,
             0,
             vim.schedule_wrap(function()
@@ -344,6 +318,7 @@ function M.fs_read_list_get_errs(results)
 
     return table.concat(errs_tbl, "\n")
 end
+-- TODO: Basically creating a dialect out of my own logic. Bad.
 
 ---@param path string
 ---@return boolean, string?
