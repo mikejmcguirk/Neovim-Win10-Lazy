@@ -42,14 +42,13 @@ local M = {}
 ---@param src_win uinteger|nil
 ---@param count uinteger
 ---@param cfg qf-herder.window.Cfg
-function M.list_open(src_win, count, cfg)
+function M.list_open(src_win, count, silent, cfg)
     if src_win == nil then
         M.qf_open(count, cfg)
     else
-        M.ll_open(count, true, cfg)
+        M.ll_open(count, silent, cfg)
     end
 end
--- TODO: This should take a silent arg.
 
 ---@param tabpages uinteger[]
 ---@param qf_id uinteger
@@ -206,8 +205,6 @@ local function copen_with_spk(spk, count, split)
     ---@diagnostic disable-next-line: return-type-mismatch
     return ok, err
 end
--- MID: Can be combined with lopen_with_spk by taking cmd as a param and making split inclusive
--- of all options. Wait because this would be a pain to unwind if it were premature.
 
 ---Wrapper for `copen` in the current tabpage.
 ---@param count uinteger

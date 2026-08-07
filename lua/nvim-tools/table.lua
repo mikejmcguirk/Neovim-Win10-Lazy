@@ -2681,6 +2681,24 @@ function M.i_fold(t, init, f, rev)
     return acc_ret
 end
 
+---@generic T
+---@param t T[]
+---@return T `nil` if `t` is length zero.
+function M.i_max(t)
+    return M.i_reduce(t, function(acc, v)
+        return v > acc and v or acc
+    end)
+end
+
+---@generic T
+---@param t T[]
+---@return T `nil` if `t` is length zero.
+function M.i_min(t)
+    return M.i_reduce(t, function(acc, v)
+        return v < acc and v or acc
+    end)
+end
+
 ---Apply a function to all elements of a list, transforming them into a single value. The first
 ---accumulator will be the first element of the list (last if iterating in reverse).
 ---@see |i_fold()| to specify an initial accumulator.

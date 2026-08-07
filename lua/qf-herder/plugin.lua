@@ -105,7 +105,7 @@ M.maps = {
 { nmode, "<Plug>(qf-herder-diag-ll-curbuf-only-hint)", { prefix_ll .. key_diag .. diag_hint_only }, "", "Send cur buf hints to the location list", function() herder.diags.ll_cur_buf_only_hint() end, },
 { nmode, "<Plug>(qf-herder-diag-ll-curbuf-only-info)", { prefix_ll .. key_diag .. diag_info_only }, "", "Send cur buf info to the location list", function() herder.diags.ll_cur_buf_only_info() end, },
 { nmode, "<Plug>(qf-herder-diag-ll-curbuf-only-warn)", { prefix_ll .. key_diag .. diag_warn_only }, "", "Send cur buf warnings to the location list", function() herder.diags.ll_cur_buf_only_warn() end, },
-{ nmode, "<Plug>(qf-herder-diag-qf-bufs-errs)", { prefix_qf .. key_diag .. diag_err, prefix_ll .. key_diag .. diag_err }, "", "Send all errors to the quickfix list", function() herder.diags.qf_all_bufs_err() end, },
+{ nmode, "<Plug>(qf-herder-diag-qf-bufs-errs)", { prefix_qf .. key_diag .. diag_err, prefix_qf .. key_diag .. diag_err_only }, "", "Send all errors to the quickfix list", function() herder.diags.qf_all_bufs_err() end, },
 { nmode, "<Plug>(qf-herder-diag-qf-bufs-min-hint)", { prefix_qf .. key_diag .. diag_hint }, "", "Send all hints+ to the quickfix list", function() herder.diags.qf_all_bufs_min_hint() end, },
 { nmode, "<Plug>(qf-herder-diag-qf-bufs-min-info)", { prefix_qf .. key_diag .. diag_info }, "", "Send all info+ to the quickfix list", function() herder.diags.qf_all_bufs_min_info() end, },
 { nmode, "<Plug>(qf-herder-diag-qf-bufs-min-warn)", { prefix_qf .. key_diag .. diag_warn }, "", "Send all warnings+ to the quickfix list", function() herder.diags.qf_all_bufs_min_warnings() end, },
@@ -251,7 +251,7 @@ M.cmds = {
 { "Qtoggle", function(cargs) require("qf-herder._window").q_toggle_cmd(cargs) end, { count = 0, desc = "Toggle the quickfix list (to [count] height on open)" } },
 { "Qresize", function(cargs) require("qf-herder._window").q_resize_cmd(cargs) end, { count = 0, desc = "Resize the quickfix list to [count] height" } },
 { "Lopen", function(cargs) require("qf-herder._window").l_open_cmd(cargs) end, { count = 0, desc = "Open the location list to [count] height" } },
-{ "Lclose", function() require("qf-herder._window").l_close_cmd() end, { desc = "Close the location list" } },
+{ "Lclose", function(cargs) require("qf-herder._window").l_close_cmd(cargs) end, { desc = "Close the location list" } },
 { "Ltoggle", function(cargs) require("qf-herder._window").l_toggle_cmd(cargs) end, { count = 0, desc = "Toggle the location list (to [count] height on open)" } },
 { "Lresize", function(cargs) require("qf-herder._window").l_resize_cmd(cargs) end, { count = 0, desc = "Resize the location list to [count] height" } },
 

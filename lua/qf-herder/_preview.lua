@@ -420,7 +420,6 @@ local function pvw_open(cfg)
     end
 
     state_list_win = list_win
-    -- MID: Should be possible to title the preview win here as well
     set_preview_win_opts(state_pvw_win)
     pvw_pos_set(qf_range_api, cfg)
     create_autocmds(cfg)

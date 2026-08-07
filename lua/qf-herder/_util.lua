@@ -52,7 +52,7 @@ function M.set_nr_and_open(src_win, nr, silent)
     require("qf-herder._stack")._history(src_win, silent, nr, stack_cfg)
 
     local _, _, win_cfg = herder._config_merged_from_win(src_win or 0, "window")
-    require("qf-herder._window").list_open(src_win, 0, win_cfg)
+    require("qf-herder._window").list_open(src_win, 0, silent, win_cfg)
 end
 
 return M

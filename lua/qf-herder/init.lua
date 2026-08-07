@@ -248,8 +248,6 @@ local schema = {
     system = {
         auto_height = "boolean",
         open_results = "boolean",
-        -- TODO: This should be a param or a ctx field not an opt
-        silent = "boolean",
         spk = spk_validate,
         split_ll = ll_split_validate,
         split_qf = qf_split_validate,
@@ -636,12 +634,6 @@ function M._config_merged_from_win(win, ...)
     local buf = api.nvim_win_get_buf(win)
     return win, buf, M._config_merged_get(buf, nil, ...)
 end
--- TODO: For qf ops, this produces buf 0, which is no different from just calling
--- _config_merged_get with buf 0. For ll ops, this uses the buf of the src_win. Is this
--- desirable behavior? This function also obscures the question of, for stack ops especially,
--- do we want to use the buf opts of where we are going or where we are coming from? (Almost
--- certainly the latter, since it's more clear. But then we need to actually guarantee that
--- behavior)
 
 ---------------
 -- MARK: API --
@@ -779,9 +771,6 @@ end
 function M.diags.qf_all_bufs_min_warnings(opts)
     qf_diags_do({ severity = { 1, 2 } }, opts)
 end
-
--- TODO: Does doing the severities in a list this way work with how the no diags printing works?
--- That function should be changed to accomodate this.
 
 ---@param opts? qf-herder.diagnostics.Opts
 function M.diags.qf_all_bufs_only_warnings(opts)

@@ -8,7 +8,8 @@
     - [ ] silent
     - [ ] ctx
 
-- [ ] Should be a "goto_list_nr" _util func that does the stack change and window open
+- [ ] Do a final audit of every file
+  - [ ] Config especially matters because it will project back to farsight and catharsis
 
 - [ ] Disable the old rancher so this can be used.
 - [ ] Change all mentions of "herder" back to rancher.
@@ -38,6 +39,10 @@
 #### GREP:
 
 - [ ] Should count say what stack nr to put the results in?
+
+#### PREVIEW:
+
+- [ ] Allow for setting of the preview win title
 
 #### WINDOW:
 

@@ -26,9 +26,6 @@ local function autosize_do(src_win, silent, cfg)
         require("qf-herder._window").qf_resize(0, 0, win_cfg)
     end
 end
--- TODO: The config should be based on the the buf the cmd is initiated from. Verify that none of
--- these cmds change the win/buf (might be the case if you do a list change, if for whatever
--- reason you have config in a list buffer)
 
 ---@param src_win integer|nil
 ---@param list_nr integer|"$"
@@ -134,7 +131,7 @@ end
 ---@param cfg qf-herder.stack.Cfg
 function M.q_history(silent, count, cfg)
     local cur_nr, new_nr = history_goto_abs(nil, silent, count)
-    if cur_nr > 0 and new_nr > 0 and cur_nr ~= new_nr then
+    if cur_nr > 0 and new_nr > 0 then
         autosize_do(nil, silent, cfg)
     end
 end
@@ -145,9 +142,6 @@ function M.q_clear(count, cfg)
         autosize_do(nil, false, cfg)
     end
 end
--- LOW: You could get the old and new size of the list to see if a resize is necessary. But I
--- think getting the information for the guard is more expensive than always autosizing, given
--- that clearing an empty list should be an atypical action.
 
 ---@param cfg qf-herder.stack.Cfg
 function M.q_free(cfg)
@@ -207,7 +201,7 @@ function M.l_history(src_win, silent, count, cfg)
     end
 
     local cur_nr, new_nr = history_goto_abs(src_win, silent, count)
-    if cur_nr > 0 and new_nr > 0 and cur_nr ~= new_nr then
+    if cur_nr > 0 and new_nr > 0 then
         autosize_do(src_win, silent, cfg)
     end
 end

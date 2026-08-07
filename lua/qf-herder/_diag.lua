@@ -1,7 +1,6 @@
 local api = vim.api
 local ds = vim.diagnostic.severity
 
-local herder = require("qf-herder")
 local ntt = require("nvim-tools.table")
 local ntq = require("nvim-tools.quickfix")
 
@@ -57,6 +56,52 @@ local severity_str = {
 }
 
 ---@param getopts vim.diagnostic.GetOpts
+---@return vim.diagnostic.Severity
+local function sev_min_get(getopts)
+    local sev = getopts.severity
+    if sev == nil then
+        return ds.ERROR
+    end
+
+    if type(sev) ~= "table" then
+        ---@diagnostic disable-next-line: return-type-mismatch
+        return sev
+    end
+
+    local sev_min = sev.min
+    if sev_min ~= nil then
+        return sev_min
+    end
+
+    ---@diagnostic disable-next-line: param-type-mismatch
+    local min = require("nvim-tools.table").i_min(sev)
+    return min ~= nil and min or ds.ERROR
+end
+
+---@param getopts vim.diagnostic.GetOpts
+---@return vim.diagnostic.Severity
+local function sev_max_get(getopts)
+    local sev = getopts.severity
+    if sev == nil then
+        return ds.HINT
+    end
+
+    if type(sev) ~= "table" then
+        ---@diagnostic disable-next-line: return-type-mismatch
+        return sev
+    end
+
+    local sev_max = sev.max
+    if sev_max ~= nil then
+        return sev_max
+    end
+
+    ---@diagnostic disable-next-line: param-type-mismatch
+    local max = require("nvim-tools.table").i_max(sev)
+    return max ~= nil and max or ds.HINT
+end
+
+---@param getopts vim.diagnostic.GetOpts
 ---@return string
 local function get_empty_msg(getopts)
     local default = "No diagnostics"
@@ -72,9 +117,9 @@ local function get_empty_msg(getopts)
         return default
     end
 
-    local min = sev.min or ds.HINT
-    local max = sev.max or ds.ERROR
-    if min == ds.HINT and max == ds.ERROR then
+    local min = sev_min_get(getopts)
+    local max = sev_max_get(getopts)
+    if min == ds.ERROR and max == ds.HINT then
         return default
     end
 

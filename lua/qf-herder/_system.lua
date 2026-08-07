@@ -108,7 +108,7 @@ local function output_set_to_list(src_win, obj, what, ctx, cfg)
     end
 
     if is_new_ll_win or cfg.open_results then
-        _util.set_nr_and_open(src_win_res, dest_nr, false)
+        _util.set_nr_and_open(src_win_res, dest_nr, true)
     end
 
     if is_new_ll_win then
