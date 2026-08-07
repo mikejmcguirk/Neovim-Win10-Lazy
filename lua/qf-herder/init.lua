@@ -9,6 +9,8 @@ local ntt = require("nvim-tools.table")
 -- MARK: Functions --
 ---------------------
 
+local M = {}
+
 ---@param expected string
 ---@param actual any
 ---@return string
@@ -215,16 +217,17 @@ local schema = {
         diag_info = is_lower_string,
         diag_warn = is_lower_string,
         key_buf = is_lower_string,
-        key_diag = is_lower_string,
+        prefix_diag = is_lower_string,
         key_dir = is_lower_string,
         key_filename = is_lower_string,
-        key_filter = "string",
+        prefix_filter = "string",
         key_fname = is_lower_string,
         key_help = is_lower_string,
         key_text = is_lower_string,
+        prefix_grep = "string",
         prefix_ll = is_lower_string,
         prefix_qf = is_lower_string,
-        sort_key = "string",
+        prefix_sort = "string",
         stack_clear = is_lower_string,
         stack_newer = "string",
         stack_older = "string",
@@ -301,17 +304,17 @@ local default_config = {
         diag_hint = "n", ---@type string -- Must be lowercase
         diag_info = "o", ---@type string -- Must be lowercase
         diag_warn = "w", ---@type string -- Must be lowercase
-        fname = "f", ---@type string -- Must be lowercase
+        key_fname = "f", ---@type string -- Must be lowercase
         key_buf = "u", ---@type string
-        key_diag = "i", ---@type string -- Must be lowercase
+        prefix_diag = "i", ---@type string -- Must be lowercase
         key_dir = "d", ---@type string
-        key_filter = "r", ---@type string
+        prefix_filter = "r", ---@type string
         key_help = "h", ---@type string
         key_text = "e", ---@type string -- Must be lowercase
         prefix_grep = "g", ---@type string
         prefix_ll = "<leader>l", ---@type string -- Must be lowercase
         prefix_qf = "<leader>q", ---@type string -- Must be lowercase
-        sort_key = "t", ---@type string
+        prefix_sort = "t", ---@type string
         stack_clear = "e", ---@type string
         stack_newer = "]", ---@type string
         stack_older = "[", ---@type string
@@ -341,7 +344,6 @@ local default_config = {
     system = {
         auto_height = true, ---@type boolean
         open_results = true, ---@type boolean
-        silent = false, ---@type boolean
         spk = "topline", ---@type ""|"cursor"|"screen"|"topline"
         split_ll = "belowright", ---@type qf-herder.window.llSplit
         split_qf = "botright", ---@type qf-herder.window.qfSplit
@@ -356,6 +358,11 @@ local default_config = {
         spk = "topline", ---@type ""|"cursor"|"screen"|"topline"
     },
 }
+
+---@return boolean, string
+function M.__default_schema_check()
+    return matches_schema(default_config, schema)
+end
 
 ---@class qf-herder.filter.Opts
 ---@field open_results? boolean
@@ -441,8 +448,6 @@ local default_config = {
 
 local config = ntt.deepcopy(default_config)
 ---@cast config qf-herder.Config
-
-local M = {}
 
 ---@param new_config? qf-herder.config.Partial
 ---@return qf-herder.Config

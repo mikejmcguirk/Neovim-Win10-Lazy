@@ -1,16 +1,5 @@
 ## TODO:
 
-- [ ] Do a project-wide variable ordering consistency check
-  - [ ] src_win always first
-  - [ ] cfg always last
-  - [ ] Unsure
-    - [ ] count
-    - [ ] silent
-    - [ ] ctx
-
-- [ ] Do a final audit of every file
-  - [ ] Config especially matters because it will project back to farsight and catharsis
-
 - [ ] Disable the old rancher so this can be used.
 - [ ] Change all mentions of "herder" back to rancher.
 
