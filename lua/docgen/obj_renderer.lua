@@ -9,14 +9,8 @@ local md_vimdoc = require("docgen.md_vimdoc")
 local md_to_vimdoc = md_vimdoc.luacats_md_to_vimdoc
 
 local util = require("docgen.util")
-local list_copy = util.list_copy
-local list_fold = util.list_fold
-local list_insert_at = util.list_insert_at
-local list_filter_map = util.list_filter_map
-local list_filter_map_to = util.list_filter_map_to
-local lpad = util.str_lpad
-local rpad = util.str_rpad
-local str_surround = util.str_surround
+local ntt = require("nvim-tools.table")
+local nts = require("nvim-tools.str")
 local str_op_by_sep = util.str_op_by_sep
 local wrap = util.wrap
 
@@ -49,11 +43,11 @@ local function header_create(title, title_wrap, tags, sep)
     if tags then
         local tags_len_minus_one = #tags - 1
         for i = 1, tags_len_minus_one do
-            ret[#ret + 1] = lpad(str_surround(tags[i], "*"), " ", TEXT_WIDTH)
+            ret[#ret + 1] = nts.lpad(nts.surround(tags[i], "*"), " ", TEXT_WIDTH)
         end
     end
 
-    local tag_fmt = (tags and #tags > 0) and str_surround(tags[#tags], "*") or ""
+    local tag_fmt = (tags and #tags > 0) and nts.surround(tags[#tags], "*") or ""
     local title_fmt = title
     if sep then
         title_fmt = str_op_by_sep(title, "-", function(part)
@@ -72,7 +66,7 @@ local function header_create(title, title_wrap, tags, sep)
         end
     else
         -- TODO: Deal with missing tag_fmt here as well.
-        ret[#ret + 1] = lpad(tag_fmt, " ", TEXT_WIDTH)
+        ret[#ret + 1] = nts.lpad(tag_fmt, " ", TEXT_WIDTH)
         ret[#ret + 1] = wrap(title, 0, title_wrap, TEXT_WIDTH, false)
     end
 
@@ -135,7 +129,7 @@ local function arg_mapper(arg, max_name_width, base_indent)
     local sig_parts = {} ---@type string[]
     sig_parts[#sig_parts + 1] = "• "
 
-    local name_cbraced = rpad(str_surround(arg.name, "{", "}"), " ", max_name_width)
+    local name_cbraced = nts.rpad(nts.surround(arg.name, "{", "}"), " ", max_name_width)
     sig_parts[#sig_parts + 1] = name_cbraced
     sig_parts[#sig_parts + 1] = "  "
 
@@ -160,12 +154,12 @@ local function arg_mapper(arg, max_name_width, base_indent)
 
     if inlinedesc then
         local fields = inlinedesc.fields --[[@as (docgen.DocItem[])]]
-        local inline_max_name_width = list_fold(fields, 0, function(acc, field)
+        local inline_max_name_width = ntt.i_fold(fields, 0, function(acc, field)
             return math.max(acc, #field.name)
         end) + 2 -- Since cbraces will be added.
 
         local inline_base_indent = base_indent + INDENT
-        local ret_inline = list_filter_map(list_copy(fields), function(field)
+        local ret_inline = ntt.i_filter_map_to(ntt.i_copy(fields), function(field)
             return arg_mapper(field, inline_max_name_width, inline_base_indent)
         end)
 
@@ -196,7 +190,7 @@ local function fields_get(class)
     ret[#ret + 1] = INDENT_STR .. "Fields: ~"
 
     local fields = class.fields --[[@as (docgen.DocItem[])]]
-    local max_name_width = list_fold(fields, 0, function(acc, field)
+    local max_name_width = ntt.i_fold(fields, 0, function(acc, field)
         return math.max(acc, #field.name)
     end) + 2 -- Since cbraces will be added.
 
@@ -212,9 +206,10 @@ end
 local function class_render(class)
     local ret = {} --- @type string[]
 
-    local name_cbraced = str_surround(class.name, "{", "}")
+    local name_cbraced = nts.surround(class.name, "{", "}")
     local tags = class.tags_addtl or {}
-    list_insert_at(tags, class.tag)
+    local ntt = require("nvim-tools.table")
+    ntt.i_insert_at(tags, class.tag)
     local header = header_create(name_cbraced, INDENT, tags)
     local post_header = post_header_get(class)
     if post_header then
@@ -239,8 +234,8 @@ local function proto_params_get(fun)
         return ""
     end
 
-    local cbraced_params = list_filter_map(list_copy(params), function(param)
-        return str_surround(param.name, "{", "}")
+    local cbraced_params = ntt.i_filter_map_to(ntt.i_copy(params), function(param)
+        return nts.surround(param.name, "{", "}")
     end)
 
     return table.concat(cbraced_params, ", ")
@@ -252,7 +247,7 @@ local function fun_header_get(fun)
     local namevar = fun.namevar
     local title = string.format("%s(%s)", namevar, proto_params_get(fun))
     local tags = fun.tags_addtl or {}
-    list_insert_at(tags, fun.tag)
+    ntt.i_insert_at(tags, fun.tag)
     return header_create(title, #namevar, tags)
 end
 
@@ -274,7 +269,7 @@ local function params_get(fun)
         return
     end
 
-    local max_name_width = list_fold(params, 0, function(acc, param)
+    local max_name_width = ntt.i_fold(params, 0, function(acc, param)
         return math.max(acc, #param.name)
     end) + 2 -- To account for cbraces
 
@@ -313,7 +308,7 @@ local function returns_get(fun)
     end
 
     local lines = {} --- @type string[]
-    local count_returns = list_fold(returns, 0, function(acc, ret)
+    local count_returns = ntt.i_fold(returns, 0, function(acc, ret)
         return acc + #ret
     end)
 
@@ -334,7 +329,7 @@ local function returns_get(fun)
 
             local r_name = r.name
             if r_name then
-                local r_name_fmt = str_surround(r.name, "{", "}")
+                local r_name_fmt = nts.surround(r.name, "{", "}")
                 name_width_tot = name_width_tot + #r_name_fmt
                 ret_names[i] = r_name_fmt
             end
@@ -358,7 +353,7 @@ local function returns_get(fun)
             local lines_ret = {} ---@type string[]
             for i = 1, #ret_types do
                 local ret_name = ret_names[i]
-                local ret_type_rpadded = rpad(ret_types[i], " ", typ_width_max)
+                local ret_type_rpadded = nts.rpad(ret_types[i], " ", typ_width_max)
                 local line = ret_name and ret_type_rpadded .. " " .. ret_name or ret_type_rpadded
                 lines_ret[#lines_ret + 1] = wrap(line, DBL_INDENT, TPL_INDENT, TEXT_WIDTH, false)
             end
@@ -463,7 +458,7 @@ end
 
 ---@param parsed_source docgen.ParserObj[]
 function M.render_objs(parsed_source)
-    local sections = list_filter_map_to(parsed_source, function(obj)
+    local sections = ntt.filter_map_to(parsed_source, function(obj)
         if obj.kind == "fun" then
             return render_fun(obj)
         elseif obj.kind == "class" then

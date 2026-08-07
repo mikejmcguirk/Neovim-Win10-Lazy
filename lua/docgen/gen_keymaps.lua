@@ -7,16 +7,12 @@ local LUA_WIDTH = 99
 local MAP_WIDTH = TEXT_WIDTH - TAB_WIDTH
 local SET = "vim.api.nvim_set_keymap("
 
+local ntt = require("nvim-tools.table")
+local nts = require("nvim-tools.str")
 local util = require("docgen.util")
-local checked_surround = util.checked_surround
 local err_if_seen_or_add = util.err_if_seen_or_add
 -- local list_copy = util.list_copy
 local list_flat_map_to = util.list_flat_map_to
-local list_filter_map = util.list_filter_map
-local list_filter_map_accum = util.list_filter_map_accum
-local list_filter_map_to = util.list_filter_map_to
-local list_fold = util.list_fold
-local list_insert_at = util.list_insert_at
 local mode_map_to_short = util.mode_map_to_short
 local tag_from_txt = util.tag_from_txt
 local wrap = util.wrap
@@ -56,7 +52,7 @@ function M.gen_keymap_vimdoc(maps, help_prefix)
     local all_tags = {} ---@type table<string, true>
     local help_texts = {}
     for _, map in ipairs(maps) do
-        local tags_addtl = list_filter_map_to(map.tags_addtl, function(tag)
+        local tags_addtl = ntt.filter_map_to(map.tags_addtl, function(tag)
             local tag_fmt = tag_from_txt(tag, help_prefix)
             err_if_seen_or_add(all_tags, tag_fmt, "Duplicate tag " .. tag_fmt)
             return tag_fmt
@@ -67,9 +63,9 @@ function M.gen_keymap_vimdoc(maps, help_prefix)
             local plug_fmt = plug_txt_to_map(help_prefix, plug)
             return list_flat_map_to(map.modes, function(mode)
                 local short_modes = mode_map_to_short(mode)
-                return list_filter_map_to(short_modes, function(short)
+                return ntt.filter_map_to(short_modes, function(short)
                     local mode_tag = short == "n" and plug_fmt or short .. "_" .. plug_fmt
-                    local surrounded = checked_surround(mode_tag, "*")
+                    local surrounded = nts.checked_surround(mode_tag, "*")
                     err_if_seen_or_add(all_tags, surrounded, "Duplicate tag " .. surrounded)
                     return surrounded
                 end)
@@ -126,7 +122,7 @@ function M.gen_keymap_md(maps)
         local plugs = list_flat_map_to(map.plugs, function(plug)
             return list_flat_map_to(map.modes, function(mode)
                 local short_modes = mode_map_to_short(mode)
-                return list_filter_map_to(short_modes, function(short)
+                return ntt.filter_map_to(short_modes, function(short)
                     local mode_plug = mode == "n" and plug or short .. "_" .. plug
                     -- TODO: wrong verbiage here
                     err_if_seen_or_add(acc_tags, mode_plug, "Duplicate tag " .. mode_plug)
@@ -136,8 +132,8 @@ function M.gen_keymap_md(maps)
         end)
 
         ---@diagnostic disable-next-line: assign-type-mismatch
-        local defaults = list_filter_map_to(map.lhs, function(lh)
-            return checked_surround(lh, "`")
+        local defaults = ntt.filter_map_to(map.lhs, function(lh)
+            return nts.checked_surround(lh, "`")
         end)
 
         local row = {}
@@ -149,7 +145,7 @@ function M.gen_keymap_md(maps)
     end)
 
     local header_tbl = { "Action(s)", "Desc", "Default(s)" }
-    local col_maxes = list_fold(
+    local col_maxes = ntt.i_fold(
         tbl_rows,
         { #header_tbl[1], #header_tbl[2], #header_tbl[3] },
         function(acc, row)
@@ -160,7 +156,7 @@ function M.gen_keymap_md(maps)
         end
     )
 
-    list_filter_map_accum(tbl_rows, col_maxes, function(maxes, row)
+    ntt.i_filter_modify_accum(tbl_rows, col_maxes, function(maxes, row)
         local plug_len = #row[1]
         local plug_rpad = maxes[1] - plug_len
         ---@diagnostic disable-next-line: param-type-mismatch
@@ -179,18 +175,18 @@ function M.gen_keymap_md(maps)
         return maxes, row
     end)
 
-    list_filter_map(tbl_rows, function(row)
+    ntt.i_filter_modify(tbl_rows, function(row)
         return table.concat(row, " | ")
     end)
 
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local header_delim_tbl = list_filter_map_to(col_maxes, function(col_max)
+    local header_delim_tbl = ntt.filter_map_to(col_maxes, function(col_max)
         return string.rep("-", col_max)
     end)
 
     -- TODO: It should be one function to create a table and concat it. Intercalate?
     local header_delim = table.concat(header_delim_tbl, " | ")
-    list_filter_map_accum(header_tbl, col_maxes, function(maxes, col, idx)
+    ntt.i_filter_modify_accum(header_tbl, col_maxes, function(maxes, col, idx)
         local len = maxes[idx]
         local len_diff = len - #col
         ---@diagnostic disable-next-line: param-type-mismatch
@@ -200,10 +196,10 @@ function M.gen_keymap_md(maps)
     local header = table.concat(header_tbl, " | ")
 
     -- TODO: Really bad because we have to shift the whole table twice
-    list_insert_at(tbl_rows, header_delim, 1)
-    list_insert_at(tbl_rows, header, 1)
+    ntt.i_insert_at(tbl_rows, header_delim, 1)
+    ntt.i_insert_at(tbl_rows, header, 1)
 
-    list_filter_map(tbl_rows, function(row)
+    ntt.i_filter_modify(tbl_rows, function(row)
         -- TODO: Dumb
         return "| " .. row .. " |"
     end)

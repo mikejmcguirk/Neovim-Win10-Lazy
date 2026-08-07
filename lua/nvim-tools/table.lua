@@ -383,6 +383,7 @@ function M.i_splice(t, start, stop)
     M.i_clear(t)
     return t
 end
+-- TODO: stop should be optional
 
 ---Creates a new |lua-list| containing a subset of `t` defined by `start` and `stop`. References
 ---are shallow-copied.

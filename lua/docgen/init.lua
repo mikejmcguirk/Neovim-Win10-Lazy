@@ -29,20 +29,14 @@ local renderer = require("docgen.obj_renderer")
 local get_header = renderer.get_header
 local render_objs = renderer.render_objs
 
+local ntt = require("nvim-tools.table")
 local util = require("docgen.util")
 local err_if_seen_or_append = util.err_if_seen_or_add
 local get_requirable_path = util.get_requirable_path
-local list_chain = util.list_chain
 -- local list_fold = util.list_fold
-local list_filter_map_to = util.list_filter_map_to
-local list_intersperse = util.list_intersperse
 -- local list_map_to_table = util.list_map_to_table
-local list_splice = util.list_splice
-local table_common_prefix = util.table_common_prefix
-local list_filter_map = util.list_filter_map
 local list_filter_map_two = util.list_filter_map_two
 -- local table_filter_map_to = util.table_filter_map_to
-local table_new = util.table_new
 
 ---@param default_fname string
 ---@param debug_path string
@@ -325,13 +319,13 @@ local function gen_vimdoc(vimdoc_sources, imported, prefix, debug_path, opts)
     end
 
     resolve_holistic(obj_lists)
-    list_filter_map(doc_parts, function(part)
+    ntt.i_filter_modify(doc_parts, function(part)
         return ((not part.objs) or #part.objs > 0) and part or nil
     end)
 
     local docs_tbl = {} ---@type string[]
     docs_tbl[#docs_tbl + 1] = "*" .. prefix .. ".txt*"
-    local toc_tags = list_filter_map_to(doc_parts, function(part)
+    local toc_tags = ntt.filter_map_to(doc_parts, function(part)
         if part.header_tag then
             return "|" .. part.header_tag .. "|"
         end
@@ -364,8 +358,8 @@ end
 ---@param sources docgen.gen.source.Vimdoc[] Modified in place!
 ---@return string help_prefix
 local function doc_sources_add_names_headers(sources)
-    local split_paths = list_filter_map_to(sources, function(source)
-        local segments = table_new(4, 0) ---@type string[]
+    local split_paths = ntt.filter_map_to(sources, function(source)
+        local segments = ntt.new(4, 0) ---@type string[]
         segments[#segments + 1] = "/" -- Reduce contrivance upstream
         for segment in vim.gsplit(source.path, "/", { plain = true }) do
             if segment ~= "" then
@@ -376,14 +370,14 @@ local function doc_sources_add_names_headers(sources)
         return segments
     end)
 
-    local prefix_idx = table_common_prefix(split_paths) or 1
+    local prefix_idx = ntt.i_common_prefix(split_paths) or 1
     for _, path in pairs(split_paths) do
-        list_splice(path, prefix_idx)
+        ntt.i_splice(path, prefix_idx, #path)
     end
 
     local prefix = split_paths[1][1]
     for _, path in ipairs(split_paths) do
-        list_intersperse(path, "-", 1, 1, #path - 1)
+        ntt.i_intersperse(path, "-", 1, 1, #path - 1)
     end
 
     for _, path in ipairs(split_paths) do
@@ -391,7 +385,7 @@ local function doc_sources_add_names_headers(sources)
         local fname = path[path_len]
         if fname ~= "init.lua" then
             path[path_len] = vim.call("fnamemodify", fname, ":r")
-            list_intersperse(path, ".", 1, path_len - 1, path_len)
+            ntt.i_intersperse(path, ".", 1, path_len - 1, path_len)
         else
             path[path_len] = nil
         end
@@ -413,30 +407,33 @@ end
 ---@param opts docgen.gen.Opts
 ---@return table<string, string>
 local function source_text_import(plugin_sources, readme_sources, vimdoc_sources, opts)
-    local inputs_vimdoc = list_filter_map_to(vimdoc_sources, function(source)
+    local inputs_vimdoc = ntt.filter_map_to(vimdoc_sources, function(source)
         return (source.type == "luacats" and source.text == nil) and source.path or nil
     end)
 
-    local inputs_readme = list_filter_map_to(readme_sources, function(source)
+    local inputs_readme = ntt.filter_map_to(readme_sources, function(source)
         -- TODO: I have no idea if this name works
         return (source.type == "paragraph" and source.text == nil) and source.path or nil
     end)
 
-    local inputs_plugin = list_filter_map_to(plugin_sources, function(source)
+    local inputs_plugin = ntt.filter_map_to(plugin_sources, function(source)
         -- TODO: I have no idea if this name works
         return (source.type == "paragraph" and source.text == nil) and source.path or nil
     end)
 
     local imports_other = { opts.vimdoc_intro_path }
-    local inputs = list_chain(inputs_vimdoc, inputs_readme, inputs_plugin, imports_other)
+    local ntt = require("nvim-tools.table")
+    local inputs = ntt.i_append(inputs_vimdoc, inputs_readme, inputs_plugin, imports_other)
     vim.list.unique(inputs)
 
-    local ok, timed_out, results = file_ops.fs_read_list(inputs)
+    local ntf = require("nvim-tools.fs")
+    -- TODO: The inputs to append have bad types.
+    local ok, timed_out, results = ntf.fs_read_list(inputs, {})
     if not (ok and results) then
         if timed_out then
             error("Time out while reading file data")
         else
-            error(file_ops.fs_read_list_get_errs(results))
+            error(ntf.fs_read_list_get_errs(results))
         end
     end
 

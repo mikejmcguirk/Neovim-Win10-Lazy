@@ -1,25 +1,82 @@
+local api = vim.api
+
 local M = {}
 
----@param sep string
----@param ... any
----@return string
-function M.concat_vargs(sep, ...)
-    local nargs = select("#", ...)
-    if nargs == 0 then
-        return ""
+---@param str string
+---@param char string
+---@param target_width integer
+local function str_pad_get_chars_count(str, char, target_width)
+    -- Use nvim_strwidth instead of strdisplaywidth because the latter's tab expansions are
+    -- dependent on window context.
+    local width_rem = target_width - api.nvim_strwidth(str)
+    if width_rem > 0 then
+        local char_width = api.nvim_strwidth(char)
+        if char_width == 1 then
+            return width_rem
+        end
+
+        if char_width == 2 then
+            return bit.rshift(width_rem, 1)
+        end
+
+        -- I have never seen a width three character before.
+        if char_width == 0 then
+            return 0
+        end
+
+        return math.floor(width_rem / char_width)
     end
 
-    local keys = {}
-    local vargs = { ... }
-    local vargs_len = #vargs
-    for i = 1, vargs_len do
-        local arg = select(i, ...)
-        keys[i] = type(arg) == "string" and arg or vim.inspect(arg)
-    end
-
-    return table.concat(keys, sep)
+    return 0
 end
--- TODO: Once the old config module is gone, yeet this, since you can do this with table.concat
+
+---@param str string
+---@param char string
+---@param target_width integer
+function M.lpad(str, char, target_width)
+    local chars_count = str_pad_get_chars_count(str, char, target_width)
+    if chars_count > 0 then
+        return string.rep(char, chars_count) .. str
+    end
+
+    return str
+end
+
+---@param str string
+---@return string
+function M.ltrim(str)
+    local gsubbed, _ = string.gsub(str, "^%s+", "")
+    return gsubbed
+end
+
+---@param str string
+---@return string
+function M.rtrim(str)
+    local matched = string.match(str, "^.*%S")
+    if matched then
+        return matched
+    end
+
+    return ""
+end
+
+---@param str string
+---@param char string
+---@param target_width integer
+function M.rpad(str, char, target_width)
+    local chars_count = str_pad_get_chars_count(str, char, target_width)
+    if chars_count > 0 then
+        return str .. string.rep(char, chars_count)
+    end
+
+    return str
+end
+
+---@param str string
+---@return string, integer
+function M.lua_pattern_escape(str)
+    return string.gsub(str, "([%^%$%(%)%.%[%]%*%+%-%?])", "%%%1")
+end
 
 ---@audited 2026-07-03
 ---@param str string
@@ -61,6 +118,34 @@ function M.split_map(str)
 
     return result
 end
+
+---@param str string
+---@param left string
+---@param right? string Same as left if nil
+---@return string
+function M.surround(str, left, right)
+    right = right or left
+    return left .. str .. right
+end
+-- TODO: This should also optionally handle seeing if the surround is already present on each side
+-- before adding.
+
+---@param text string
+---@param surround string
+---@return string
+function M.checked_surround(text, surround)
+    local line = text
+    if not vim.startswith(line, surround) then
+        line = surround .. line
+    end
+
+    if not vim.endswith(text, surround) then
+        line = line .. surround
+    end
+
+    return line
+end
+-- TODO: Combine this with "surround"
 
 ---@audited 2026-07-03
 ---Bespoke version to strip out guard code. Always relaxed indexing.

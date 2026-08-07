@@ -324,7 +324,6 @@ function M.fs_read_list(paths, opts)
 
     return ok, timed_out, results
 end
--- DEPRECATE: I would guess that vim.async would make this irrelevant.
 
 ---@param results table<string, nvim-tools.fs.FsReadListResult>?
 function M.fs_read_list_get_errs(results)

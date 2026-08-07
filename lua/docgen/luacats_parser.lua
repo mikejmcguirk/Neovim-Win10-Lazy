@@ -3,18 +3,11 @@ local log_warning = logger.log_warning
 
 local luacats_grammar = require("docgen.luacats_grammar")
 
+local ntt = require("nvim-tools.table")
+local nts = require("nvim-tools.str")
 local util = require("docgen.util")
 local checked_append = util.checked_append
 local checked_prepend = util.checked_prepend
-local endswith_byte = util.endswith_byte
-local list_contains = util.list_contains
-local list_filter = util.list_filter
-local list_fold = util.list_fold
-local rtrim = util.str_rtrim
-local startswith_byte = util.startswith_byte
-local table_clear = util.table_clear
-local table_get_or_create_subtable = util.table_get_or_create_subtable
-local table_new = util.table_new
 
 local const = require("docgen.const")
 local NBSP = const.NBSP
@@ -91,7 +84,7 @@ end
 ---@param item nvim.luacats.grammar.Result Modified in place
 local function item_type_fixup(item)
     local typ = item.type ---@type string
-    typ = rtrim(typ)
+    typ = nts.rtrim(typ)
     typ = string.gsub(typ, "%s*|%s*", "|")
     typ = string.gsub(typ, "|nil$", "?")
     typ = string.gsub(typ, "nil|(.*)", "%1?")
@@ -106,7 +99,7 @@ local function item_type_fixup(item)
     local name_part, opt = string.match(name, "^([^?]*)(%??)$")
     if opt == "?" then
         item.name = name_part
-        if not (endswith_byte(typ, 63) or string.find("nil", typ, 1, true)) then
+        if not (nts.endswith_byte(typ, 63) or string.find("nil", typ, 1, true)) then
             item.type = typ .. opt
         end
     else
@@ -131,7 +124,8 @@ end
 ---@return boolean
 local function kind_warn_if_not(obj, targets, msg)
     local kind = obj.kind or ""
-    if list_contains(targets, kind) then
+    local ntt = require("nvim-tools.table")
+    if ntt.i_includes(targets, kind) then
         return true
     end
 
@@ -170,7 +164,7 @@ local function obj_doc_line_append(obj, line)
         return
     end
 
-    local doc_lines = table_get_or_create_subtable(obj, "doc_lines")
+    local doc_lines = ntt.get_or_set_subtable(obj, "doc_lines")
     -- Always save the line, even if it has no bytes, to preserve paragraph gaps.
     doc_lines[#doc_lines + 1] = line
 end
@@ -187,7 +181,7 @@ local function obj_doc_lines_commit(obj, take, new_doc_item)
     end
 
     local doc_lines_str = table.concat(doc_lines, "\n")
-    table_clear(doc_lines)
+    ntt.i_clear(doc_lines)
     local cur_doc_item = obj.cur_doc_item ---@type docgen.LastDocItem?
     if take then
         -- Malformed LuaCATs
@@ -257,7 +251,7 @@ local function obj_desc_set_from_doc_lines_or_parsed(obj, parsed)
 
     local parsed_desc = parsed.desc
     if parsed_desc and string.find(parsed_desc, "[^%s]") ~= nil then
-        obj.desc = rtrim(parsed_desc)
+        obj.desc = nts.rtrim(parsed_desc)
     end
 end
 
@@ -405,14 +399,14 @@ local function obj_field_append(obj, parsed)
     obj_kind_assert(obj, "class", "Fields must be declared after @class.")
 
     local doc_lines = obj_doc_lines_commit(obj, true)
-    if parsed.access ~= nil or startswith_byte(parsed.name, 95) then
+    if parsed.access ~= nil or nts.startswith_byte(parsed.name, 95) then
         return
     end
 
     if doc_lines ~= nil and string.find(doc_lines, "[^%s]") ~= nil then
         parsed.desc = doc_lines
     elseif parsed.desc ~= nil and string.find(parsed.desc, "[^%s]") ~= nil then
-        parsed.desc = rtrim(parsed.desc)
+        parsed.desc = nts.rtrim(parsed.desc)
     else
         parsed.desc = nil
     end
@@ -420,7 +414,7 @@ local function obj_field_append(obj, parsed)
     item_type_fixup(parsed)
     item_extract_default_from_desc(parsed)
 
-    local fields = table_get_or_create_subtable(obj, "fields")
+    local fields = ntt.get_or_set_subtable(obj, "fields")
     fields[#fields + 1] = parsed --[[@as docgen.DocItem]]
 end
 
@@ -437,7 +431,7 @@ local function obj_overload_append(obj, parsed)
     -- The renderer needs to show the desc
     -- Note somewhere that desc after overload is not shown in Lua_Ls
     -- TODO: Verify that the grammar does not pick up a desc for overloads
-    local overloads = table_get_or_create_subtable(obj, "overloads")
+    local overloads = ntt.get_or_set_subtable(obj, "overloads")
     overloads[#overloads + 1] = parsed.type
 end
 
@@ -447,7 +441,7 @@ local function obj_param_append(obj, item)
     obj_kind_assert(obj, "", "Cannot add param here.")
 
     local name = item.name ---@type string
-    if startswith_byte(name, 95) then
+    if nts.startswith_byte(name, 95) then
         obj_doc_lines_commit(obj, false, "_")
         return
     else
@@ -455,7 +449,7 @@ local function obj_param_append(obj, item)
         local prev_param = (params and #params > 0) and params[#params] or nil
         if prev_param then
             local prev_name = prev_param.name ---@type string
-            if prev_param and startswith_byte(prev_name, 95) then
+            if prev_param and nts.startswith_byte(prev_name, 95) then
                 -- This would make the param layout in the doc not match the physical function.
                 error("Invalid: Public param " .. name .. "after private param " .. prev_name)
             end
@@ -464,9 +458,9 @@ local function obj_param_append(obj, item)
 
     obj_doc_lines_commit(obj, false, "param")
     item_type_fixup(item)
-    item.desc = item.desc and rtrim(item.desc) or nil
+    item.desc = item.desc and nts.rtrim(item.desc) or nil
 
-    local params = table_get_or_create_subtable(obj, "params") ---@type docgen.DocItem[]
+    local params = ntt.get_or_set_subtable(obj, "params") ---@type docgen.DocItem[]
     params[#params + 1] = item --[[@as docgen.DocItem]]
 end
 -- TEST: The LuaCATs grammar needs to have a test that, in order to return a valid param, the
@@ -477,7 +471,7 @@ end
 local function obj_return_append(obj, parsed)
     obj_kind_assert(obj, "", "Cannot add return. Object has a kind.")
 
-    list_filter(parsed, function(p)
+    ntt.i_keep(parsed, function(p)
         return p.type ~= nil and p.type ~= "nil"
     end)
 
@@ -494,7 +488,7 @@ local function obj_return_append(obj, parsed)
     if last_name and parsed_desc then
         -- TODO: This should not be a fold since it short-circuits.
         local merge_last_name = len_parsed - 1 == 0 and true
-            or list_fold(parsed, true, function(will_merge, ret)
+            or ntt.i_fold(parsed, true, function(will_merge, ret)
                 if will_merge == false then
                     return nil
                 end
@@ -508,13 +502,13 @@ local function obj_return_append(obj, parsed)
         end
     end
 
-    parsed.desc = parsed.desc and rtrim(parsed.desc) or nil
+    parsed.desc = parsed.desc and nts.rtrim(parsed.desc) or nil
     for _, p in ipairs(parsed) do
         item_type_fixup(p)
     end
 
     ---@type docgen.DocItem[]
-    local returns = table_get_or_create_subtable(obj, "returns")
+    local returns = ntt.get_or_set_subtable(obj, "returns")
     returns[#returns + 1] = parsed --[[@as docgen.DocItem]]
 end
 -- MID: The behavior here would be more clear if the typing was more clear.
@@ -531,7 +525,7 @@ local function obj_see_add(obj, parsed)
         return
     end
 
-    local see = table_get_or_create_subtable(obj, "see")
+    local see = ntt.get_or_set_subtable(obj, "see")
     see[#see + 1] = parsed.desc
 end
 
@@ -543,7 +537,7 @@ local function obj_tags_addtl_append(obj, parsed)
         return not vim.startswith(right, left)
     end)
 
-    local tags_addtl = table_get_or_create_subtable(obj, "tags_addtl")
+    local tags_addtl = ntt.get_or_set_subtable(obj, "tags_addtl")
     tags_addtl[#tags_addtl + 1] = tag_name
 end
 
@@ -609,7 +603,7 @@ end
 local function fun_finalize(obj, classvar, sep, namevar)
     obj_kind_assert(obj, "", "Cannot add function. Object has a kind.")
 
-    if startswith_byte(namevar, 95) then
+    if nts.startswith_byte(namevar, 95) then
         return false
     end
 
@@ -636,7 +630,7 @@ local function fun_finalize(obj, classvar, sep, namevar)
     local params = obj.params
     if params then
         if sep == ":" then
-            list_filter(params, function(param)
+            ntt.i_keep(params, function(param)
                 return param.name ~= "self"
             end)
         end
@@ -735,7 +729,7 @@ end
 ---@param line string
 ---@return 0|1|2 status
 local function obj_append_line(obj, line)
-    line = rtrim(line)
+    line = nts.rtrim(line)
     line = string.gsub(line, "\t", string.rep(" ", 8))
     line = string.gsub(line, NBSP, " ")
 
@@ -784,7 +778,7 @@ local M = {}
 ---@param header_tag string
 ---@return docgen.ParserObj
 local function obj_new(help_prefix, header_tag, modvar)
-    local obj = table_new(0, 8)
+    local obj = ntt.new(0, 8)
     obj.help_prefix = help_prefix
     obj.header_tag = header_tag
     obj.modvar = modvar

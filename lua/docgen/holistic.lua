@@ -1,10 +1,6 @@
-local util = require("docgen.util")
-local endswith_byte = util.endswith_byte
-local list_copy = util.list_copy
-local list_filter = util.list_filter
-local list_filter_map = util.list_filter_map
-local table_new = util.table_new
-local table_get_or_create_subtable = util.table_get_or_create_subtable
+local nts = require("nvim-tools.str")
+
+local ntt = require("nvim-tools.table")
 
 local M = {}
 
@@ -14,7 +10,7 @@ local function fun_to_fun_type_annotation(fun)
     local type_tbl = { "fun(" } ---@type string[]
     local params = fun.params
     if params and #params > 0 then
-        local type_params = list_filter_map(list_copy(params), function(param)
+        local type_params = ntt.i_filter_map_to(ntt.i_copy(params), function(param)
             return string.format("%s:%s", param.name, param.type)
         end)
 
@@ -54,9 +50,9 @@ end
 ---@param class docgen.ParserObj Modified in place
 ---@param fun docgen.ParserObj Modified in place
 local function class_fun_attach(class, fun)
-    local fields = table_get_or_create_subtable(class, "fields") ---@type docgen.DocItem[]
+    local fields = ntt.get_or_set_subtable(class, "fields") ---@type docgen.DocItem[]
     local fun_namevar = fun.namevar
-    list_filter(fields, function(field)
+    ntt.i_keep(fields, function(field)
         return field.name ~= fun_namevar
     end)
 
@@ -71,7 +67,7 @@ local function class_fun_attach(class, fun)
     local sep = fun.sep
     fun.tag = class_tag .. sep .. fun_namevar .. "()"
 
-    local fun_see = table_get_or_create_subtable(fun, "see") ---@type string[]
+    local fun_see = ntt.get_or_set_subtable(fun, "see") ---@type string[]
     fun_see[#fun_see + 1] = "|" .. class_tag .. "|"
 
     local fun_tag = fun.tag --[[@as string]]
@@ -138,7 +134,7 @@ local function desc_append_see_class_tag(doc_item, class)
         return
     end
 
-    local see_text = endswith_byte(desc_old, 46) and " See " or ". See "
+    local see_text = nts.endswith_byte(desc_old, 46) and " See " or ". See "
     doc_item.desc = desc_old .. see_text .. tag .. "."
 end
 
@@ -306,7 +302,7 @@ end
 ---@param classes_count integer
 ---@return table<string, string> classvar_map
 local function create_classvar_map(classes, classes_count)
-    local classvar_map = table_new(0, math.floor(classes_count * 0.25))
+    local classvar_map = ntt.new(0, math.floor(classes_count * 0.25))
     for _, class in pairs(classes) do
         local classvar = class.classvar
         if classvar then
@@ -345,7 +341,7 @@ end
 ---@param funs table<string, docgen.ParserObj> Edited in place
 local function parsed_sources_filter_invalid(obj_lists, classes, funs)
     for _, list in ipairs(obj_lists) do
-        list_filter(list, function(obj)
+        ntt.i_keep(list, function(obj)
             local kind = obj.kind
             if kind == "fun" then
                 if obj.class == nil then
@@ -363,7 +359,7 @@ local function parsed_sources_filter_invalid(obj_lists, classes, funs)
         end)
     end
 
-    list_filter(obj_lists, function(source)
+    ntt.i_keep(obj_lists, function(source)
         return #source[2] > 0
     end)
 end
@@ -371,12 +367,12 @@ end
 ---@param obj_lists docgen.ParserObj[][] Modified in place
 local function parsed_sources_filter_inlinedoc(obj_lists)
     for _, list in ipairs(obj_lists) do
-        list_filter(list, function(obj)
+        ntt.i_keep(list, function(obj)
             return not (obj.kind == "class" and obj.doc_flag == "inlinedoc")
         end)
     end
 
-    list_filter(obj_lists, function(source)
+    ntt.i_keep(obj_lists, function(source)
         return #source[2] > 0
     end)
 end
