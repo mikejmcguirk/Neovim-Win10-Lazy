@@ -378,7 +378,7 @@ local M = {}
 ---@param win uinteger
 ---@param buf uinteger Assumes that `win` contains `buf`.
 ---@param upward boolean
----@param ctx farsight.live.Ctx
+---@param ctx farsight.live.Cfg
 function M.live(win, buf, upward, ctx)
     if api.nvim_win_get_config(win).hide then
         api.nvim_echo({ { "Cannot jump in a hidden window", "WarningMsg" } }, false, {})

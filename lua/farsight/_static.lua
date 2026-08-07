@@ -462,12 +462,12 @@ end
 
 local M = {}
 
----@class farsight.static.MatchCtx : farsight.static.Ctx
+---@class farsight.static.MatchCtx : farsight.static.Cfg
 ---@field mode string
 ---@field regex vim.regex
 
 ---@param cur_win uinteger
----@param ctx farsight.static.Ctx
+---@param ctx farsight.static.Cfg
 function M.static(cur_win, ctx)
     local mode = api.nvim_get_mode().mode
     local wins = wins_valid_sorted_get(mode, cur_win)

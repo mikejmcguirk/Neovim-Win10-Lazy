@@ -379,7 +379,7 @@ end
 ---@param mode_status 0|1|2|3|4|5
 ---@param win uinteger
 ---@param buf uinteger
----@param ctx farsight.csearch.Ctx
+---@param ctx farsight.csearch.Cfg
 ---@return boolean, [uinteger, uinteger]
 local function do_jump(char, upward, till, count1, top, bot, mode_status, win, buf, ctx)
     local exclusive = api.nvim_get_option_value("selection", { scope = "global" }) == "exclusive"
@@ -575,7 +575,7 @@ end
 ---@param upward boolean
 ---@param count1 uinteger
 ---@param till boolean
----@param ctx farsight.csearch.Ctx
+---@param ctx farsight.csearch.Cfg
 local function base_hls_set(win, buf, upward, count1, till, ctx)
     local match_area = _match.csearch_match_area_get(win, buf, upward and -1 or 1)
     if ctx.dim then
@@ -608,7 +608,7 @@ end
 ---@param top uinteger 0-indexed
 ---@param bot uinteger 0-indexed
 ---@param mode_status 0|1|2|3|4|5
----@param ctx farsight.csearch.Ctx
+---@param ctx farsight.csearch.Cfg
 local function cont_jump(upward, till, count1, top, bot, mode_status, ctx)
     cont_did_csearch = true
     local ok, pos =
@@ -639,7 +639,7 @@ end
 ---@param count1 uinteger
 ---@param upward boolean
 ---@param till boolean
----@param ctx farsight.csearch.Ctx
+---@param ctx farsight.csearch.Cfg
 function M.csearch(win, buf, count1, upward, till, ctx)
     local mode_status = mode_status_get(api.nvim_get_mode().mode)
     local is_repeating, is_reg_executing = cont_mode_ensure_valid()

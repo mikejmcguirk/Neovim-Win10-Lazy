@@ -66,7 +66,8 @@ for _, hl in ipairs(hls) do
 end
 
 local farsight = require("farsight")
-if not farsight.config.default_keymaps_set then
+local config = farsight._config_get()
+if not config.default_keymaps_set then
     return
 end
 
