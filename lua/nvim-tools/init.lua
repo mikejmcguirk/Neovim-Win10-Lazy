@@ -70,7 +70,7 @@ end
 ---@param prev table<table, true>
 ---@return boolean, string
 local function matches_validator_with(t, s, prev)
-    if prev[t] then
+    if prev[t] == true then
         return false, "Cyclic reference found in values."
     end
 
@@ -83,8 +83,8 @@ local function matches_validator_with(t, s, prev)
             return false, "[" .. tostring(k) .. "]" .. " has no validator."
         end
 
-        local v_is_dict = ntt.is_dict(v) == 2
-        local vs_is_dict = ntt.is_dict(vs) == 2
+        local v_is_dict = ntt.is_table(v) == 3
+        local vs_is_dict = ntt.is_table(vs) == 3
         if v_is_dict ~= vs_is_dict then
             prev[t] = nil
             return false, "[" .. tostring(k) .. "]" .. " sub-table mismatch."
@@ -124,11 +124,11 @@ end
 ---@return boolean, string
 local function matches_schema_with_run(t, s)
     local ntt = require("nvim-tools.table")
-    if ntt.is_dict(t) == 0 then
-        return false, "Config values are not a dictionary table."
+    if ntt.is_table(t) == 0 then
+        return false, "Config values are not a table."
     end
 
-    if ntt.is_dict(s) < 2 then
+    if ntt.is_table(s) < 3 then
         return false, "Schema values are not a dictionary table."
     end
 

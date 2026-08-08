@@ -4,132 +4,11 @@ local api = vim.api
 -- consolidated into as few modules as is reasonable.
 local ntt = require("nvim-tools.table")
 
----------------------
--- MARK: Functions --
----------------------
-
-local M = {}
-
----@param expected string
----@param actual any
----@return string
-local function validator_err_make(expected, actual)
-    return "Expected " .. expected .. ", found " .. type(actual)
-end
-
----@param val any
----@param typ string
----@return boolean, string
-local function string_type_is_valid(val, typ)
-    if typ ~= "callable" then
-        local ok = type(val) == typ
-        return ok, ok and "" or validator_err_make(typ, val)
-    end
-
-    if type(val) == "function" then
-        return true, ""
-    end
-
-    local mt = getmetatable(val)
-    local ok = mt ~= nil and type(rawget(mt, "__call")) == "function"
-    return ok, ok and "" or "Not a callable metatable"
-end
-
----@param val any
----@param validator string|string[]|fun(val:any): boolean, string
----@return boolean, string
-local function validator_check(val, validator)
-    if type(validator) == "string" then
-        return string_type_is_valid(val, validator)
-    end
-
-    if vim.islist(validator) then
-        for i = 1, #validator do
-            ---@diagnostic disable-next-line: param-type-mismatch
-            if string_type_is_valid(val, validator[i]) then
-                return true, ""
-            end
-        end
-
-        return false, validator_err_make(vim.inspect(validator), val)
-    end
-
-    if type(validator) == "function" then
-        return validator(val)
-    end
-
-    return false, "Invalid validator for " .. tostring(val)
-end
-
----@param t table
----@param s table
----@param prev table<table, true>
----@return boolean, string
-local function matches_schema_checked(t, s, prev)
-    if prev[t] ~= nil then
-        return false, "Cyclic reference detected in values."
-    end
-
-    prev[t] = true
-    for k, v in pairs(t) do
-        local vs = s[k]
-        if vs == nil then
-            prev[t] = nil
-            return false, "[" .. tostring(k) .. "]" .. " has no validator."
-        end
-
-        local v_is_dict = ntt.is_dict(v) == 2
-        local vs_is_dict = ntt.is_dict(vs) == 2
-        if (not v_is_dict) and not vs_is_dict then
-            local ok, err = validator_check(v, vs)
-            if not ok then
-                prev[t] = nil
-                return false, "[" .. tostring(k) .. "]" .. err
-            end
-        elseif v_is_dict and vs_is_dict then
-            local ok, err = matches_schema_checked(v, vs, prev)
-            if not ok then
-                prev[t] = nil
-                return false, "[" .. tostring(k) .. "]" .. err
-            end
-        else
-            prev[t] = nil
-            return false, "[" .. tostring(k) .. "]" .. " sub-table mismatch."
-        end
-    end
-
-    prev[t] = nil
-    return true, ""
-end
-
----Inspired by futil-js `matchesSignature`
----
----Compare a |lua-dict| of values with a |lua-dict| schema. Returns `true` if all
----validators pass. Returns `false` with an error `string` if not.
----
----Values from `t` are allowed to be missing. Values from `t` without a corresponding signature
----`s` will cause a failure.
----
----See |vim.validate()| for validation logic.
----@audited 2026-07-03
----@param t table
----@param s table
----@return boolean, string
-local function matches_schema(t, s)
-    if ntt.is_dict(t) == 0 then
-        return false, "Config values are not a dictionary table."
-    end
-
-    if ntt.is_dict(s) < 2 then
-        return false, "Schema values are not a dictionary table."
-    end
-
-    return matches_schema_checked(t, s, {})
-end
-
 ---------------------------
 -- MARK: Defaults/Schema --
 ---------------------------
+
+local M = {}
 
 ---@class catharsis.config.Schema
 local schema = {
@@ -199,7 +78,7 @@ local default_config = {
 
 ---@return boolean, string
 function M.__default_schema_check()
-    return matches_schema(default_config, schema)
+    return ntt.matches_schema(default_config, schema)
 end
 
 ---@class catharsis.documentHighlight.Opts
@@ -227,39 +106,35 @@ end
 ------------------
 
 local config = ntt.deepcopy(default_config)
----@cast config qf-herder.Config
+---@cast config catharsis.Config
 
----@param new_config? qf-herder.config.Partial
----@return qf-herder.Config
+---@param new_config? catharsis.config.Partial
+---@return catharsis.Config
 function M.config(new_config)
     if new_config == nil then
-        ---@diagnostic disable-next-line: return-type-mismatch
         return ntt.deepcopy(config)
     end
 
-    local ok, err = matches_schema(new_config, schema)
+    local ok, err = ntt.matches_schema(new_config, schema)
     if not ok then
         if vim.v.vim_did_enter == 1 then
             error(err)
         end
 
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        ---@diagnostic disable-next-line: return-type-mismatch
         return ntt.deepcopy(config)
     end
 
     ntt.merge_deep_right(config, new_config)
-    ---@diagnostic disable-next-line: return-type-mismatch
     return ntt.deepcopy(config)
 end
 
 function M.config_reset()
-    ---@diagnostic disable-next-line: assign-type-mismatch
     config = ntt.deepcopy(default_config)
 end
 
 ---@param keys table
----@return qf-herder.Config
+---@return catharsis.Config
 function M.unset_keys(keys)
     vim.validate("keys", keys, "table")
 
@@ -269,7 +144,6 @@ function M.unset_keys(keys)
     end)
 
     ntt.defaults_deep(config, defaults_zipped)
-    ---@diagnostic disable-next-line: return-type-mismatch
     return ntt.deepcopy(config)
 end
 
@@ -281,14 +155,14 @@ end
 -- MARK: Buf Config --
 ----------------------
 
-local buf_configs = {} ---@type table<uinteger, qf-herder.config.Partial>
+local buf_configs = {} ---@type table<uinteger, catharsis.config.Partial>
 
 local function get_buf_augroup_name(buf)
-    return "qf-herder.buf_config." .. tostring(buf)
+    return "catharsis.buf_config." .. tostring(buf)
 end
 
 ---@param buf uinteger
----@return qf-herder.config.Partial
+---@return catharsis.config.Partial
 local function buf_config_add(buf)
     api.nvim_create_autocmd("BufWipeout", {
         group = api.nvim_create_augroup(get_buf_augroup_name(buf), {}),
@@ -305,42 +179,36 @@ local function buf_config_add(buf)
 end
 
 ---@param buf uinteger
----@return qf-herder.config.Partial
-local function buf_configs_get(buf)
-    local buf_config = buf_configs[buf]
-    if buf_config == nil then
-        buf_config = buf_config_add(buf)
-    end
-
-    return buf_config
+---@return catharsis.config.Partial
+local function buf_config_get_or_create(buf)
+    return buf_configs[buf] or buf_config_add(buf)
 end
 
----@param new_config qf-herder.config.Partial?
+---@param new_config catharsis.config.Partial?
 ---@param buf? uinteger
----@return qf-herder.config.Partial
+---@return catharsis.config.Partial
 function M.buf_config(new_config, buf)
-    vim.validate("buf", buf, require("nvim-tools.types").is_uint, true)
-    buf = (buf ~= nil and buf ~= 0) and buf or api.nvim_get_current_buf()
+    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
+    vim.validate("new_config", new_config, "table", true)
+
+    buf = buf ~= 0 and buf or api.nvim_get_current_buf()
     if not api.nvim_buf_is_valid(buf) then
         buf_configs[buf] = nil
         error(buf .. " is not valid")
     end
 
-    local buf_config = buf_configs_get(buf)
+    local buf_config = buf_config_get_or_create(buf)
     if new_config == nil then
-        ---@diagnostic disable-next-line: return-type-mismatch
         return ntt.deepcopy(buf_config)
     end
 
-    local ok, err = matches_schema(new_config, schema)
+    local ok, err = ntt.matches_schema(new_config, schema)
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        ---@diagnostic disable-next-line: return-type-mismatch
     else
         ntt.merge_deep_right(buf_config, new_config)
     end
 
-    ---@diagnostic disable-next-line: return-type-mismatch
     return ntt.deepcopy(buf_config)
 end
 
@@ -367,11 +235,34 @@ function M.buf_config_clear(bufs)
     end
 end
 
+---@param buf uinteger
+---@param keys table
+---@return catharsis.config.Partial
+function M.buf_config_unset_keys(buf, keys)
+    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
+    vim.validate("keys", keys, "table")
+
+    buf = buf ~= 0 and buf or api.nvim_get_current_buf()
+    if not api.nvim_buf_is_valid(buf) then
+        buf_configs[buf] = nil
+        error(buf .. " is not valid")
+    end
+
+    return ntt.deepcopy(ntt.unset_keys(buf_config_get_or_create(buf), keys))
+end
+
 ---@return uinteger[]
 function M.buf_config_list_bufs()
     local keys = ntt.keys(buf_configs)
     table.sort(keys)
     return keys
+end
+
+---@return uinteger[]
+function M._buf_config_list_bufs_empty()
+    return ntt.i_keep(M.buf_config_list_bufs(), function(buf)
+        return next(buf_configs[buf]) == nil
+    end)
 end
 
 -----------------------
@@ -402,7 +293,7 @@ function M._config_merged_get(buf, usr_config, ...)
     end
 
     local sub_schema = ntt.get(schema, ...)
-    local ok, err = matches_schema(usr_config, sub_schema)
+    local ok, err = ntt.matches_schema(usr_config, sub_schema)
     if not ok then
         error(err)
     end

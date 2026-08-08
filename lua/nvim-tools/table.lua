@@ -119,9 +119,8 @@ function M.i_copy(t)
     return require("nvim-tools._table").i_copy_exact(t, 1, t_len)
 end
 
----@generic K, V
----@param t table<K, V>
----@param prev table<K, true>
+---@param t any
+---@param prev any
 ---@return any
 local function deepcopy(t, prev)
     local t_type = type(t)
@@ -138,7 +137,6 @@ local function deepcopy(t, prev)
     end
 
     prev[t] = true
-
     local copy = {}
     for k, v in pairs(t) do
         local dk = deepcopy(k, prev)
@@ -155,15 +153,14 @@ local function deepcopy(t, prev)
 end
 
 ---Differences from |vim.deepcopy()|:
----- `userdata` and `thread` values are discarded rather than erroring. Beware that, if either
----data type is used as a table key, the table value will be lost.
----- No special handling for `vim.NIL`.
----- Always "noref" behavior, meaning that repeated references to the same table each get a
----new copy. If a cyclic reference is detected, it is discarded.
+---- `userdata` and `thread` values are discarded rather than erroring. If either type is used as
+---  a table key, the value is discarded.
+---- `vim.NIL` is handled the same as other data.
+---- Always "noref" behavior. Repeated references to the same table each get a new copy. If a
+---  cyclic reference is detected, it is discarded.
 ---- Assumes that neither table has a metatable.
----@generic K, V
----@param t table<K, V>
----@return table<K, V>
+---@param t any
+---@return any
 function M.deepcopy(t)
     return deepcopy(t, {})
 end
@@ -191,13 +188,13 @@ function M.i_deepcopy(t)
 end
 
 ---Evaluate if `t` is a |lua-dict|.
----@audited 2026-07-03
 ---@param t any
----@return 0|1|2
----- 0: Not a |lua-table|, or a |lua-list|.
----- 1: An empty |lua-table|.
----- 2: A |lua-dict|.
-function M.is_dict(t)
+---@return 0|1|2|3
+---- 0: Not a |lua-table|.
+---- 1: Empty |lua-table|.
+---- 2: |lua-list|
+---- 3: |lua-dict| (may contain a list element).
+function M.is_table(t)
     if type(t) ~= "table" then
         return 0
     end
@@ -208,20 +205,19 @@ function M.is_dict(t)
 
     local len = #t
     if len == 0 then
-        return 2
+        return 3
     end
 
     local count = 0
     for k in pairs(t) do
         count = count + 1
         if type(k) ~= "number" or k < 1 or k > len or k ~= math.floor(k) then
-            return 2
+            return 3
         end
     end
 
-    return (count == len) and 0 or 2
+    return (count == len) and 2 or 3
 end
--- TODO: Go over usages
 
 ----------------------------
 -- MARK: Table Properties --
@@ -231,7 +227,6 @@ end
 
 ---Get a |lua-list| of all keys from `t`.
 ---@mark table-properties
----@audited 2026-07-05
 ---@generic K, V
 ---@param t table<K, V>
 ---@return K[]
@@ -258,6 +253,136 @@ function M.keys_count(t)
     end
 
     return count
+end
+
+---@param expected string
+---@param actual string
+---@return string
+local function validator_err_make(expected, actual)
+    return "Expected " .. expected .. ", found " .. actual
+end
+
+---@param val any
+---@return boolean
+local function is_callable(val)
+    local val_type = type(val)
+    if val_type == "function" then
+        return true
+    end
+
+    local mt = getmetatable(val)
+    return mt ~= nil and type(rawget(mt, "__call")) == "function"
+end
+
+---@param val any
+---@param typ string
+---@return boolean, string
+local function string_type_is_valid(val, typ)
+    if typ ~= "callable" then
+        local val_type = type(val)
+        local ok = val_type == typ
+        return ok, ok and "" or validator_err_make(typ, val_type)
+    end
+
+    local ok = is_callable(val)
+    return ok, ok and "" or "Not callable: " .. vim.inspect(val)
+end
+
+---@param val any
+---@param validator string|string[]|fun(val:any): boolean, string
+---@return boolean, string
+local function validator_check(val, validator)
+    if type(validator) == "string" then
+        return string_type_is_valid(val, validator)
+    end
+
+    if vim.islist(validator) then
+        ---@cast validator string[]
+        for i = 1, #validator do
+            local ok, err = string_type_is_valid(val, validator[i])
+            if ok then
+                return ok, err
+            end
+        end
+
+        return false, validator_err_make(vim.inspect(validator), type(val))
+    end
+
+    if is_callable(validator) then
+        ---@cast validator function
+        return validator(val)
+    end
+
+    return false, "Invalid validator for " .. tostring(val)
+end
+
+---@param t table
+---@param s table
+---@param prev table<table, true>
+---@return boolean, string
+local function matches_schema_checked(t, s, prev)
+    if prev[t] ~= nil then
+        return false, "Cyclic reference detected in values."
+    end
+
+    local ok = true
+    local err = ""
+    prev[t] = true
+    for k, v in pairs(t) do
+        local vs = s[k]
+        if vs == nil then
+            ok = false
+            err = "[" .. tostring(k) .. "]" .. " has no validator."
+        else
+            local v_is_dict = M.is_table(v) == 3
+            local vs_is_dict = M.is_table(vs) == 3
+            if (not v_is_dict) and not vs_is_dict then
+                local ok_vc, err_vc = validator_check(v, vs)
+                if not ok_vc then
+                    ok = ok_vc
+                    err = "[" .. tostring(k) .. "]" .. err_vc
+                end
+            elseif v_is_dict and vs_is_dict then
+                local ok_msc, err_msc = matches_schema_checked(v, vs, prev)
+                if not ok_msc then
+                    ok = ok_msc
+                    err = "[" .. tostring(k) .. "]" .. err_msc
+                end
+            else
+                ok = false
+                err = "[" .. tostring(k) .. "]" .. " sub-table mismatch."
+            end
+        end
+    end
+
+    prev[t] = nil
+    return true, ""
+end
+
+---Inspired by futil-js `matchesSignature`
+---
+---Compare a |lua-dict| of values with a |lua-dict| schema. Returns `true` if all
+---validators pass. Returns `false` with an error `string` if not.
+---
+---Schema values should follow |vim.validate()| logic.
+
+---Values from `t` are allowed to be missing. Values from `t` without a corresponding signature
+---`s` will return false.
+---@audited 2026-07-03
+---@param t table
+---@param s table
+---@return boolean, string
+function M.matches_schema(t, s)
+    local table_type_t = M.is_table(t)
+    if table_type_t == 0 or table_type_t == 2 then
+        return false, "Config values are not a dictionary table."
+    end
+
+    if M.is_table(s) < 3 then
+        return false, "Schema values are not a dictionary table."
+    end
+
+    return matches_schema_checked(t, s, {})
 end
 
 --------------------------
@@ -528,7 +653,6 @@ function M.i_drain(t, idx)
 end
 
 ---Wrap `t` in a metatable that prevents it from being written to.
----@audited 2026-07-03
 ---@param t table
 ---@return table
 function M.freeze(t)
@@ -688,7 +812,6 @@ end
 
 ---Check if all items in |lua-table| `t` satisfy predicate function `f`.
 ---@mark eval
----@audited 2026-07-08
 ---@generic K, V
 ---@param t table<K, V>
 ---@param f fun(k:K, v:V): boolean
@@ -699,7 +822,6 @@ end
 
 ---Check if a |lua-table| `t` is non-empty and all elements satisfy predicate function `f`.
 ---@mark eval
----@audited 2026-07-08
 ---@generic K, V
 ---@param t table<K, V>
 ---@param f fun(k:K, v:V): boolean
@@ -785,7 +907,6 @@ end
 
 ---Check if any items in |lua-table| `t` satisfy predicate function `f`.
 ---@mark eval
----@audited 2026-07-08
 ---@generic K, V
 ---@param t table<K, V>
 ---@param f fun(k:K, v:V): boolean
@@ -1018,7 +1139,6 @@ end
 ---Iterate through the indices of `t1` and `t2`, comparing the corresponding values, optionally
 ---using a `key`.
 ---@mark eval
----@audited 2026-07-10
 ---@generic T
 ---@param t1 T[]
 ---@param t2 T[]
@@ -1298,7 +1418,6 @@ end
 
 ---Return the first item and its index from `t` satisfying predicate function `f`.
 ---@mark extractors
----@audited 2026-07-18
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
@@ -1611,29 +1730,30 @@ function M.i_impasse_to(key, ...)
 end
 -- MID: Outline the loop into a helper
 
----@param t1 table<any, any> Modified in place!
----@param t2 table<any, any>
----@param prev table<table<any, any>, true>
+---@param t1 table Modified in place!
+---@param t2 table
+---@param prev table<table, true>
 local function merge_deep_left(t1, t2, prev)
     if prev[t2] == true then
         return
     end
 
     prev[t2] = true
-
     for k, v2 in pairs(t2) do
-        if M.is_dict(v2) == 2 then
+        local v2_type = type(v2)
+        if v2_type ~= "userdata" and v2_type ~= "thread" then
             local v1 = t1[k]
             if v1 == nil then
-                v1 = {}
-                t1[k] = v1
+                t1[k] = deepcopy(v2, {})
+            else
+                local v2_table_type = M.is_table(v2)
+                if v2_table_type >= 2 then
+                    local v1_table_type = M.is_table(v1)
+                    if (v1_table_type == 3 and v2_table_type == 3) or v1_table_type == 1 then
+                        merge_deep_left(v1, v2, prev)
+                    end
+                end
             end
-
-            if M.is_dict(v1) >= 1 then
-                merge_deep_left(v1, v2, prev)
-            end
-        elseif t1[k] == nil then
-            t1[k] = deepcopy(v2, {})
         end
     end
 
@@ -1642,9 +1762,13 @@ end
 
 ---Recursively merges all values from `t2` into `t1`. Values from `t1` take precedence.
 ---
----All values are deep-copied. If a circular reference is detected, merging at that sub-table is
----aborted.
----@audited 2026-07-03
+---All values are deep-copied. Cyclic references are discarded.
+---
+---Actions:
+---- `userdata` or `thread` values in `t2` will no-op.
+---- Values in `t2` will deepcopy into `t1` if no corresponding key is present.
+---- `t2` will recursively merge left into `t1` if the value in `t1` is an empty table or a
+---  |lua-dict|.
 ---@param t1 table<any, any> Modified in place!
 ---@param t2 table<any, any>
 ---@return table<any, any> Reference to `t1`.
@@ -1653,25 +1777,29 @@ function M.merge_deep_left(t1, t2)
     return t1
 end
 
----@param t1 table<any, any> Modified in place!
----@param t2 table<any, any>
----@param prev table<table<any, any>, true>
+---@param t1 table Modified in place!
+---@param t2 table
+---@param prev table<table, true>
 local function merge_deep_right(t1, t2, prev)
     if prev[t2] == true then
         return
     end
 
     prev[t2] = true
-
     for k, v2 in pairs(t2) do
-        if M.is_dict(v2) == 2 then
-            local v1 = t1[k]
-            if M.is_dict(v1) == 0 then
-                v1 = {}
-                t1[k] = v1
+        local v2_table_type = M.is_table(v2)
+        if v2_table_type == 0 then
+            local v2_type = type(v2)
+            if v2_type ~= "userdata" and v2_type ~= "thread" then
+                t1[k] = deepcopy(v2, {})
             end
-
-            merge_deep_right(v1, v2, prev)
+        elseif v2_table_type == 3 then
+            local v1 = t1[k]
+            if M.is_table(v1) == 3 then
+                merge_deep_right(v1, v2, prev)
+            else
+                t1[k] = deepcopy(v2, {})
+            end
         else
             t1[k] = deepcopy(v2, {})
         end
@@ -1680,20 +1808,21 @@ local function merge_deep_right(t1, t2, prev)
     prev[t2] = nil
 end
 
----Recursively merges all values from `t2` into `t1`. Values from `t2` take precedence.
+---Recursively merge `t2` into `t1`. Values from `t2` take precedence.
 ---
----All values are deep-copied. If a circular reference is detected, merging at that sub-table is
----aborted.
----@audited 2026-07-03
----@param t1 table<any, any> Modified in place!
----@param t2 table<any, any>
----@return table<any, any> Reference to `t1`.
+---All values are deep-copied. Cyclic references are discarded.
+---
+---Actions:
+---- `userdata` or `thread` values in `t2` will no-op.
+---- A |lua-dict| in `t2` will merge into a corresponding dict in `t1`.
+---- Otherwise, the value in `t2` will deepcopy into and over `t1`.
+---@param t1 table Modified in place!
+---@param t2 table
+---@return table Reference to `t1`.
 function M.merge_deep_right(t1, t2)
     merge_deep_right(t1, t2, {})
     return t1
 end
--- TODO: Maybe name this `merge_deepc_right`. So that way you can have `deep` vs `deepc` as a
--- convention for shallow vs deep copy.
 
 ---Combines multiple sorted vararg `...` lists into a new sorted |lua-list|. References are
 ---shallow-copied.
@@ -2169,22 +2298,21 @@ function M.i_unique_to(t, key)
     return _ntt.filter_keep_not_seen_unique_to(t, t_len, key_fn, {})
 end
 
----@param t table<any, any> Modified in place!
----@param keys table<any, true>
----@param prev table<table<any, any>, true>
+---@param t table Modified in place!
+---@param keys table
+---@param prev table<table, true>
 local function unset_keys(t, keys, prev)
     if prev[keys] == true then
         return
     end
 
     prev[keys] = true
-
     for k, v in pairs(keys) do
         if v == true then
             t[k] = nil
-        elseif M.is_dict(v) == 2 then
+        elseif M.is_table(v) == 3 then
             local tv = t[k]
-            if M.is_dict(tv) == 2 then
+            if M.is_table(tv) == 3 then
                 unset_keys(tv, v, prev)
             end
         end
@@ -2196,11 +2324,10 @@ end
 ---Recursively set values in `t` to `nil` if the matching key/value pair in `keys` is true. If
 ---a value in `keys` is a |lua-dict|, iterate recursively.
 ---
----If a circular reference is detected, iteration at that sub-table is aborted.
----@audited 2026-07-03
----@param t table<any, any> Modified in place!
----@param keys table<any, true>
----@return table<any, any> Reference to `t`.
+---If a cyclic reference is detected, iteration at that sub-table is aborted.
+---@param t table Modified in place!
+---@param keys table
+---@return table Reference to `t`.
 function M.unset_keys(t, keys)
     unset_keys(t, keys, {})
     return t
@@ -2813,43 +2940,44 @@ function M.i_combine(t, f)
     return t
 end
 
----@generic K, V
----@param t table<any, any> Modified in place!
----@param defaults table<any, any>
----@param prev_defaults table<table<K, V>, true>
+---@param t table Modified in place!
+---@param defaults table
+---@param prev_defaults table<table, true>
 local function defaults_deep(t, defaults, prev_defaults)
     if prev_defaults[defaults] == true then
         return
     end
 
     prev_defaults[defaults] = true
-
     for k, vd in pairs(defaults) do
-        if M.is_dict(vd) == 2 then
+        local vd_table_type = M.is_table(vd)
+        if vd_table_type == 3 then
             local v = t[k]
-            if M.is_dict(v) == 0 then
+            if M.is_table(v) ~= 3 then
                 v = {}
                 t[k] = v
             end
 
             defaults_deep(v, vd, prev_defaults)
-        elseif t[k] == nil then
-            t[k] = deepcopy(vd, {})
+        else
+            local vd_type = type(vd)
+            if vd_type ~= "userdata" and vd_type ~= "thread" and t[k] == nil then
+                t[k] = deepcopy(vd, {})
+            end
         end
     end
 
     prev_defaults[defaults] = nil
 end
 
----Recursively merges values from `t2` into `t1` if they are missing in `t1`. |lua-dict| values in
----`t2` will overwrite any non-dict value in `t1`.
+---Recursively merge values from `t2` into `t1` if they are missing in `t1`. Unlike
+---|merge_deep_left()|, a |lua-dict| value in `t2` will overwrite a non-dict value in `t1`.
 ---
----All values are deep-copied. If a circular reference is detected, merging at that sub-table is
----aborted.
+---All values are deep-copied. If a cyclic reference is detected, merging is aborted.
 ---@generic K, V
----@param t table<any, any> Modified in place!
----@param defaults table<any, any>
----@return table<any, any> Reference to `t`.
+---@param t table Modified in place!
+---@param defaults table
+---@return table Reference to `t`.
 function M.defaults_deep(t, defaults)
     defaults_deep(t, defaults, {})
     return t
@@ -3457,8 +3585,8 @@ local function zip_deep_with(ret, t1, t2, f, prev)
     for k, v1 in pairs(t1) do
         local v2 = t2[k]
         if v2 ~= nil then
-            local v1_is_dict = M.is_dict(v1) == 2
-            local v2_is_dict = M.is_dict(v2) == 2
+            local v1_is_dict = M.is_table(v1) == 3
+            local v2_is_dict = M.is_table(v2) == 3
             if v1_is_dict == true and v2_is_dict == true then
                 local v_new = {}
                 zip_deep_with(v_new, v1, v2, f, prev)
@@ -3476,7 +3604,6 @@ end
 ---
 ---Only keys present in both tables are included (intersection). Structural mis-matches are
 ---dropped.
----@audited 2026-07-03
 ---@generic T, U, M
 ---@param t1 table<any, any>
 ---@param t2 table<any, any>

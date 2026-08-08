@@ -1,5 +1,6 @@
 ## TODO:
 
+- [ ] Create checkhealth
 - [ ] Disable the old rancher so this can be used.
 - [ ] Change all mentions of "herder" back to rancher.
 

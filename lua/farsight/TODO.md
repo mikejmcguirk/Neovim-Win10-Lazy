@@ -5,6 +5,10 @@
   - [ ] Map finding
   - [ ] Show options
 
+- [ ] Consolidate TODO/comments
+- [ ] cut into a separate repo
+- [ ] Remove nvim-tools refs
+
 - [ ] Re-check that the farsight name is available
 
 ## TODO-DEP:
