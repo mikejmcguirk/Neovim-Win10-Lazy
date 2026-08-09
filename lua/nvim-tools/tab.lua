@@ -60,7 +60,7 @@ end
 ---@param enter boolean
 ---@param after integer
 function M.open_new_tab(buf, enter, after)
-    if fn.has("nvim-0.12") then
+    if fn.has("nvim-0.12") == 1 then
         return M.open_new_tab_v12(buf, enter, after)
     else
         return M.open_new_tab_old(buf, enter, after)

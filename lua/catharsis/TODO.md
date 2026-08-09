@@ -1,5 +1,7 @@
 ## TODO:
 
+- [ ] Move hl group definitions back to modules
+
 - [ ] Reduce the amount of requires on startup. Reduce extranneous requires in config if possible. It would be helpful if `_features` did not require until LSPAttach. Although that module at least gates doc_hl and lampshade. The published version should also consolidate all utils into one file so we only have one of those.
 - [ ] Create checkhealth
 - [ ] Verify that there are no references to other modules:

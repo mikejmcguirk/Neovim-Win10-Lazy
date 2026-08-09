@@ -1,7 +1,7 @@
 local api = vim.api
--- TODO: When cutting this plugin off, inline any functions that are only used here. We want to
--- require as few exterior modules as possible for plugin init. Exterior util functions should be
--- consolidated into as few modules as is reasonable.
+-- TODO-DEP: When cutting this plugin off, inline any functions that are only used here. We want
+-- to require as few exterior modules as possible for plugin init. Exterior util functions should
+-- be consolidated into as few modules as is reasonable.
 local ntt = require("nvim-tools.table")
 
 ---------------------------
@@ -456,14 +456,14 @@ M.live = {}
 
 ---@param opts? farsight.live.Opts
 function M.live.fwd(opts)
-    local win, win_buf, cfg = cfg_get_from_opts(opts, "live")
-    require("farsight._live").live(win, win_buf, false, cfg)
+    local win, buf, cfg = cfg_get_from_opts(opts, "live")
+    require("farsight._live").live(win, buf, false, cfg)
 end
 
 ---@param opts? farsight.live.Opts
 function M.live.rev(opts)
-    local win, win_buf, cfg = cfg_get_from_opts(opts, "live")
-    require("farsight._live").live(win, win_buf, true, cfg)
+    local win, buf, cfg = cfg_get_from_opts(opts, "live")
+    require("farsight._live").live(win, buf, true, cfg)
 end
 
 ---@param opts? farsight.static.Opts

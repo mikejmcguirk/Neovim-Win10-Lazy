@@ -42,6 +42,12 @@ end
 
 local hl_error = api.nvim_get_hl_id_by_name("ErrorMsg")
 
+do
+    api.nvim_set_hl(0, "farsightStaticDim", { default = true, link = "Dimmed" })
+    api.nvim_set_hl(0, "farsightStaticTargetLabel", { default = true, link = "IncSearch" })
+    api.nvim_set_hl(0, "farsightStaticLabel", { default = true, link = "CurSearch" })
+end
+
 local hl_dim = api.nvim_get_hl_id_by_name("farsightStaticDim")
 local hl_label = api.nvim_get_hl_id_by_name("farsightStaticLabel")
 local hl_target = api.nvim_get_hl_id_by_name("farsightStaticTargetLabel")
@@ -82,7 +88,7 @@ local function do_jump(win, buf, row, col, cur_win, ctx)
     if cur_win ~= win then
         api.nvim_set_current_win(win)
     else
-        row, col = require("farsight._util").ensure_state_for_omode(win, buf, row, col)
+        row, col = require("farsight._util").ensure_pos_for_omode(win, buf, row, col)
     end
 
     if not ctx.keepjumps then
@@ -352,7 +358,6 @@ local function bisected_idx_get(pos_name, ranges)
     ---@cast idx uinteger
     return idx - 1
 end
--- TODO: Same logic as doc_hl jumping. Outline to catharsis or nvim-tools.
 
 ---@param ctx farsight.static.MatchCtx
 ---@param ranges [uinteger, uinteger, uinteger, uinteger][]

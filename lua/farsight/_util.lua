@@ -34,8 +34,6 @@ local function setup_repeat_tracking()
 
     -- Credit folke/flash
     vim.on_key(function(key)
-        -- TODO: To allow the user to remap dot-repeat, config should accept a "dot_repeat_key"
-        -- variable for this module to read.
         if key == "." and fn.reg_executing() == "" and fn.reg_recording() == "" then
             is_repeating = 1
             vim.schedule(function()
@@ -92,7 +90,7 @@ end
 ---@param dest_row uinteger 0 indexed
 ---@param dest_col uinteger 0 indexed
 ---@return uinteger, uinteger
-function M.ensure_state_for_omode(win, buf, dest_row, dest_col)
+function M.ensure_pos_for_omode(win, buf, dest_row, dest_col)
     if not require("nvim-tools.misc").is_omode(api.nvim_get_mode().mode) then
         return dest_row, dest_col
     end
@@ -116,8 +114,6 @@ function M.ensure_state_for_omode(win, buf, dest_row, dest_col)
     api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
     return dest_row, dest_col
 end
--- TODO: Need to roll what we learned from csearch about noV mode into here, then also use this
--- in csearch.
 
 -- stylua: ignore
 -- Copied from Nvim source

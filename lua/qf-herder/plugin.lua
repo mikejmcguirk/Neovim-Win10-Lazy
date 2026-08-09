@@ -226,7 +226,6 @@ if config.default_keymaps_set then
     for _, map in ipairs(M.maps) do
         for _, lhs in ipairs(map[3]) do
             for _, mode in ipairs(map[1]) do
-                -- MID: Use `mapcheck()` or `hasmapto()`
                 if vim.call("maparg", lhs, mode) == "" then
                     api.nvim_set_keymap(mode, lhs, map[2], { noremap = true, desc = map[5] })
                 end
@@ -236,7 +235,7 @@ if config.default_keymaps_set then
 end
 
 if not config.default_cmds_set then
-    return
+    return M
 end
 
 -- stylua: ignore
@@ -294,3 +293,5 @@ M.cmds = {
 for _, cmd in ipairs(M.cmds) do
     api.nvim_create_user_command(cmd[1], cmd[2], cmd[3])
 end
+
+return M

@@ -168,8 +168,6 @@ local function match_area_get(win, buf, dir, match_start, match_end)
 
     return range
 end
--- MID: If you add to `lines` here, you add three API calls in this function and two in
--- `add_missing_lines`. Questionable trade for only three strings.
 
 -------------------
 -- MARK: Csearch --

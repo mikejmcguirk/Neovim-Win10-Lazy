@@ -2,7 +2,6 @@ local api = vim.api
 local fn = vim.fn
 
 local _match = require("farsight._match")
-local ntt = require("nvim-tools.table")
 
 -----------------
 -- MARK: State --
@@ -10,8 +9,8 @@ local ntt = require("nvim-tools.table")
 
 local state_cmdline = ""
 local state_err = ""
-local state_jump_col_ext = -1
-local state_jump_row_ext = -1
+local state_jump_col = -1
+local state_jump_row = -1
 local state_res_cache = {} ---@type table<string, farsight.live.MatchData>
 local state_res_current = nil ---@type farsight.live.MatchData|nil
 
@@ -48,8 +47,8 @@ local function state_try_stage_jump_from_label()
     end
 
     local range = state_res_current.targets[range_idx]
-    state_jump_row_ext = range[1]
-    state_jump_col_ext = range[2]
+    state_jump_row = range[1]
+    state_jump_col = range[2]
     return true
 end
 
@@ -63,7 +62,7 @@ end
 ---@param text string
 ---@param upward boolean
 local function state_resolve_jump_pos(ok, text, upward)
-    if state_jump_row_ext ~= -1 and state_jump_col_ext ~= -1 then
+    if state_jump_row ~= -1 and state_jump_col ~= -1 then
         return
     end
 
@@ -77,16 +76,16 @@ local function state_resolve_jump_pos(ok, text, upward)
     end
 
     local target = upward and targets[#targets] or targets[1]
-    state_jump_row_ext = target[1]
-    state_jump_col_ext = target[2]
+    state_jump_row = target[1]
+    state_jump_col = target[2]
 end
 
 ---@return [uinteger, uinteger], string
 local function state_clean_and_export()
-    local jump_col_ext = state_jump_col_ext
-    local jump_row_ext = state_jump_row_ext
-    state_jump_row_ext = -1
-    state_jump_col_ext = -1
+    local jump_col_ext = state_jump_col
+    local jump_row_ext = state_jump_row
+    state_jump_row = -1
+    state_jump_col = -1
 
     require("nvim-tools.table").clear(state_res_cache)
     state_res_current = nil
@@ -106,6 +105,12 @@ local state_ns_dynamic = api.nvim_create_namespace(ns_basename .. ".dynamic")
 local state_ns_dim = api.nvim_create_namespace(ns_basename .. ".dim")
 
 local hl_error = api.nvim_get_hl_id_by_name("ErrorMsg")
+
+do
+    api.nvim_set_hl(0, "farsightLiveDim", { default = true, link = "Dimmed" })
+    api.nvim_set_hl(0, "farsightLiveLabel", { default = true, link = "IncSearch" })
+    api.nvim_set_hl(0, "farsightLiveResult", { default = true, link = "Search" })
+end
 
 local hl_dim = api.nvim_get_hl_id_by_name("farsightLiveDim")
 local hl_res = api.nvim_get_hl_id_by_name("farsightLiveResult")
@@ -210,6 +215,7 @@ end
 ---@return string[]
 local function tokens_avail_get(res, tokens, chars_after)
     local res_labeled_targets = res.labeled_targets
+    local ntt = require("nvim-tools.table")
     if next(res_labeled_targets) ~= nil then
         return ntt.i_discard_to(tokens, function(token)
             return chars_after[token] == true or res_labeled_targets[token] ~= nil
@@ -226,7 +232,7 @@ end
 local function bit_pack_start(target)
     return target[1] * 16384 + target[2]
 end
--- MID: This should be able to detect massive files and switch to a string key.
+-- MID: For massive files, an alternative string key fn should be available.
 
 ---@param res farsight.live.MatchData Modified in place!
 ---@param chars_after table<string, true>
@@ -380,21 +386,16 @@ local M = {}
 ---@param upward boolean
 ---@param ctx farsight.live.Cfg
 function M.live(win, buf, upward, ctx)
-    if api.nvim_win_get_config(win).hide then
-        api.nvim_echo({ { "Cannot jump in a hidden window", "WarningMsg" } }, false, {})
-        return
-    end
-
-    local range, lines = _match.live_info_get(win, buf, (upward and -1 or 1))
+    local area, lines = _match.live_info_get(win, buf, (upward and -1 or 1))
     api.nvim__ns_set(state_ns_dynamic, { wins = { win } })
     local _util = require("farsight._util")
     local dim = ctx.dim
     if dim then
-        _util.dim_set_ns_and_extmarks(state_ns_dim, win, hl_dim, hl_priority_dim, range, buf)
+        _util.dim_set_ns_and_extmarks(state_ns_dim, win, hl_dim, hl_priority_dim, area, buf)
     end
 
     local prompt = ctx.prompt .. " "
-    listener_init(ctx.cmdline_modifier, range, win, buf, lines, ctx.tokens, upward)
+    listener_init(ctx.cmdline_modifier, area, win, buf, lines, ctx.tokens, upward)
     local ok_i, text_i = require("nvim-tools.ui").input({ prompt = prompt, scope = "buffer" })
     listener_teardown()
 
@@ -420,8 +421,8 @@ function M.live(win, buf, upward, ctx)
         api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
     end
 
-    pos_ext[1], pos_ext[2] = _util.ensure_state_for_omode(win, buf, pos_ext[1], pos_ext[2])
     local pos = require("nvim-tools.pos").ext_to_mark_pos(pos_ext)
+    pos_ext[1], pos_ext[2] = _util.ensure_pos_for_omode(win, buf, pos_ext[1], pos_ext[2])
     api.nvim_win_set_cursor(win, pos)
     local unfold = ctx.unfold
     if #unfold > 0 then
