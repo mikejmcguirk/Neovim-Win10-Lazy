@@ -62,6 +62,9 @@
 
 ## LOW:
 
+- [ ] Could you implement an nvim-tools "sort_by_key" function that maps then sorts the map? How would you get back to the originals though?
+  - https://github.com/neovim/neovim/commit/f33c92348a77ae4cb62504b4cf71d1b7443bcf0e
+
 - [ ] Come up with a principled way to check for the truncated line in search plugins:
   - Use case: Jump plugins in wrapped buffers
   - Problems:

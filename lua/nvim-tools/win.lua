@@ -28,13 +28,6 @@ end
 ---If vsplit, splitright is used
 ---@return integer
 function M.create_split(win, buf, enter, split)
-    local ntt = require("nvim-tools.types")
-    -- is_int because -1 is valid here
-    vim.validate("win", win, ntt.is_int, true)
-    vim.validate("buf", buf, ntt.is_uint, true)
-    vim.validate("enter", enter, "boolean")
-    vim.validate("split", split, "string")
-
     win = win == nil and 0 or win
     buf = buf and buf
         or require("nvim-tools.buf").create_temp_buf("wipe", false, "nofile", "", true)
