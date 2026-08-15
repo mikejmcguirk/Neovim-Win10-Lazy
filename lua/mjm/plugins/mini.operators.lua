@@ -2,7 +2,7 @@ local set = vim.keymap.set
 
 return {
     "nvim-mini/mini.operators",
-    version = "*",
+    version = false,
     config = function()
         local mini_ops = require("mini.operators")
         mini_ops.setup({
