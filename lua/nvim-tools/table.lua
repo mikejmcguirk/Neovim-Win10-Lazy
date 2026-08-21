@@ -79,8 +79,7 @@ M.clear = clear
 ---@param t T[] Modified in place!
 ---@return T[] Reference to `t`.
 function M.i_clear(t)
-    local t_len = #t
-    for i = 1, t_len do
+    for i = 1, #t do
         t[i] = nil
     end
 
@@ -2123,11 +2122,15 @@ end
 ---@return T[] Reference to `t`.
 function M.i_keep(t, f)
     local t_len = #t
-    if t_len == 0 then
-        return t
+    local j = 1
+    for i = 1, t_len do
+        local v = t[i]
+        if f(v) then
+            t[j] = v
+            j = j + 1
+        end
     end
 
-    local j = require("nvim-tools._table").keep_do(t, t_len, t, f)
     for i = j, t_len do
         t[i] = nil
     end

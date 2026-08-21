@@ -6,7 +6,7 @@ lsp.log.set_level(vim.log.levels.ERROR)
 
 set("n", "gr", "<nop>")
 -- Don't undo <C-s> signature help default. I have nothing to add to it.
-local lsp_map_defaults = { "gra", "gri", "grn", "grr", "grt", "grx", "gO" }
+local lsp_map_defaults = { "gra", "gri", "grn", "grr", "grt", "gO" }
 for _, map in ipairs(lsp_map_defaults) do
     if #vim.call("maparg", map, "n") > 0 then
         vim.keymap.del("n", map)
@@ -43,7 +43,6 @@ local function set_lsp_maps(ev)
     -- textDocument/codeLens --
     if client:supports_method("textDocument/codeLens") then
         lsp.codelens.enable()
-        set("n", "grx", lsp.codelens.run, { buf = buf })
     end
     -- MID: Unsure how either `unable` or `run` handle LSPs that don't support codeLens.
 

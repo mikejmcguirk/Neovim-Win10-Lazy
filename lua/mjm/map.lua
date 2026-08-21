@@ -48,8 +48,6 @@ set("n", "ZU", function()
         end
     end
 end)
--- LOW: Getting listed bufs (requires a filter) then filtering again for current buf is
--- inefficient.
 
 ----------------
 -- MARK: TABS --

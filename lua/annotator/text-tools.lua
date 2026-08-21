@@ -3,17 +3,12 @@ local fn = vim.fn
 
 local M = {}
 
----@return boolean
-local function check_ft()
-    return api.nvim_get_option_value("filetype", { buf = 0 }) == "lua"
+local function get_comment_start()
+    local ft = api.nvim_get_option_value("filetype", { buf = 0 })
+    return ft == "lua" and "--" or "//"
 end
--- TODO: Delete once proper comment string checking is added.
 
 function M.add_annotation()
-    if not check_ft() then
-        return
-    end
-
     local row = fn.line(".")
     local row_0 = row - 1
     local cur_line = api.nvim_get_current_line()
@@ -21,7 +16,8 @@ function M.add_annotation()
     local is_blank = string.match(cur_line, "^%s*$")
     local fin_row = is_blank and row or row_0
     local indent = require("nvim-tools.buf").get_indent(0, row)
-    local mark_text = table.concat({ string.rep(" ", indent), "-- MARK:  --" })
+    local cstart = get_comment_start()
+    local mark_text = table.concat({ string.rep(" ", indent), cstart .. " MARK:  " .. cstart })
 
     api.nvim_buf_set_lines(0, row_0, fin_row, false, { mark_text })
     local new_col = #mark_text - 3
@@ -29,12 +25,14 @@ function M.add_annotation()
 
     api.nvim_cmd({ cmd = "startinsert" }, {})
 end
+-- TODO: This method of handling cstart does not work for enclosing comment strings like markdown
+
+local function get_border_char()
+    local ft = api.nvim_get_option_value("filetype", { buf = 0 })
+    return ft == "lua" and "-" or "/"
+end
 
 function M.add_borders()
-    if not check_ft() then
-        return
-    end
-
     local row = fn.line(".")
     local row_0 = row - 1
 
@@ -54,18 +52,15 @@ function M.add_borders()
     local trail_start = string.find(cur_line, "%s+$")
     local len_trail = trail_start and (len_cur_line - trail_start + 1) or 0
     local len_content = len_cur_line - indent - len_trail
-    local border = string.rep(" ", indent) .. string.rep("-", len_content)
+    local bchar = get_border_char()
+    local border = string.rep(" ", indent) .. string.rep(bchar, len_content)
 
     ---@param line string?
     ---@return boolean
     local function is_border(line)
-        if not line then
-            return false
-        end
-        return line:match("^%s*-+$") ~= nil
+        return line and line:match("^%s*" .. bchar .. "+$") ~= nil or false
     end
 
-    -- Set each border individually to avoid overwriting extmarks and moving the cursor
     if is_border(line_above) and is_border(line_below) then
         api.nvim_buf_set_lines(0, row_0 - 1, row_0, false, { border })
         api.nvim_buf_set_lines(0, row_0 + 1, row_0 + 2, false, { border })
