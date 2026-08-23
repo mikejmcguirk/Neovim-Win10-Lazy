@@ -32,7 +32,9 @@ end
 local function cmd_do(src_win, count, cmd, silent, do_zzze)
     ---@return { [1]:boolean, [2]:string }
     local function cmd_call()
-        local ok, err = pcall(api.nvim_cmd, { cmd = cmd, count = count, silent = silent }, {})
+        ---@type vim.api.keyset.cmd
+        local cmd_args = { cmd = cmd, count = count, mods = { silent = silent } }
+        local ok, err = pcall(api.nvim_cmd, cmd_args, {})
         if ok and do_zzze then
             api.nvim_cmd({ cmd = "norm", args = { "zzze" }, bang = true }, {})
         end
@@ -211,7 +213,7 @@ end
 ---@param silent boolean
 ---@param cfg qf-herder.nav.Cfg
 function M.q_q(count, cur_win, keep_focus, silent, cfg)
-    if keep_focus and fn.win_gettype(cur_win) ~= "loclist" then
+    if keep_focus and fn.win_gettype(cur_win) ~= "quickfix" then
         local msg = "Current window is not a quickfix list"
         api.nvim_echo({ { msg, "WarningMsg" } }, false, {})
         return

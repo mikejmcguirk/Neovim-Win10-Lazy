@@ -13,6 +13,13 @@ require("qf-herder.plugin")
 keymap.set({ "n", "x" }, "gw", "gq")
 keymap.set("n", "gww", "gqq")
 
+api.nvim_create_autocmd("FileType", {
+    group = api.nvim_create_augroup("mjm.herder-tmp.ftplugin", {}),
+    callback = function()
+        require("qf-herder.qf").do_ftplugin()
+    end,
+})
+
 --------------
 
 require("annotator.plugin")
@@ -21,8 +28,8 @@ keymap.set("n", "<leader>-K", "<Plug>(annotator-add-borders)")
 keymap.set("n", "<leader>fnk", "<Plug>(annotator-fzf-lua-grep-curbuf)")
 keymap.set("n", "<leader>fnK", "<Plug>(annotator-fzf-lua-grep-cwd)")
 keymap.set("n", "<leader>fnm", "<Plug>(annotator-fzf-lua-grep-curbuf-luacats)")
-keymap.set("n", "<leader>qgk", "<Plug>(annotator-rancher-grep-cwd)")
-keymap.set("n", "<leader>lgk", "<Plug>(annotator-rancher-grep-curbuf)")
+-- keymap.set("n", "<leader>qgk", "<Plug>(annotator-rancher-grep-cwd)")
+-- keymap.set("n", "<leader>lgk", "<Plug>(annotator-rancher-grep-curbuf)")
 
 --------------
 
@@ -118,6 +125,7 @@ api.nvim_create_autocmd("LspAttach", {
         local buf = ev.buf
         local func = action_filters[api.nvim_get_option_value("filetype", { buf = buf })]
         if func ~= nil then
+            -- TODO: Unsure why this is showing a type warning
             require("catharsis").buf_config({ lampshade = { action_filter = func } }, buf)
         end
     end,

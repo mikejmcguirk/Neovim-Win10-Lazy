@@ -81,19 +81,19 @@ if config.create_plug_integrations then
         end,
     })
 
-    api.nvim_set_keymap("n", "<Plug>(annotator-rancher-grep-curbuf)", "", {
-        noremap = true,
-        callback = function()
-            annotator.rancher_grep(true)
-        end,
-    })
+    -- api.nvim_set_keymap("n", "<Plug>(annotator-rancher-grep-curbuf)", "", {
+    --     noremap = true,
+    --     callback = function()
+    --         annotator.rancher_grep(true)
+    --     end,
+    -- })
 
-    api.nvim_set_keymap("n", "<Plug>(annotator-rancher-grep-cwd)", "", {
-        noremap = true,
-        callback = function()
-            annotator.rancher_grep(false)
-        end,
-    })
+    -- api.nvim_set_keymap("n", "<Plug>(annotator-rancher-grep-cwd)", "", {
+    --     noremap = true,
+    --     callback = function()
+    --         annotator.rancher_grep(false)
+    --     end,
+    -- })
 end
 
 if config.set_default_maps == false then

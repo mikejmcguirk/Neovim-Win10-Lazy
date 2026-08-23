@@ -4,10 +4,14 @@ local set = vim.keymap.set
 return {
     "mikejmcguirk/nvim-qf-rancher",
     -- dir = "~/Documents/nvim-plugin-dev/nvim-qf-rancher/",
+    cond = false,
     init = function()
         -- vim.api.nvim_set_var("qfr_create_loclist_autocmds", false) -- For debugging
-        -- vim.g.qfr_set_default_keymaps = false
-        -- vim.g.qfr_set_default_cmds = false
+        vim.g.qfr_set_default_keymaps = false
+        vim.g.qfr_set_default_cmds = false
+        vim.g.qfr_ftplugin_set_opts = false
+        vim.g.qfr_ftplugin_keymap = false
+        vim.g.qfr_ftplugin_demap = false
 
         set("n", "[<M-q>", "<Plug>(qfr-qf-older)")
         set("n", "]<M-q>", "<Plug>(qfr-qf-newer)")

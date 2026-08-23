@@ -483,9 +483,12 @@ set({ "x", "o" }, "<C-c>", "<esc>")
 -- NORMAL MODE --
 -----------------
 
-set("n", "<C-m>", "<cmd>messages<cr>")
+set("n", "g>", "<cmd>messages<cr>")
 
-set("n", "U", "<nop>")
+set("n", "U", "<C-r>")
+set("n", "<C-r>", function()
+    print("Use `U`")
+end)
 
 set({ "n" }, "<M-s>", ":'<,'>s/\\%V")
 set({ "x" }, "<M-s>", ":s/\\%V")
@@ -505,9 +508,9 @@ set({ "x" }, "<M-s>", ":s/\\%V")
 -- - Push the suffix to the line below: dJ
 -- - Push the suffix to the line above: unmapped
 -- dH/dL might be fine here.
-set("n", "dJ", "Djg_p")
+set("n", "cJ", "Djg_p")
 -- MID: This creates two undo points
-set("n", "dK", "DO\27p==", { silent = true })
+set("n", "cK", "DO\27p==", { silent = true })
 
 -- MAYBE: This is never used
 set("n", "dm", "<cmd>delmarks!<cr>")
