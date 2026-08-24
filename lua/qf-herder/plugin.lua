@@ -178,22 +178,22 @@ M.maps = {
     -- MARK: Maps - Preview --
     --------------------------
 
-{ nmode , "<Plug>(qf-herder-preview-open)", {}, "", "Open the preview window", function() qfr.preview.open() end },
-{ nmode , "<Plug>(qf-herder-preview-close)", {}, "", "Close the preview window", function() qfr.preview.close() end },
-{ nmode , "<Plug>(qf-herder-preview-toggle)", {}, "", "Toggle the preview window", function() qfr.preview.toggle() end },
+{ nmode, "<Plug>(qf-herder-preview-open)", {}, "", "Open the preview window", function() qfr.preview.open() end },
+{ nmode, "<Plug>(qf-herder-preview-close)", {}, "", "Close the preview window", function() qfr.preview.close() end },
+{ nmode, "<Plug>(qf-herder-preview-toggle)", {}, "", "Toggle the preview window", function() qfr.preview.toggle() end },
 
     -----------------------
     -- MARK: Maps - Sort --
     -----------------------
 
-{ nmode , "<Plug>(qf-herder-qf-sort-fname-asc)", { prefix_qf .. prefix_sort .. key_fname }, "", "Sort [count] quickfix list by filename asc", function() qfr.sort.qf_fname_asc() end },
-{ nmode , "<Plug>(qf-herder-qf-sort-fname-desc)", { prefix_qf .. prefix_sort .. key_fname_upper }, "", "Sort [count] quickfix list by filename desc", function() qfr.sort.qf_fname_desc() end },
-{ nmode , "<Plug>(qf-herder-qf-sort-sev-asc)", { prefix_qf .. prefix_sort .. sev_asc }, "", "Sort [count] quickfix list by sev asc", function() qfr.sort.qf_severity_asc() end },
-{ nmode , "<Plug>(qf-herder-qf-sort-sev-desc)", { prefix_qf .. prefix_sort .. sev_desc }, "", "Sort [count] quickfix list by sev desc", function() qfr.sort.qf_severity_desc() end },
-{ nmode , "<Plug>(qf-herder-ll-sort-fname-asc)", { prefix_ll .. prefix_sort .. key_fname }, "", "Sort [count] location list by filename asc", function() qfr.sort.ll_fname_asc() end },
-{ nmode , "<Plug>(qf-herder-ll-sort-fname-desc)", { prefix_ll .. prefix_sort .. key_fname_upper }, "", "Sort [count] location list by filename desc", function() qfr.sort.ll_fname_desc() end },
-{ nmode , "<Plug>(qf-herder-ll-sort-sev-asc)", { prefix_ll .. prefix_sort .. sev_asc }, "", "Sort [count] location list by severity asc", function() qfr.sort.ll_severity_asc() end },
-{ nmode , "<Plug>(qf-herder-ll-sort-sev-desc)", { prefix_ll .. prefix_sort .. sev_desc }, "", "Sort [count] location list by severity desc", function() qfr.sort.ll_severity_desc() end },
+{ nmode, "<Plug>(qf-herder-qf-sort-fname-asc)", { prefix_qf .. prefix_sort .. key_fname }, "", "Sort [count] quickfix list by filename asc", function() qfr.sort.qf_fname_asc() end },
+{ nmode, "<Plug>(qf-herder-qf-sort-fname-desc)", { prefix_qf .. prefix_sort .. key_fname_upper }, "", "Sort [count] quickfix list by filename desc", function() qfr.sort.qf_fname_desc() end },
+{ nmode, "<Plug>(qf-herder-qf-sort-sev-asc)", { prefix_qf .. prefix_sort .. sev_asc }, "", "Sort [count] quickfix list by sev asc", function() qfr.sort.qf_severity_asc() end },
+{ nmode, "<Plug>(qf-herder-qf-sort-sev-desc)", { prefix_qf .. prefix_sort .. sev_desc }, "", "Sort [count] quickfix list by sev desc", function() qfr.sort.qf_severity_desc() end },
+{ nmode, "<Plug>(qf-herder-ll-sort-fname-asc)", { prefix_ll .. prefix_sort .. key_fname }, "", "Sort [count] location list by filename asc", function() qfr.sort.ll_fname_asc() end },
+{ nmode, "<Plug>(qf-herder-ll-sort-fname-desc)", { prefix_ll .. prefix_sort .. key_fname_upper }, "", "Sort [count] location list by filename desc", function() qfr.sort.ll_fname_desc() end },
+{ nmode, "<Plug>(qf-herder-ll-sort-sev-asc)", { prefix_ll .. prefix_sort .. sev_asc }, "", "Sort [count] location list by severity asc", function() qfr.sort.ll_severity_asc() end },
+{ nmode, "<Plug>(qf-herder-ll-sort-sev-desc)", { prefix_ll .. prefix_sort .. sev_desc }, "", "Sort [count] location list by severity desc", function() qfr.sort.ll_severity_desc() end },
 
     ------------------------
     -- MARK: Maps - Stack --
@@ -226,7 +226,10 @@ if config.default_keymaps_set then
     for _, map in ipairs(M.maps) do
         for _, lhs in ipairs(map[3]) do
             for _, mode in ipairs(map[1]) do
-                if vim.call("maparg", lhs, mode) == "" then
+                local ma_res = vim.call("maparg", lhs, mode)
+                -- TODO: I think the name of the defaults file was changed in the last couple
+                -- Nvim versions.
+                if ma_res == "" or string.find(ma_res, "vim/_core/defaults", 1, true) ~= nil then
                     api.nvim_set_keymap(mode, lhs, map[2], { noremap = true, desc = map[5] })
                 end
             end
