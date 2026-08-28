@@ -13,7 +13,7 @@
   "mini.test": { "branch": "main", "commit": "56e1399c130080a289d7c0a86d46e48f70a22e3d" },
   "multicursor.nvim": { "branch": "1.0", "commit": "704b99f10a72cc05d370cfeb294ff83412a8ab55" },
   "nvim-autopairs": { "branch": "master", "commit": "430522f95fe4fb7c511ec64f8c1a90cc6a66c05c" },
-  "nvim-lspconfig": { "branch": "master", "commit": "3928e638fdedf195b23ae5a18f024afa487982bc" },
+  "nvim-lspconfig": { "branch": "master", "commit": "684cb45c2faa24ce463b4fe9aaf011bfe1e0fb26" },
   "nvim-qf-rancher": { "branch": "master", "commit": "41ee8ec133aa35002ecd6916b3ef94164375055c" },
   "nvim-surround": { "branch": "main", "commit": "1098d7b3c34adcfa7feb3289ee434529abd4afd1" },
   "nvim-treeclimber": { "branch": "main", "commit": "e3a1429c73828b65b79a46ea57640240cab37dc6" },
