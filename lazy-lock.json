@@ -11,7 +11,6 @@
   "markdown-preview.nvim": { "branch": "master", "commit": "a923f5fc5ba36a3b17e289dc35dc17f66d0548ee" },
   "mini.operators": { "branch": "main", "commit": "9e0aa164b097c6cb45e59b9371c9347ac06eb822" },
   "mini.test": { "branch": "main", "commit": "56e1399c130080a289d7c0a86d46e48f70a22e3d" },
-  "multicursor.nvim": { "branch": "1.0", "commit": "704b99f10a72cc05d370cfeb294ff83412a8ab55" },
   "nvim-autopairs": { "branch": "master", "commit": "430522f95fe4fb7c511ec64f8c1a90cc6a66c05c" },
   "nvim-lspconfig": { "branch": "master", "commit": "ee1e369181a9e64904cdd7b739e98c70778cfc71" },
   "nvim-qf-rancher": { "branch": "master", "commit": "41ee8ec133aa35002ecd6916b3ef94164375055c" },
