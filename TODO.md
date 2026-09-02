@@ -28,6 +28,7 @@
 - EmmyLua conversion
   * Go through all config files and handle diagnostics
   * Change `integer` > `uinteger` where needed
+- See what old multicursor functionality we can move over.
 
 ## TODO-DEP:
 

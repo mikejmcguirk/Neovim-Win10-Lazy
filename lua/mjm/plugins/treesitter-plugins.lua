@@ -179,8 +179,8 @@ local function map_objects(ev)
     -- individually. Last attempt at doing this did not work. Treesitter quries are nasty.
     -- MID: Should be able to use (d/)d to swap elements of a Lua ternary.
 
-    set({ "n", "x" }, "(", "<nop>", { buf = ev.buf })
-    set({ "n", "x" }, ")", "<nop>", { buf = ev.buf })
+    set({ "n" }, "(", "<nop>", { buf = ev.buf })
+    set({ "n" }, ")", "<nop>", { buf = ev.buf })
     local swap = require("nvim-treesitter-textobjects.swap")
     for _, m in pairs(swap_maps) do
         set("n", m[1], function()

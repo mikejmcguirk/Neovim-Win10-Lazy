@@ -6,6 +6,15 @@ local vimv = vim.v
 
 _G.I_Dedent = "<C-m>"
 
+-----------------------
+-- MARK: Normal Mode --
+-----------------------
+
+set("n", "@@", function()
+    local reg = fn.reg_recorded()
+    return reg == "" and "" or ("@" .. reg)
+end, { expr = true })
+
 -----------------
 -- LEADER MAPS --
 -----------------

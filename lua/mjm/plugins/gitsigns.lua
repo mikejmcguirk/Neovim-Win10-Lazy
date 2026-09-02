@@ -39,12 +39,8 @@ return {
                 local greedy_staged = { greedy = true, target = "staged" }
                 diff_set("[c", "prev", greedy, "[c", buf_opt)
                 diff_set("]c", "next", greedy, "]c", buf_opt)
-                diff_set("[C", "first", greedy, "[c", buf_opt)
-                diff_set("]C", "last", greedy, "]c", buf_opt)
                 diff_set("[<C-c>", "prev", greedy_staged, "[c", buf_opt)
                 diff_set("]<C-c>", "next", greedy_staged, "]c", buf_opt)
-                diff_set("[<M-c>", "first", greedy_staged, "[c", buf_opt)
-                diff_set("]<M-c>", "last", greedy_staged, "]c", buf_opt)
 
                 -- NOTE: stage_hunk is also undo stage
                 set("n", "<leader>hs", gitsigns.stage_hunk, buf_opt)
