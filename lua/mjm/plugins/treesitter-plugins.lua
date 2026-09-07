@@ -226,10 +226,9 @@ return {
         branch = "main",
         build = ":TSUpdate",
         config = function()
-            local ts = require("nvim-treesitter")
-            ts.install(langs)
+            require("nvim-treesitter").install(langs)
             api.nvim_create_autocmd({ "FileType" }, {
-                group = api.nvim_create_augroup("mjm-ts-start", {}),
+                group = api.nvim_create_augroup("mjm.nvim-treesitter.start", {}),
                 pattern = fts,
                 callback = function(ev)
                     local buf = ev.buf
@@ -249,10 +248,7 @@ return {
         branch = "main",
         init = function()
             require("nvim-treesitter-textobjects").setup({
-                select = {
-                    lookahead = true,
-                    include_surrounding_whitespace = false,
-                },
+                select = { lookahead = true, include_surrounding_whitespace = false },
                 move = { set_jumps = false },
             })
 
