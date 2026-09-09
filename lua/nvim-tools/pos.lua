@@ -11,7 +11,6 @@ local M = {}
 -- MARK: Position Comparison --
 -------------------------------
 
----@audited 2026-07-03
 ---@param a_r integer
 ---@param a_c integer
 ---@param b_r integer
@@ -58,7 +57,6 @@ function M.eval_to_ext(row, col)
 end
 
 ---Convert an eval-based position (1,1) to an ext-based position (0,0).
----@audited 2026-07-18
 ---@param pos_eval [uinteger, uinteger] Modified in place!
 ---@return [uinteger, uinteger] Reference to `pos_eval`
 function M.eval_to_ext_pos(pos_eval)
@@ -84,7 +82,6 @@ function M.eval_to_mark_pos(pos_eval)
     return pos_eval
 end
 
----@audited 2026-07-03
 ---@param row integer 0 indexed
 ---@param col integer 0 indexed, inclusive
 ---@return integer, integer 1,1 indexed, inclusive end
@@ -93,7 +90,6 @@ function M.ext_to_eval(row, col)
 end
 
 ---Convert an ext-based position (0,0) to an eval-based position (1,1).
----@audited 2026-07-18
 ---@param pos_ext [uinteger, uinteger] Modified in place!
 ---@return [uinteger, uinteger] Reference to `pos_eval`
 function M.ext_to_eval_pos(pos_ext)
@@ -174,7 +170,6 @@ function M.mark_to_ext(row, col)
     return row - 1, col
 end
 
----@audited 2026-07-03
 ---@param pos nvim-tools.Pos Modified in place!
 ---@return nvim-tools.Pos Reference to `pos`.
 function M.mark_to_ext_pos(pos)
