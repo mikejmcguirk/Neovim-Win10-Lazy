@@ -132,7 +132,7 @@ local function buf_get_lines(buf)
     end
 
     local ntf = require("nvim-tools.fs")
-    local ok, text = ntf.read_file(api.nvim_buf_get_name(buf))
+    local ok, text = ntf.file_read(api.nvim_buf_get_name(buf))
     if ok and text ~= nil then
         return vim.split(text, "\n")
     else

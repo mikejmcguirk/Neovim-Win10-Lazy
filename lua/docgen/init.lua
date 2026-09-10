@@ -401,6 +401,26 @@ local function doc_sources_add_names_headers(sources)
     return prefix
 end
 
+---@param results table<string, nvim-tools.fs.FsReadListResult>?
+function fs_read_list_get_errs(results)
+    if not results then
+        return ""
+    end
+
+    local errs_tbl = {} ---@type string[]
+    for file, result in pairs(results) do
+        if not results[1] then
+            errs_tbl[#errs_tbl + 1] = file .. ": " .. (result[3] or "Unknown error")
+        end
+    end
+
+    if #errs_tbl == 0 then
+        return
+    end
+
+    return table.concat(errs_tbl, "\n")
+end
+
 ---@param plugin_sources docgen.gen.input.Plugin[]
 ---@param readme_sources docgen.gen.input.Readme[]
 ---@param vimdoc_sources docgen.gen.source.Vimdoc[]
@@ -422,18 +442,20 @@ local function source_text_import(plugin_sources, readme_sources, vimdoc_sources
     end)
 
     local imports_other = { opts.vimdoc_intro_path }
-    local ntt = require("nvim-tools.table")
     local inputs = ntt.i_append(inputs_vimdoc, inputs_readme, inputs_plugin, imports_other)
     vim.list.unique(inputs)
 
     local ntf = require("nvim-tools.fs")
-    -- TODO: The inputs to append have bad types.
+    -- TODO: This function is now deleted and should either be replaced with a list of sync reads
+    -- or something made with vim.async
+    -- If we go the async route again - must be simple. Old function deleted because it was too
+    -- complicated.
     local ok, timed_out, results = ntf.fs_read_list(inputs, {})
     if not (ok and results) then
         if timed_out then
             error("Time out while reading file data")
         else
-            error(ntf.fs_read_list_get_errs(results))
+            error(fs_read_list_get_errs(results))
         end
     end
 
