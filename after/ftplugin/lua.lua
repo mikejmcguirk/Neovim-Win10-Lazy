@@ -12,7 +12,7 @@ local function add_annotation(annotation)
     if col_1 >= 3 and line:sub(col_1 - 2, col_1) == "---" then
         vim.api.nvim_buf_set_text(0, row_0, col_1, row_0, col_1, { annotation .. " " })
     elseif line:match("^%s*$") then -- All whitespace
-        local indent = require("nvim-tools.buf").get_indent(0, row)
+        local indent = require("nvim-tools.buf").indent_get(0, row)
         local padding = string.rep(" ", indent)
         local padded_annotation = padding .. "---" .. annotation .. " "
         vim.api.nvim_buf_set_text(0, row_0, 0, row_0, #line, { padded_annotation })

@@ -23,6 +23,7 @@ return {
         library = {
             "$VIMRUNTIME",
             "$HOME/.local/share/nvim/lazy",
+            "$HOME/Documents/nvim-plugin-dev",
         },
         ignoreGlobs = { "**/*_spec.lua" },
     },

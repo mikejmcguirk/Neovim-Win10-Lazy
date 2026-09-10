@@ -32,8 +32,8 @@ vim.keymap.set("n", "<leader>d", function()
         return
     end
 
-    local create_temp_buf = require("nvim-tools.buf").create_temp_buf
-    local temp_buf = create_temp_buf("wipe", true, "nofile", "", true)
+    local temp_buf_create = require("nvim-tools.buf").temp_buf_create
+    local temp_buf = temp_buf_create("wipe", true, "nofile", "", true)
     api.nvim_open_tabpage(temp_buf, true, { after = fn.tabpagenr("$") })
     require("difftool").open(bufnames[1], bufnames[2])
 end)

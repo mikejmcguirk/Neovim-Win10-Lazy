@@ -20,7 +20,7 @@ local function src_win_resolve(src_win, item_type)
     end
 
     local ntb = require("nvim-tools.buf")
-    local temp_buf = ntb.create_temp_buf("wipe", false, "help", "help", false)
+    local temp_buf = ntb.temp_buf_create("wipe", false, "help", "help", false)
     return api.nvim_open_win(temp_buf, false, { split = "below", win = src_win })
 end
 

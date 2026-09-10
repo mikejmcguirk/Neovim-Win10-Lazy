@@ -15,7 +15,7 @@ function M.add_annotation()
 
     local is_blank = string.match(cur_line, "^%s*$")
     local fin_row = is_blank and row or row_0
-    local indent = require("nvim-tools.buf").get_indent(0, row)
+    local indent = require("nvim-tools.buf").indent_get(0, row)
     local cstart = get_comment_start()
     local mark_text = table.concat({ string.rep(" ", indent), cstart .. " MARK:  " .. cstart })
 
@@ -47,7 +47,7 @@ function M.add_borders()
     local line_below = row < fin_line and lines[#lines] or nil
 
     local len_cur_line = #cur_line
-    local indent = require("nvim-tools.buf").get_indent(0, row)
+    local indent = require("nvim-tools.buf").indent_get(0, row)
 
     local trail_start = string.find(cur_line, "%s+$")
     local len_trail = trail_start and (len_cur_line - trail_start + 1) or 0

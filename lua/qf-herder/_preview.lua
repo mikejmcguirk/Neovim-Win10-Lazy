@@ -114,7 +114,7 @@ end
 
 ---@return uinteger
 local function create_fallback_buf()
-    local buf = ntb.create_temp_buf("wipe", false, "nofile", PVW_FT, true)
+    local buf = ntb.temp_buf_create("wipe", false, "nofile", PVW_FT, true)
     api.nvim_buf_set_lines(buf, 0, 0, false, { "No valid bufnr for this list entry" })
     api.nvim_set_option_value("ma", false, { buf = buf })
     return buf
@@ -186,7 +186,7 @@ end
 ---@param item_buf uinteger
 ---@return uinteger
 local function preview_buf_from_item_create(item_buf)
-    local preview_buf = ntb.create_temp_buf(nil, false, "nofile", "qf-rancher-preview", true)
+    local preview_buf = ntb.temp_buf_create(nil, false, "nofile", "qf-rancher-preview", true)
     preview_buf_set_lines_from_item_buf(item_buf, preview_buf)
     preview_buf_set_version(item_buf, preview_buf)
 
