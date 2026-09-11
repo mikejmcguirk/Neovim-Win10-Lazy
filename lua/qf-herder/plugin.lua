@@ -67,6 +67,7 @@ local win_open = cfg_keymap.win_open
 local win_resize = string.upper(win_open)
 
 local nmode = { "n" }
+local xmode = { "x" }
 local nxmode = { "n", "x" }
 
 local M = {}
@@ -92,7 +93,7 @@ M.maps = {
     ----------------------
 
 { nmode, "<Plug>(qf-herder-del-single)", {}, "", "Delete a single list item", function() qfr.del.single() end, },
-{ nmode, "<Plug>(qf-herder-del-visual)", {}, "", "Delete visual line selected list items", function() qfr.del.visual() end, },
+{ xmode, "<Plug>(qf-herder-del-visual)", {}, "", "Delete visual line selected list items", function() qfr.del.visual() end, },
 
     ------------------------------
     -- MARK: Maps - Diagnostics --

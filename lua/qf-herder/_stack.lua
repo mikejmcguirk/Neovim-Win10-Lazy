@@ -31,10 +31,10 @@ end
 ---@param list_nr integer|"$"
 ---@return integer
 local function clear_list(src_win, list_nr)
-    local nr = ntq.resolve_list_nr(src_win, list_nr)
+    local nr = _util.resolve_list_nr(src_win, list_nr)
     local what = { nr = nr, context = {}, items = {}, quickfixtextfunc = "", title = "" }
     local action = "r"
-    return ntq.set_result_resolve(ntq.set_list(src_win, action, what), src_win, nr, action)
+    return _util.set_result_resolve(ntq.set_list(src_win, action, what), src_win, nr, action)
 end
 
 ---@param cur_nr uinteger

@@ -34,7 +34,7 @@ end
 function M.set_nr_resolve(reuse_title, src_win, title)
     local ntq = require("nvim-tools.quickfix")
     if reuse_title then
-        local set_nr = ntq.find_list_with_title(src_win, title)
+        local set_nr = ntq.list_nr_with_title(src_win, title)
         if set_nr then
             return "u", set_nr
         end
@@ -53,6 +53,93 @@ function M.set_nr_and_open(src_win, nr, silent)
 
     local _, _, win_cfg = herder._config_merged_from_win(src_win or 0, "window")
     require("qf-herder._window").list_open(src_win, 0, silent, win_cfg)
+end
+
+---------------------------
+-- MARK: List Operations --
+---------------------------
+
+---@param src_win integer|nil
+---@param list_nr integer|"$"
+---@return integer
+function M.clear_list(src_win, list_nr)
+    local nr = M.resolve_list_nr(src_win, list_nr)
+    local what = { nr = nr, context = {}, items = {}, quickfixtextfunc = "", title = "" }
+    local action = "r"
+    local ntq = require("nvim-tools.quickfix")
+    return M.set_result_resolve(ntq.set_list(src_win, action, what), src_win, nr, action)
+end
+
+---@param src_win integer|nil
+---@param nr uinteger|"$"
+---@return uinteger
+function M.resolve_list_nr(src_win, nr)
+    local ntq = require("nvim-tools.quickfix")
+    if nr == 0 then
+        return ntq.get_list(src_win, { nr = 0 }).nr
+    end
+
+    local max_nr = ntq.get_list(src_win, { nr = "$" }).nr
+    if nr == "$" then
+        return max_nr
+    end
+
+    ---@diagnostic disable-next-line: param-type-mismatch, return-type-mismatch
+    return math.min(nr, max_nr)
+end
+
+---@param result -1|0
+---@param src_win integer|nil
+---@param nr integer|"$"
+---@param action "a"|"f"|"r"|"u"|" "
+---@return integer
+function M.set_result_resolve(result, src_win, nr, action)
+    if result == -1 then
+        return -1
+    end
+
+    if action == "f" then
+        return 0 -- Stack cleared
+    end
+
+    local ntq = require("nvim-tools.quickfix")
+    if nr == 0 then
+        return ntq.get_list(src_win, { nr = 0 }).nr ---@type uinteger
+    end
+
+    local max_nr = ntq.get_list(src_win, { nr = "$" }).nr ---@type integer
+    -- "$" will always have acted on the last item in the list. When action is " ", the new list
+    -- is always at the end.
+    if type(nr) == "string" or action == " " then
+        return max_nr
+    end
+
+    return math.min(nr, max_nr)
+end
+
+---@param src_win integer|nil
+---@param action "a"|"f"|"r"|"u"|" "
+---@param what table
+---@return integer
+function M.set_list_checked(src_win, action, what)
+    local what_set = require("nvim-tools.table").deepcopy(what)
+
+    local ntq = require("nvim-tools.quickfix")
+    what_set.nr = M.resolve_list_nr(src_win, what_set.nr)
+    if what_set.idx then
+        if what_set.items or what_set.lines then
+            local items_len = what_set.items and #what_set.items or 0
+            local lines_len = what_set.lines and #what_set.lines or 0
+            local new_len = items_len + lines_len
+            what_set.idx = new_len > 0 and math.min(what_set.idx, new_len) or nil
+        else
+            ---@type uinteger
+            local cur_size = ntq.get_list(src_win, { nr = what_set.nr, size = 0 }).size
+            what_set.idx = math.min(what_set.idx, cur_size)
+        end
+    end
+
+    return M.set_result_resolve(ntq.set_list(src_win, action, what), src_win, what_set.nr, action)
 end
 
 return M

@@ -16,7 +16,7 @@ function M.sort(src_win, count, f, cfg)
         return
     end
 
-    local nr = ntq.resolve_list_nr(src_win, count)
+    local nr = _util.resolve_list_nr(src_win, count)
     local what_ret = ntq.get_list(src_win, { nr = nr, all = true }) ---@type table
     local size = what_ret.size
     if size == 0 then
@@ -28,7 +28,7 @@ function M.sort(src_win, count, f, cfg)
 
     local what_set = ntq.what_ret_to_set(what_ret)
     table.sort(what_set.items, f)
-    local dest_nr = ntq.set_list_checked(src_win, "u", what_set)
+    local dest_nr = _util.set_list_checked(src_win, "u", what_set)
     if dest_nr < 1 then
         api.nvim_echo({ { "Unable to set new list", "ErrorMsg" } }, true, {})
         return

@@ -145,12 +145,13 @@ function M.diags_to_list(src_win, get_opts, f, cfg)
     local reuse_title = cfg.reuse_title
     local title = cfg.title
 
+    local _util = require("qf-herder._util")
     if #diags == 0 then
         api.nvim_echo({ { get_empty_msg(get_opts), "" } }, false, {})
         if reuse_title and cfg.clear_on_empty then
-            local diag_nr = ntq.find_list_with_title(src_win, title)
+            local diag_nr = ntq.list_nr_with_title(src_win, title)
             if diag_nr then
-                ntq.clear_list(src_win, diag_nr)
+                _util.clear_list(src_win, diag_nr)
             end
         end
 
@@ -159,11 +160,10 @@ function M.diags_to_list(src_win, get_opts, f, cfg)
 
     local items = ntt.i_filter_map_to(diags, convert_diag)
     table.sort(items, f)
-    local _util = require("qf-herder._util")
     local action, set_nr = _util.set_nr_resolve(reuse_title, src_win, title)
     local what = { items = items, nr = set_nr, title = title }
 
-    local dest_nr = ntq.set_list_checked(src_win, action, what)
+    local dest_nr = _util.set_list_checked(src_win, action, what)
     if dest_nr < 0 then
         api.nvim_echo({ { "Unable to set list", "ErrorMsg" } }, true, {})
         return

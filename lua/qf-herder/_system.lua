@@ -95,7 +95,7 @@ local function output_set_to_list(src_win, obj, what, ctx, cfg)
     local src_win_res = src_win_resolve(src_win, item_type)
     local what_set = ntt.deepcopy(what)
     what_set.items = entries
-    local dest_nr = ntq.set_list_checked(src_win_res, ctx.action, what_set)
+    local dest_nr = _util.set_list_checked(src_win_res, ctx.action, what_set)
     if dest_nr < 1 then
         api.nvim_echo({ { "Unable to set list", "ErrorMsg" } }, true, {})
         return
