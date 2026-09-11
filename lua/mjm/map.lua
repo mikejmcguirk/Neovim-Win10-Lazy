@@ -68,7 +68,8 @@ set("n", "<tab>", function()
     local vcount = vimv.count
     local count_tabpages = fn.tabpagenr("$")
     local pos = vcount == 0 and count_tabpages or math.min(vcount, count_tabpages)
-    require("nvim-tools.tab").open_new_tab(nil, true, pos)
+    local tmp = require("nvim-tools.buf").temp_buf_create("wipe", false, "nofile", "", false)
+    api.nvim_open_tabpage(tmp, true, { after = pos })
 end)
 
 set("n", "[T", function()
@@ -600,7 +601,8 @@ set("x", "<C-=>", eval_cmd, { noremap = true, silent = true })
 ---@param up? boolean
 ---@return nil
 local function add_blank_visual(up)
-    local vrange4 = require("nvim-tools.range").get_regionpos4(".", "v", "v", false)
+    local vregion = require("nvim-tools.misc").region_from_positions(".", "v", "v", false)
+    local vrange4 = require("nvim-tools.range").from_region(vregion)
     if not vrange4 then
         return
     end

@@ -39,7 +39,8 @@ fts[#fts + 1] = "sh"
 
 ---@return integer
 local function get_vpos()
-    local vregionpos4 = require("nvim-tools.range").get_regionpos4(".", "v", "v", false)
+    local vregion = require("nvim-tools.misc").region_from_positions(".", "v", "v", false)
+    local vregionpos4 = require("nvim-tools.range").from_region(vregion)
     vregionpos4[2] = math.max(vregionpos4[2] - 1, 0)
     vregionpos4[4] = math.max(vregionpos4[4] - 1, 0)
 

@@ -51,7 +51,8 @@ function M.visual()
         return
     end
 
-    local vrange_4 = require("nvim-tools.range").get_regionpos4(".", "v", mode)
+    local vregion = require("nvim-tools.misc").region_from_positions(".", "v", "v", false)
+    local vrange_4 = require("nvim-tools.range").from_region(vregion)
 
     local cur_idx = ntq.get_list(src_win, { idx = 0 }).idx ---@type integer
     local idx_dist = math.max(cur_idx - vrange_4[1], 0) ---@type integer
