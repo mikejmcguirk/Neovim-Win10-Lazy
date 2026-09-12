@@ -29,7 +29,7 @@ local RENAME = "textDocument/rename"
 ---@field buf uinteger
 ---@field ns_dim uinteger
 ---@field ns_dynamic uinteger
----@field ranges nvim-tools.range.BufRange[]
+---@field ranges [uinteger, uinteger, uinteger, uinteger, uinteger][]
 
 local state_ns_cur_pos = api.nvim_create_namespace("catharsis.rename.cur_pos")
 local state_ns_dims = {} ---@type uinteger[]
@@ -86,8 +86,8 @@ end
 -- stored anywhere.
 
 ---@param win uinteger
----@param ranges nvim-tools.range.BufRange[]
----@return nvim-tools.range.BufRange[]
+---@param ranges [uinteger, uinteger, uinteger, uinteger, uinteger][]
+---@return [uinteger, uinteger, uinteger, uinteger, uinteger][]
 local function ranges_extract_for_win(win, ranges)
     local ranges_len = #ranges
     if ranges_len == 0 then
@@ -164,7 +164,7 @@ local function session_create(win, buf)
 end
 
 ---@param session catharsis.rename.Session
----@param ranges nvim-tools.range.BufRange[]
+---@param ranges [uinteger, uinteger, uinteger, uinteger, uinteger][]
 ---@param cur_pos_idx uinteger
 local function session_add_cur_win_ranges(session, ranges, cur_pos_idx)
     local cur_pos_range = ranges[cur_pos_idx]
@@ -177,7 +177,7 @@ end
 ---@param cur_pos_ext [uinteger, uinteger]
 ---@param ref_wins uinteger[]
 ---@param win_bufs table<uinteger, uinteger>
----@param buf_ranges table<uinteger, nvim-tools.range.BufRange[]>
+---@param buf_ranges table<uinteger, [uinteger, uinteger, uinteger, uinteger, uinteger][]>
 ---@return boolean, string
 local function session_set_from_refs(session, cur_pos_ext, ref_wins, win_bufs, buf_ranges)
     local cur_win = session.cur_win
@@ -242,8 +242,26 @@ local hl_dim_priority = vim.hl.priorities.user + 50
 local hl_padding_priority = hl_dim_priority - 1
 local hl_priority_preview = hl_dim_priority + 1
 
+local function target_colors_get()
+    if api.nvim_get_option_value("bg", { scope = "global" }) == "dark" then
+        return "#1E1E1E", "#EFEFEF"
+    else
+        return "#EFEFEF", "#1E1E1E"
+    end
+end
+
+local function cursor_hl_get()
+    local normal = api.nvim_get_hl(0, { name = "Normal", link = false }) or {}
+    local orig_fg = normal.fg
+    local orig_bg = normal.bg
+    local target_fg, target_bg = target_colors_get()
+
+    return orig_bg or target_fg, orig_fg or target_bg
+end
+-- LOW: You could be fancier about not pulling in `bg` but this is not hot code.
+
 do
-    local new_fg, new_bg = require("nvim-tools.misc").cursor_hl_get()
+    local new_fg, new_bg = cursor_hl_get()
     api.nvim_set_hl(0, "catharsisRenameCursor", { fg = new_fg, bg = new_bg, default = true })
 
     -- TODO-DEP: Remove this when 0.14 comes out.
@@ -295,7 +313,7 @@ end
 
 ---@param start_idx uinteger
 ---@param end_idx uinteger
----@param ranges nvim-tools.range.BufRange[]
+---@param ranges [uinteger, uinteger, uinteger, uinteger, uinteger][]
 ---@param buf uinteger
 ---@param ns uinteger
 ---@param padding string
@@ -312,7 +330,7 @@ end
 
 ---@param start_idx uinteger
 ---@param end_idx uinteger
----@param ranges nvim-tools.range.BufRange[]
+---@param ranges [uinteger, uinteger, uinteger, uinteger, uinteger][]
 ---@param buf uinteger
 ---@param ns uinteger
 ---@param new_text string
