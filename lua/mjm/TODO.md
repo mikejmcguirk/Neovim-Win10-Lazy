@@ -51,6 +51,7 @@
 
 ## LOW:
 
+- [ ] Going `ct<C-c>` leaves me in insert mode, even without using the farsight mapping. Doesn't occur if I use `nvim --clean`
 - [ ] https://github.com/previm/previm - Another markdown previewer
 - [ ] Speeddating is a set of maps that it intuitively feels like Neovim should have, but I never use them and find them finnicky when I try. Either actually sit with them and try to learn them or re-develop them.
 - [ ] Add a way for harpoon to handle multiple lists. It is becoming obnoxious to re-build the lists for the various sub-projects in here.
