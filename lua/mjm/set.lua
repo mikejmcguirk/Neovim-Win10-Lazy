@@ -68,7 +68,9 @@ api.nvim_set_option_value("wrap", false, scope_global)
 api.nvim_set_option_value("bri", true, scope_global)
 api.nvim_set_option_value("lbr", true, scope_global)
 -- So that '"...bar."' stays on one line.
-api.nvim_set_option_value("brk", ".?", scope_global_rm)
+api.nvim_set_option_value("brk", ".", scope_global_rm)
+api.nvim_set_option_value("brk", "?", scope_global_rm)
+api.nvim_set_option_value("brk", "*", scope_global_rm)
 
 api.nvim_set_option_value("shm", "asuW", { operation = "append", scope = "global" })
 api.nvim_set_option_value("report", 9999, { scope = "global" })
