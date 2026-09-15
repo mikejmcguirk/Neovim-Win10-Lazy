@@ -67,7 +67,7 @@ api.nvim_set_option_value("ts", mjm.v.shiftwidth, scope_global)
 api.nvim_set_option_value("wrap", false, scope_global)
 api.nvim_set_option_value("bri", true, scope_global)
 api.nvim_set_option_value("lbr", true, scope_global)
--- So that '"...bar."' stays on one line.
+-- So that '"...bar."' stays on one line. Doing these individually is necessary for some reason.
 api.nvim_set_option_value("brk", ".", scope_global_rm)
 api.nvim_set_option_value("brk", "?", scope_global_rm)
 api.nvim_set_option_value("brk", "*", scope_global_rm)
