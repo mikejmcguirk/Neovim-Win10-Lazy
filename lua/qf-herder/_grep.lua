@@ -5,6 +5,15 @@ local ntt = require("nvim-tools.table")
 local _util = require("qf-herder._util")
 
 local base_cmd = { "rg", "--vimgrep", "-uu" }
+local rg_executable = nil ---@type boolean|nil
+
+local function is_rg_executable()
+    if rg_executable == nil then
+        rg_executable = fn.executable("rg") == 1
+    end
+
+    return rg_executable
+end
 
 ---@param pattern string
 ---@param case "ignore"|"smart"|""
@@ -86,13 +95,8 @@ local M = {}
 ---@param f fun(a:vim.quickfix.entry, b:vim.quickfix.entry): boolean
 ---@param cfg qf-herder.grep.Cfg
 function M.rg(src_win, locations, name, regex, item_type, f, cfg)
-    if fn.executable("rg") ~= 1 then
+    if not is_rg_executable() then
         api.nvim_echo({ { "rg is not executable", "WarningMsg" } }, false, {})
-        return
-    end
-
-    if src_win ~= nil and fn.getloclist(src_win, { id = 0 }).id == 0 then
-        api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
         return
     end
 

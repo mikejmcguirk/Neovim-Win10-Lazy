@@ -131,8 +131,8 @@ M.maps = {
     -- MARK: Maps - Grep --
     -----------------------
 
-{ nxmode, "<Plug>(qf-herder-rg-ll-bcd-fixed)", { prefix_ll .. prefix_grep .. key_buf }, "", "Ripgrep the bcd to the location list (fixed strings)", function() qfr.rg.ll_bcd_fixed() end, },
-{ nxmode, "<Plug>(qf-herder-rg-ll-bcd-regex)", { prefix_ll .. prefix_grep .. key_buf_re }, "", "Ripgrep the bcd to the location list (regex)", function() qfr.rg.ll_bcd_regex() end, },
+{ nxmode, "<Plug>(qf-herder-rg-ll-bcd-fixed)", { prefix_ll .. prefix_grep .. key_dir }, "", "Ripgrep the bcd to the location list (fixed strings)", function() qfr.rg.ll_bcd_fixed() end, },
+{ nxmode, "<Plug>(qf-herder-rg-ll-bcd-regex)", { prefix_ll .. prefix_grep .. key_dir_re }, "", "Ripgrep the bcd to the location list (regex)", function() qfr.rg.ll_bcd_regex() end, },
 { nxmode, "<Plug>(qf-herder-rg-ll-curbuf-fixed)", { prefix_ll .. prefix_grep .. key_buf }, "", "Ripgrep a single buf to the location list (fixed strings)", function() qfr.rg.ll_cur_buf_fixed() end, },
 { nxmode, "<Plug>(qf-herder-rg-ll-curbuf-regex)", { prefix_ll .. prefix_grep .. key_buf_re }, "", "Ripgrep a single buf to the location list (regex)", function() qfr.rg.ll_cur_buf_regex() end, },
 { nxmode, "<Plug>(qf-herder-rg-ll-help-fixed)", { prefix_ll .. prefix_grep .. key_help }, "", "Ripgrep help dirs to the location list (fixed strings)", function() qfr.rg.ll_help_fixed() end, },

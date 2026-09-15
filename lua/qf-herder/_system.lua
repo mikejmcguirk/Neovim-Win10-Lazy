@@ -2,7 +2,6 @@ local api = vim.api
 local fn = vim.fn
 
 local _util = require("qf-herder._util")
-local ntq = require("nvim-tools.quickfix")
 local ntt = require("nvim-tools.table")
 
 local M = {}
@@ -50,19 +49,14 @@ local function entries_from_stdout(stdout, sort, item_type)
     return true, entries, ""
 end
 
----@param src_win integer|nil
 ---@param obj vim.SystemCompleted
 ---@return boolean, string
-local function state_verify(src_win, obj)
+local function obj_verify(obj)
     if obj.code == nil or obj.code ~= 0 then
         local code_str = obj.code ~= nil and "Exit code: " .. obj.code or ""
         local err = obj.stderr ~= nil and #obj.stderr > 0 and "Error: " .. obj.stderr or ""
         api.nvim_echo({ { code_str .. " " .. err, "ErrorMsg" } }, true, {})
         return false, code_str .. " " .. err
-    end
-
-    if src_win and not api.nvim_win_is_valid(src_win) then
-        return false, "Window " .. src_win .. " is not valid"
     end
 
     return true, ""
@@ -79,7 +73,12 @@ end
 ---@param ctx qf-rancher.system.Ctx
 ---@param cfg qf-rancher.system.Cfg
 local function output_set_to_list(src_win, obj, what, ctx, cfg)
-    local ok, err = state_verify(src_win, obj)
+    if src_win ~= nil and not api.nvim_win_is_valid(src_win) then
+        api.nvim_echo({ { "Window " .. src_win .. " is not valid", "ErrorMsg" } }, true, {})
+        return
+    end
+
+    local ok, err = obj_verify(obj)
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
@@ -112,6 +111,7 @@ local function output_set_to_list(src_win, obj, what, ctx, cfg)
     end
 
     if is_new_ll_win then
+        -- TODO: Use our nav code. We believe in it don't we?
         api.nvim_cmd({ cmd = "ll", count = 1, mods = { silent = true } }, {})
     end
 end

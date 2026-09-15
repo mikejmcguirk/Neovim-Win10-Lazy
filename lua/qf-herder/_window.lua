@@ -286,7 +286,7 @@ function M.ll_open(count, silent, cfg)
         return
     end
 
-    if M.ll_win_find_one_by_qf_id({ 0 }, qf_id) ~= nil then
+    if M.ll_win_find_one_by_qf_id({ 0 }, qf_id) == nil then
         local cfg_spk = cfg.spk
         M.qf_wins_close_with_spk({ 0 }, cfg_spk)
         lopen_with_spk(cfg_spk, height_resolve(src_win, count, cfg.auto_height), cfg.split_ll)
