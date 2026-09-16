@@ -223,6 +223,7 @@ set_hl(0, "StatusLineNC", { link = "StatusLine" })
 set_hl(0, "Tabline", { link = "StatusLine" })
 
 -- set_hl(0, "Cursor", {}) -- I have reverse video cursor set in the terminal
+set_hl(0, "MCursor", { link = "Cursor" })
 set_hl(0, "lCursor", {})
 set_hl(0, "SignColumn", {})
 
