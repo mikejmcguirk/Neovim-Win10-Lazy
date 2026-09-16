@@ -4,11 +4,13 @@
 
 - [ ] Move away from the "leader" keymap system. So like
   - [ ] gt/gT in the list to sort
+    - eeehhhh. Maybe `s` instead.
   - [ ] gf for filter, and like gfi for diags.
     - [ ] Or maybe gi since that's insert mode
   - And so on. Leave the plugs for stuff where the mapping doesn't survive.
   - c in list to close
   - ctrl+q for qf toggle? But where does loclist go. Shift q?
+  - `D` to delete list.
 
 - [ ] Add the cmd stuff.
 
