@@ -6,15 +6,13 @@ local herder = require("qf-herder")
 local M = {}
 
 function M.do_ftplugin()
-    local ft = api.nvim_get_option_value("ft", { buf = 0 })
-    if ft ~= "qf" then
+    if api.nvim_get_option_value("ft", { buf = 0 }) ~= "qf" then
         return
     end
 
     local cur_buf = api.nvim_get_current_buf()
     ---@type qf-herder.ftplugin.Cfg
     local cfg_ftplugin = herder._config_merged_get(cur_buf, nil, "ftplugin")
-
     if cfg_ftplugin.opts_set then
         local buf_scope = { buf = cur_buf }
         api.nvim_set_option_value("bl", false, buf_scope)

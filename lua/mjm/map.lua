@@ -446,11 +446,18 @@ set("n", "<bs><M-w>", "<cmd>set wrap?<cr>")
 
 -- NOTE: could not get set lmap "\3\27" to work
 set("n", "<C-c>", function()
-    api.nvim_cmd({ cmd = "echo", args = { '""' } }, {})
-    api.nvim_cmd({ cmd = "nohlsearch" }, {})
     -- Allows <C-c> to exit commands with a count. Also eliminates command line nag
     return "<esc>"
 end, { expr = true, silent = true })
+
+-- Mostly a re-creation of the default, with the echo blank added.
+set("n", "<C-l>", function()
+    api.nvim_cmd({ cmd = "nohlsearch" })
+    api.nvim_cmd({ cmd = "diffupdate" })
+    api.nvim_buf_clear_namespace(0, api.nvim_create_namespace("nvim.multicursor"), 0, -1)
+    api.nvim_cmd({ cmd = "norm", args = { "<C-L>" }, bang = true })
+    api.nvim_cmd({ cmd = "echo", args = { '""' } })
+end)
 
 set("n", "gI", "g^i")
 set("n", "gA", "g<End>a")

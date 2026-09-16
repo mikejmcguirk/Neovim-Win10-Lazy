@@ -1,24 +1,24 @@
 local api = vim.api
 
 local mjm_group = api.nvim_create_augroup("mjm-group", {})
-local clear_conditions = { "BufLeave", "InsertEnter", "RecordingEnter", "TabLeave", "WinLeave" }
-api.nvim_create_autocmd(clear_conditions, {
-    group = mjm_group,
-    pattern = "*",
-    -- The highlight state is saved and restored when autocmds are triggered, so
-    -- schedule_wrap is used to trigger nohlsearch aftewards
-    -- See nohlsearch() help
-    callback = vim.schedule_wrap(function()
-        api.nvim_cmd({ cmd = "nohlsearch" }, {})
-    end),
-})
+-- local clear_conditions = { "BufLeave", "InsertEnter", "RecordingEnter", "TabLeave", "WinLeave" }
+-- api.nvim_create_autocmd(clear_conditions, {
+--     group = mjm_group,
+--     pattern = "*",
+--     -- The highlight state is saved and restored when autocmds are triggered, so
+--     -- schedule_wrap is used to trigger nohlsearch aftewards
+--     -- See nohlsearch() help
+--     callback = vim.schedule_wrap(function()
+--         api.nvim_cmd({ cmd = "nohlsearch" }, {})
+--     end),
+-- })
 
 api.nvim_create_autocmd("BufWinEnter", {
     group = mjm_group,
     callback = function(ev)
         local win = api.nvim_get_current_win()
         local config = api.nvim_win_get_config(win)
-        if config.relative and #config.relative > 0 then
+        if (config.relative and #config.relative > 0) or config.hide then
             return
         end
 
