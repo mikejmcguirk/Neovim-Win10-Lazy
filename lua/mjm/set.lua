@@ -125,9 +125,60 @@ api.nvim_create_autocmd({ "FileType" }, {
     group = set_group,
     pattern = "*",
     callback = function(ev)
-        api.nvim_set_option_value("fo", "o", {
-            buf = ev.buf,
-            operation = "remove",
-        })
+        api.nvim_set_option_value("fo", "o", { buf = ev.buf, operation = "remove" })
+    end,
+})
+
+---Lcs indent guides have gaps on blank lines. After using them for a few months, they still
+---catch my attention. Use a plugin for indent guides instead.
+---@param buf uinteger
+local function lcs_get_and_set(buf)
+    local lcs_tbl = {}
+    lcs_tbl[#lcs_tbl + 1] = "extends:»,precedes:«,nbsp:␣,trail:⣿"
+    if api.nvim_get_option_value("et", { buf = buf }) == true then
+        lcs_tbl[#lcs_tbl + 1] = "tab:<->"
+    else
+        lcs_tbl[#lcs_tbl + 1] = "lead:⣿"
+        lcs_tbl[#lcs_tbl + 1] = "tab:   "
+    end
+
+    api.nvim_set_option_value("lcs", table.concat(lcs_tbl, ","), { scope = "local" })
+end
+
+local lcs_group_name = "mjm.lcs"
+local lcs_group = api.nvim_create_augroup(lcs_group_name, {})
+api.nvim_create_autocmd("FileType", {
+    group = lcs_group,
+    -- Schedule wrap to let other filetype options set.
+    callback = vim.schedule_wrap(function(ev)
+        local buf = ev.buf
+        -- In case this fired on a temporary buffer.
+        if not api.nvim_buf_is_valid(buf) then
+            return
+        end
+
+        if api.nvim_get_option_value("bt", { buf = buf }) ~= "" then
+            return
+        end
+
+        lcs_get_and_set(buf)
+    end),
+})
+
+-- MID: Instead of InsertEnter/InsertLeave, do it based on ModeChanged.
+-- - Would prevent leading/trailing spacechars from appearing in `ni` mode.
+api.nvim_create_autocmd("InsertEnter", {
+    group = lcs_group,
+    callback = function()
+        local win = api.nvim_get_current_win()
+        api.nvim_set_option_value("lcs", "trail:⣿", { operation = "remove", win = win })
+    end,
+})
+
+api.nvim_create_autocmd("InsertLeave", {
+    group = lcs_group,
+    callback = function()
+        local win = api.nvim_get_current_win()
+        api.nvim_set_option_value("lcs", "trail:⣿", { operation = "append", win = win })
     end,
 })

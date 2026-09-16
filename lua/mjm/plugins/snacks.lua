@@ -2,14 +2,18 @@ local api = vim.api
 local group = "mjm-zen-tmux-status"
 local tmux_status = api.nvim_create_augroup(group, {})
 
+local has_tmux = nil ---@type boolean|nil
+
 ---@param cmd_parts string[]
 ---@return nil
 local function do_if_tmux(cmd_parts)
-    if os.getenv("TMUX") == nil then
-        return
+    if has_tmux == nil then
+        has_tmux = os.getenv("TMUX") ~= nil
     end
 
-    vim.system(cmd_parts, { text = true, timeout = 1000 })
+    if has_tmux then
+        vim.system(cmd_parts, { text = true, timeout = 1000 })
+    end
 end
 
 return {
@@ -21,7 +25,11 @@ return {
         dashboard = { enabled = false },
         explorer = { enabled = false },
         image = { enabled = true, ["math"] = { enabled = false } },
-        indent = { enabled = false },
+        indent = {
+            indent = { enabled = true },
+            animate = { enabled = false },
+            scope = { enabled = false },
+        },
         input = { enabled = false },
         notifier = { enabled = false },
         quickfile = { enabled = false },
