@@ -37,6 +37,7 @@ function M.do_ftplugin()
     api.nvim_buf_set_keymap(0, "n", "<C-x>", "<Plug>(qf-herder-tabnew-keep-focus)", opts)
 
     if fn.win_gettype(0) == "loclist" then
+        api.nvim_buf_set_keymap(0, "n", "r", "<Plug>(qf-herder-ll-resize)", opts)
         api.nvim_buf_set_keymap(0, "n", "o", "<Plug>(qf-herder-ll-ll)", opts)
         api.nvim_buf_set_keymap(0, "n", "<C-o>", "<Plug>(qf-herder-ll-ll-keep-focus)", opts)
         api.nvim_buf_set_keymap(0, "n", "q", "<Plug>(qf-herder-ll-close)", opts)
@@ -47,6 +48,7 @@ function M.do_ftplugin()
         api.nvim_buf_set_keymap(0, "n", "{", "<Plug>(qf-herder-ll-prev-keep-focus)", opts)
         api.nvim_buf_set_keymap(0, "n", "}", "<Plug>(qf-herder-ll-next-keep-focus)", opts)
     else
+        api.nvim_buf_set_keymap(0, "n", "r", "<Plug>(qf-herder-qf-resize)", opts)
         api.nvim_buf_set_keymap(0, "n", "o", "<Plug>(qf-herder-qf-qq)", opts)
         api.nvim_buf_set_keymap(0, "n", "<C-o>", "<Plug>(qf-herder-qf-qq-keep-focus)", opts)
         api.nvim_buf_set_keymap(0, "n", "q", "<Plug>(qf-herder-qf-close)", opts)

@@ -32,25 +32,21 @@ local maps = {
     end, },
 }
 
+local plug_opts = { noremap = true }
 for _, map in ipairs(maps) do
     for _, mode in ipairs(map[1]) do
-        api.nvim_set_keymap(mode, map[2], map[4], {
-            noremap = true,
-            desc = map[5],
-            callback = map[6],
-        })
+        plug_opts.desc = map[5]
+        plug_opts.callback = map[6]
+        api.nvim_set_keymap(mode, map[2], map[4], plug_opts)
     end
 end
 
-local config = catharsis._config_get()
-if not config.default_keymaps_set then
+if not catharsis._config_get().default_keymaps_set then
     return
 end
 
-local group = api.nvim_create_augroup("catharsis.keymap_set", {})
-
 api.nvim_create_autocmd("LspAttach", {
-    group = group,
+    group = api.nvim_create_augroup("catharsis.keymap_set", {}),
     desc = "Create keymaps for LSP Catharsis",
     callback = function(ev)
         if not lsp.get_client_by_id(ev.data.client_id) then
@@ -58,15 +54,14 @@ api.nvim_create_autocmd("LspAttach", {
         end
 
         local buf = ev.buf
+        local map_opts = { noremap = true }
         for _, map in ipairs(maps) do
+            map_opts.desc = map[5]
             for _, mode in ipairs(map[1]) do
-                -- MID: Use `mapcheck()` or `hasmapto()`
-                if #vim.call("maparg", map[3], mode) == 0 then
-                    api.nvim_buf_set_keymap(buf, mode, map[3], map[2], {
-                        noremap = true,
-                        desc = map[5],
-                    })
-                end
+                api.nvim_buf_set_keymap(buf, mode, map[3], map[2], {
+                    noremap = true,
+                    desc = map[5],
+                })
             end
         end
     end,

@@ -54,10 +54,6 @@ local stack_free = string.upper(stack_clear)
 local stack_newer = cfg_keymap.stack_newer
 local stack_older = cfg_keymap.stack_older
 
-local win_close = cfg_keymap.win_close
-local win_open = cfg_keymap.win_open
-local win_resize = string.upper(win_open)
-
 local nmode = { "n" }
 local xmode = { "x" }
 local nxmode = { "n", "x" }
@@ -71,14 +67,14 @@ M.maps = {
     -- MARK: Maps - Window --
     -------------------------
 
-{ nmode, "<Plug>(qf-herder-qf-open)", { prefix_qf .. win_open }, "", "Open the quickfix list", function() qfr.window.qf_open() end, },
-{ nmode, "<Plug>(qf-herder-qf-close)", { prefix_qf .. win_close }, "", "Close the quickfix list", function() qfr.window.qf_close() end, },
-{ nmode, "<Plug>(qf-herder-qf-toggle)", { prefix_qf .. last_qf }, "", "Toggle the quickfix list", function() qfr.window.qf_toggle() end, },
-{ nmode, "<Plug>(qf-herder-qf-resize)", { prefix_qf .. win_resize }, "", "Resize the quickfix list", function() qfr.window.qf_resize() end, },
-{ nmode, "<Plug>(qf-herder-ll-open)", { prefix_ll .. win_open }, "", "Open the location list", function() qfr.window.ll_open() end, },
-{ nmode, "<Plug>(qf-herder-ll-close)", { prefix_ll .. win_close }, "", "Close the location list", function() qfr.window.ll_close() end, },
-{ nmode, "<Plug>(qf-herder-ll-toggle)", { prefix_ll .. last_ll }, "", "Toggle the location list", function() qfr.window.ll_toggle() end, },
-{ nmode, "<Plug>(qf-herder-ll-resize)", { prefix_ll .. win_resize }, "", "Resize the location list", function() qfr.window.ll_resize() end, },
+{ nmode, "<Plug>(qf-herder-qf-open)", {}, "", "Open the quickfix list", function() qfr.window.qf_open() end, },
+{ nmode, "<Plug>(qf-herder-qf-close)", {}, "", "Close the quickfix list", function() qfr.window.qf_close() end, },
+{ nmode, "<Plug>(qf-herder-qf-toggle)", { "<C-q>" }, "", "Toggle the quickfix list", function() qfr.window.qf_toggle() end, },
+{ nmode, "<Plug>(qf-herder-qf-resize)", {}, "", "Resize the quickfix list", function() qfr.window.qf_resize() end, },
+{ nmode, "<Plug>(qf-herder-ll-open)", {}, "", "Open the location list", function() qfr.window.ll_open() end, },
+{ nmode, "<Plug>(qf-herder-ll-close)", {}, "", "Close the location list", function() qfr.window.ll_close() end, },
+{ nmode, "<Plug>(qf-herder-ll-toggle)", { "<C-w><C-q>", "<C-w>q" }, "", "Toggle the location list", function() qfr.window.ll_toggle() end, },
+{ nmode, "<Plug>(qf-herder-ll-resize)", {}, "", "Resize the location list", function() qfr.window.ll_resize() end, },
 
     ----------------------
     -- MARK: Maps - Del --
@@ -201,25 +197,41 @@ M.maps = {
 
 }
 
+local plug_opts = { noremap = true }
 for _, map in ipairs(M.maps) do
     for _, mode in ipairs(map[1]) do
-        api.nvim_set_keymap(mode, map[2], map[4], {
-            noremap = true,
-            desc = map[5],
-            callback = map[6],
-        })
+        plug_opts.desc = map[5]
+        plug_opts.callback = map[6]
+        api.nvim_set_keymap(mode, map[2], map[4], plug_opts)
     end
+end
+
+plug_opts.desc = nil
+plug_opts.callback = nil
+
+---@param mode string
+---@param lhs string
+---@param rhs string
+---@return boolean
+local function should_map_default(mode, lhs, rhs)
+    if vim.call("hasmapto", rhs, mode) == 1 then
+        return false
+    end
+
+    local maparg_res = vim.call("maparg", lhs, mode) ---@type string
+    -- TODO: The defaults string might need a has() check. Might have been changed
+    -- after nvim 10
+    return maparg_res == "" or string.find(maparg_res, "vim/_core/defaults", 1, true) ~= nil
 end
 
 if config.default_keymaps_set then
     for _, map in ipairs(M.maps) do
+        plug_opts.desc = map[5]
         for _, lhs in ipairs(map[3]) do
             for _, mode in ipairs(map[1]) do
-                local ma_res = vim.call("maparg", lhs, mode)
-                -- TODO: I think the name of the defaults file was changed in the last couple
-                -- Nvim versions.
-                if ma_res == "" or string.find(ma_res, "vim/_core/defaults", 1, true) ~= nil then
-                    api.nvim_set_keymap(mode, lhs, map[2], { noremap = true, desc = map[5] })
+                local rhs = map[2]
+                if should_map_default(mode, lhs, rhs) then
+                    api.nvim_set_keymap(mode, lhs, rhs, plug_opts)
                 end
             end
         end

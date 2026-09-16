@@ -206,7 +206,7 @@ for _, m in ipairs(resize_maps) do
     end)
 end
 
-for _, map in ipairs({ "<C-w>q", "<C-w><C-q>" }) do
+for _, map in ipairs({ "<C-w>c", "<C-w><C-c>" }) do
     set("n", map, function()
         local ntw = require("nvim-tools.win")
         local cur_win = api.nvim_get_current_win()
@@ -247,9 +247,6 @@ end
 -- MID: This logic should be used for win/buf closing in a lot of different places, because
 -- bwipe closes in all windows and close does not handle the underlying buffer data
 -- - Check defaults, such as in Fugitive, to make sure this doesn't have side-effects
-
-set("n", "<C-w>c", "<nop>")
-set("n", "<C-w><C-c>", "<nop>")
 
 ---------------------
 -- CAP MOTION MAPS --

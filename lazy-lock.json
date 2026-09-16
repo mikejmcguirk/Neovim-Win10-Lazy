@@ -2,7 +2,7 @@
   "blink.cmp": { "branch": "main", "commit": "78336bc89ee5365633bcf754d93df01678b5c08f" },
   "bullets.vim": { "branch": "master", "commit": "81570b98ca44b4100b3ddcf8d9ca74b9a9b0c884" },
   "conform.nvim": { "branch": "master", "commit": "016802de402556da54c36bd7359b441266b01cdd" },
-  "farsight.nvim": { "branch": "master", "commit": "77b79fe4c4239367457ef6730383933f913e0d22" },
+  "farsight.nvim": { "branch": "master", "commit": "62ace9f60267254e780347ad3114a806dc90be86" },
   "friendly-snippets": { "branch": "main", "commit": "b4d01b0fdf3c9a549961c2f9ffe8dc09be166219" },
   "fzf-lua": { "branch": "main", "commit": "05e44d38de0a79c11fba5f7bf8138791b1dbdd1e" },
   "gitsigns.nvim": { "branch": "main", "commit": "5eb287fdbd523c3a1b3d01f304f43570e73e259b" },
