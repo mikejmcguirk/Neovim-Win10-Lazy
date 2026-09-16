@@ -93,7 +93,6 @@ local function set_lsp_maps(ev)
     set("n", "grO", lsp.document_color.color_presentation, { buf = buf })
 
     -- textDocument/documentHighlight --
-    -- MID:DEP: Use grh to toggle this if it becomes annoying.
 
     -- textDocument/documentSymbol --
     -- Check method support because this masks a Vim default.
@@ -124,7 +123,7 @@ local function set_lsp_maps(ev)
 
     -- textDocument/inlayHint --
     if client:supports_method("textDocument/inlayHint") then
-        set("n", "grl", function()
+        set("n", "grh", function()
             lsp.inlay_hint.enable(not lsp.inlay_hint.is_enabled({ buf = buf }))
         end, { buf = buf })
     end

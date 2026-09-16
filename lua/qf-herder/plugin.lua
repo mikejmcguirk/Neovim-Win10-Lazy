@@ -28,14 +28,6 @@ local prefix_qf_tbl = require("nvim-tools.str").split_map(prefix_qf)
 local last_qf = prefix_qf_tbl[#prefix_qf_tbl]
 
 local prefix_diag = cfg_keymap.prefix_diag
-local diag_err = cfg_keymap.diag_err
-local diag_err_only = string.upper(diag_err)
-local diag_hint = cfg_keymap.diag_hint
-local diag_hint_only = string.upper(diag_hint)
-local diag_info = cfg_keymap.diag_info
-local diag_info_only = string.upper(diag_info)
-local diag_warn = cfg_keymap.diag_warn
-local diag_warn_only = string.upper(diag_warn)
 
 local prefix_grep = cfg_keymap.prefix_grep
 local key_buf = cfg_keymap.key_buf
@@ -99,20 +91,16 @@ M.maps = {
     -- MARK: Maps - Diagnostics --
     ------------------------------
 
-{ nmode, "<Plug>(qf-herder-diag-ll-curbuf-errs)", { prefix_ll .. prefix_diag .. diag_err, prefix_ll .. prefix_diag .. diag_err_only }, "", "Send cur buf errors to the location list", function() qfr.diags.ll_cur_buf_errors() end, },
-{ nmode, "<Plug>(qf-herder-diag-ll-curbuf-min-hint)", { prefix_ll .. prefix_diag .. diag_hint }, "", "Send cur buf hints+ to the location list", function() qfr.diags.ll_cur_buf_min_hint() end, },
-{ nmode, "<Plug>(qf-herder-diag-ll-curbuf-min-info)", { prefix_ll .. prefix_diag .. diag_info }, "", "Send cur buf info+ to the location list", function() qfr.diags.ll_cur_buf_min_info() end, },
-{ nmode, "<Plug>(qf-herder-diag-ll-curbuf-min-warn)", { prefix_ll .. prefix_diag .. diag_warn }, "", "Send cur buf warnings+ to the location list", function() qfr.diags.ll_cur_buf_min_warn() end, },
-{ nmode, "<Plug>(qf-herder-diag-ll-curbuf-only-hint)", { prefix_ll .. prefix_diag .. diag_hint_only }, "", "Send cur buf hints to the location list", function() qfr.diags.ll_cur_buf_only_hint() end, },
-{ nmode, "<Plug>(qf-herder-diag-ll-curbuf-only-info)", { prefix_ll .. prefix_diag .. diag_info_only }, "", "Send cur buf info to the location list", function() qfr.diags.ll_cur_buf_only_info() end, },
-{ nmode, "<Plug>(qf-herder-diag-ll-curbuf-only-warn)", { prefix_ll .. prefix_diag .. diag_warn_only }, "", "Send cur buf warnings to the location list", function() qfr.diags.ll_cur_buf_only_warn() end, },
-{ nmode, "<Plug>(qf-herder-diag-qf-bufs-errs)", { prefix_qf .. prefix_diag .. diag_err, prefix_qf .. prefix_diag .. diag_err_only }, "", "Send all errors to the quickfix list", function() qfr.diags.qf_all_bufs_err() end, },
-{ nmode, "<Plug>(qf-herder-diag-qf-bufs-min-hint)", { prefix_qf .. prefix_diag .. diag_hint }, "", "Send all hints+ to the quickfix list", function() qfr.diags.qf_all_bufs_min_hint() end, },
-{ nmode, "<Plug>(qf-herder-diag-qf-bufs-min-info)", { prefix_qf .. prefix_diag .. diag_info }, "", "Send all info+ to the quickfix list", function() qfr.diags.qf_all_bufs_min_info() end, },
-{ nmode, "<Plug>(qf-herder-diag-qf-bufs-min-warn)", { prefix_qf .. prefix_diag .. diag_warn }, "", "Send all warnings+ to the quickfix list", function() qfr.diags.qf_all_bufs_min_warnings() end, },
-{ nmode, "<Plug>(qf-herder-diag-qf-bufs-only-hint)", { prefix_qf .. prefix_diag .. diag_hint_only }, "", "Send all hints to the quickfix list", function() qfr.diags.qf_all_bufs_only_hint() end, },
-{ nmode, "<Plug>(qf-herder-diag-qf-bufs-only-info)", { prefix_qf .. prefix_diag .. diag_info_only }, "", "Send all info to the quickfix list", function() qfr.diags.qf_all_bufs_only_info() end, },
-{ nmode, "<Plug>(qf-herder-diag-qf-bufs-only-warn)", { prefix_qf .. prefix_diag .. diag_warn_only }, "", "Send all warnings to the quickfix list", function() qfr.diags.qf_all_bufs_only_warnings() end, },
+{ nmode, "<Plug>(qf-herder-diag-ll-curbuf-min-err)", {}, "", "Send cur buf errors to the location list", function() qfr.diags.ll_cur_buf_error() end, },
+{ nmode, "<Plug>(qf-herder-diag-ll-curbuf-min-hint)", { "grl" }, "", "Send cur buf hints+ to the location list", function() qfr.diags.ll_cur_buf_max_hint() end, },
+{ nmode, "<Plug>(qf-herder-diag-ll-curbuf-min-info)", {}, "", "Send cur buf info+ to the location list", function() qfr.diags.ll_cur_buf_max_info() end, },
+{ nmode, "<Plug>(qf-herder-diag-ll-curbuf-min-warn)", {}, "", "Send cur buf warnings+ to the location list", function() qfr.diags.ll_cur_buf_max_warn() end, },
+{ nmode, "<Plug>(qf-herder-diag-ll-curbuf-top)", { "grL" }, "", "Send cur buf top severity to the location list", function() qfr.diags.ll_cur_buf_top() end, },
+{ nmode, "<Plug>(qf-herder-diag-qf-bufs-min-err)", {}, "", "Send all errors to the quickfix list", function() qfr.diags.qf_all_bufs_error() end, },
+{ nmode, "<Plug>(qf-herder-diag-qf-bufs-min-hint)", { "grq" }, "", "Send all hints+ to the quickfix list", function() qfr.diags.qf_all_bufs_max_hint() end, },
+{ nmode, "<Plug>(qf-herder-diag-qf-bufs-min-info)", {}, "", "Send all info+ to the quickfix list", function() qfr.diags.qf_all_bufs_max_info() end, },
+{ nmode, "<Plug>(qf-herder-diag-qf-bufs-min-warn)", {}, "", "Send all warnings+ to the quickfix list", function() qfr.diags.qf_all_bufs_max_warn() end, },
+{ nmode, "<Plug>(qf-herder-diag-qf-bufs-top)", { "grQ" }, "", "Send top severity to the quickfix list", function() qfr.diags.qf_all_bufs_top() end, },
 
     -----------------------
     -- MARK: Maps - Filter --

@@ -448,14 +448,12 @@ set("n", "<bs><M-w>", "<cmd>set wrap?<cr>")
 set("n", "<C-c>", function()
     api.nvim_cmd({ cmd = "echo", args = { '""' } }, {})
     api.nvim_cmd({ cmd = "nohlsearch" }, {})
-    -- Trying auto highlight again
-    -- vim.lsp.buf.clear_references()
-
     -- Allows <C-c> to exit commands with a count. Also eliminates command line nag
     return "<esc>"
 end, { expr = true, silent = true })
 
 set("n", "gI", "g^i")
+set("n", "gA", "g<End>a")
 -- "S" enters insert with the proper indent. "I" left on default behavior
 -- LOW: This creates an undo point, even when exiting insert immediately
 for _, map in pairs({ "i", "a", "A" }) do

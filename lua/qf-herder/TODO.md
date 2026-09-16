@@ -1,6 +1,19 @@
 ## TODO:
 
+- [ ] Keep min error as a plug, but the Q/L map should be top priority
+
+- [ ] Move away from the "leader" keymap system. So like
+  - [ ] gt/gT in the list to sort
+  - [ ] gf for filter, and like gfi for diags.
+    - [ ] Or maybe gi since that's insert mode
+  - And so on. Leave the plugs for stuff where the mapping doesn't survive.
+  - c in list to close
+  - ctrl+q for qf toggle? But where does loclist go. Shift q?
+
+- [ ] Add the cmd stuff.
+
 - [ ] Move hl group definitions back to modules
+  - Like how farsight does it
 
 - [ ] Create checkhealth
 - [ ] Disable the old rancher so this can be used.
@@ -26,7 +39,6 @@
 #### DIAGS:
 
 - [ ] It should be possible to configure the default sort
-- [ ] have grq and grQ for LSP diagnostics in all buffers or current buffer (loclist)
 
 #### GREP:
 

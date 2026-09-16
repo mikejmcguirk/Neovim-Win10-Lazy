@@ -18,6 +18,7 @@ vim.keymap.set("n", "<C-[>", "<C-[>")
 vim.keymap.set("n", "<esc>", "<esc>")
 
 -- :h standard-plugin-list
+-- Currently disabled with lazy.nvim
 -- api.nvim_set_var("loaded_2html_plugin", 1)
 api.nvim_set_var("did_install_default_menus", 1)
 -- api.nvim_set_var("loaded_gzip", 1)

@@ -99,19 +99,15 @@ local action_filters = {
         end
 
         local title = action.title ---@type string|nil
-        if not title then
+        if title == nil then
             return true
         end
 
-        local fix_all_str = "Ruff: Fix all auto-fixable problems"
-        local fix_all = string.find(title, fix_all_str, 1, true)
-        if fix_all then
+        if string.find(title, "Ruff: Fix all auto-fixable problems", 1, true) ~= nil then
             return false
         end
 
-        local organize_str = "Ruff: Organize imports"
-        local organize = string.find(title, organize_str, 1, true)
-        if organize then
+        if string.find(title, "Ruff: Organize imports", 1, true) ~= nil then
             return false
         end
 

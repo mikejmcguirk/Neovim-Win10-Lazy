@@ -664,88 +664,68 @@ M.diags = {}
 
 ---@param get_opts vim.diagnostic.GetOpts
 ---@param opts? qf-herder.diagnostics.Opts
-local function qf_diags_do(get_opts, opts)
+local function qf_diags_do(get_opts, top_only, opts)
     local _, _, cfg = cfg_get_from_opts(opts, "diagnostics")
     local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(nil, get_opts, sort_fun, cfg)
+    require("qf-herder._diag").diags_to_list(nil, get_opts, top_only, sort_fun, cfg)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diags.qf_all_bufs_err(opts)
-    qf_diags_do({ severity = 1 }, opts)
+function M.diags.qf_all_bufs_top(opts)
+    qf_diags_do({ severity = 1, 2, 3, 4 }, true, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diags.qf_all_bufs_min_warnings(opts)
-    qf_diags_do({ severity = { 1, 2 } }, opts)
+function M.diags.qf_all_bufs_error(opts)
+    qf_diags_do({ severity = 1 }, false, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diags.qf_all_bufs_only_warnings(opts)
-    qf_diags_do({ severity = { 2 } }, opts)
+function M.diags.qf_all_bufs_max_warn(opts)
+    qf_diags_do({ severity = { 1, 2 } }, false, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diags.qf_all_bufs_min_info(opts)
-    qf_diags_do({ severity = { 1, 2, 3 } }, opts)
+function M.diags.qf_all_bufs_max_info(opts)
+    qf_diags_do({ severity = { 1, 2, 3 } }, false, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diags.qf_all_bufs_only_info(opts)
-    qf_diags_do({ severity = { 3 } }, opts)
-end
-
----@param opts? qf-herder.diagnostics.Opts
-function M.diags.qf_all_bufs_min_hint(opts)
-    qf_diags_do({ severity = { 1, 2, 3, 4 } }, opts)
-end
-
----@param opts? qf-herder.diagnostics.Opts
-function M.diags.qf_all_bufs_only_hint(opts)
-    qf_diags_do({ severity = { 4 } }, opts)
+function M.diags.qf_all_bufs_max_hint(opts)
+    qf_diags_do({ severity = { 1, 2, 3, 4 } }, false, opts)
 end
 
 ---@param get_opts vim.diagnostic.GetOpts
 ---@param opts? qf-herder.diagnostics.Opts
-local function ll_diags_do(get_opts, opts)
+local function ll_diags_do(get_opts, top_only, opts)
     local win, _, cfg = cfg_get_from_opts(opts, "diagnostics")
     local sort_fun = require("qf-herder._sort").severity_asc
-    require("qf-herder._diag").diags_to_list(win, get_opts, sort_fun, cfg)
+    require("qf-herder._diag").diags_to_list(win, get_opts, top_only, sort_fun, cfg)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diags.ll_cur_buf_errors(opts)
-    ll_diags_do({ severity = 1 }, opts)
+function M.diags.ll_cur_buf_top(opts)
+    ll_diags_do({ severity = 1, 2, 3, 4 }, true, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diags.ll_cur_buf_min_warn(opts)
-    ll_diags_do({ severity = { 1, 2 } }, opts)
+function M.diags.ll_cur_buf_error(opts)
+    ll_diags_do({ severity = 1 }, false, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diags.ll_cur_buf_only_warn(opts)
-    ll_diags_do({ severity = { 2 } }, opts)
+function M.diags.ll_cur_buf_max_warn(opts)
+    ll_diags_do({ severity = { 1, 2 } }, false, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diags.ll_cur_buf_min_info(opts)
-    ll_diags_do({ severity = { 1, 2, 3 } }, opts)
+function M.diags.ll_cur_buf_max_info(opts)
+    ll_diags_do({ severity = { 1, 2, 3 } }, false, opts)
 end
 
 ---@param opts? qf-herder.diagnostics.Opts
-function M.diags.ll_cur_buf_only_info(opts)
-    ll_diags_do({ severity = { 3 } }, opts)
-end
-
----@param opts? qf-herder.diagnostics.Opts
-function M.diags.ll_cur_buf_min_hint(opts)
-    ll_diags_do({ severity = { 1, 2, 3, 4 } }, opts)
-end
-
----@param opts? qf-herder.diagnostics.Opts
-function M.diags.ll_cur_buf_only_hint(opts)
-    ll_diags_do({ severity = { 4 } }, opts)
+function M.diags.ll_cur_buf_max_hint(opts)
+    ll_diags_do({ severity = { 1, 2, 3, 4 } }, false, opts)
 end
 
 M.filter = {}

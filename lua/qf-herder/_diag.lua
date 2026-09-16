@@ -6,6 +6,12 @@ local ntq = require("nvim-tools.quickfix")
 
 local M = {}
 
+-- Severities:
+-- ERROR: 1
+-- WARN: 2
+-- INFO: 3
+-- HINT: 4
+
 local severity_map = {
     [ds.ERROR] = "E",
     [ds.WARN] = "W",
@@ -13,9 +19,25 @@ local severity_map = {
     [ds.HINT] = "H",
 }
 
+---@param diags vim.Diagnostic[] Modified in place!
+local function keep_top_severity(diags)
+    local _tools = require("qf-herder._tools")
+    local top_severity = _tools.i_fold(diags, 4, function(top, d)
+        if top == 1 then
+            return nil
+        else
+            return math.min(top, d.severity)
+        end
+    end)
+
+    _tools.i_keep(diags, function(d)
+        return d.severity == top_severity
+    end)
+end
+
 ---@param diag vim.Diagnostic
 ---@return vim.quickfix.entry
-local function convert_diag(diag)
+local function diag_to_entry_map(diag)
     local diag_source = diag.source
     local code = diag.code
     local end_lnum = diag.end_lnum
@@ -139,7 +161,7 @@ end
 ---@param get_opts vim.diagnostic.GetOpts
 ---@param f fun(a: vim.quickfix.entry, b: vim.quickfix.entry): boolean
 ---@param cfg qf-herder.diag.Cfg
-function M.diags_to_list(src_win, get_opts, f, cfg)
+function M.diags_to_list(src_win, get_opts, top_only, f, cfg)
     local buf = src_win ~= nil and api.nvim_win_get_buf(src_win) or nil
     local diags = vim.diagnostic.get(buf, get_opts)
     local reuse_title = cfg.reuse_title
@@ -158,7 +180,11 @@ function M.diags_to_list(src_win, get_opts, f, cfg)
         return
     end
 
-    local items = ntt.i_filter_map_to(diags, convert_diag)
+    if top_only then
+        keep_top_severity(diags)
+    end
+
+    local items = ntt.i_filter_map_to(diags, diag_to_entry_map)
     table.sort(items, f)
     local action, set_nr = _util.set_nr_resolve(reuse_title, src_win, title)
     local what = { items = items, nr = set_nr, title = title }
