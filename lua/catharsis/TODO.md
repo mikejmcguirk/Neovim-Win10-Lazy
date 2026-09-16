@@ -9,6 +9,10 @@
   - [ ] farsight/rancher/herder
     - [ ] Particular issue: Herder references in init since we copied that code
 
+- [ ] In the features file, and the files that use it, "on_buf_rm" is confusing. What it actually means is, no clients are attached. But it could be interpreted as a BufWipeout
+
+- [ ] It might be useful for features to signal to modules that bufs are wiped out, so that only one autocmd is necessary.
+
 #### Rename
 
 - [ ] Come up with a name for this module (like lampshade)

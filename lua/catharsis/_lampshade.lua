@@ -2,6 +2,7 @@ local api = vim.api
 local fn = vim.fn
 local lsp = vim.lsp
 local util = lsp.util
+local uv = vim.uv
 
 local METHOD = "textDocument/codeAction" ---@type vim.lsp.protocol.Method.ClientToServer.Request
 
@@ -41,6 +42,20 @@ local function lamp_and_ns_clear(buf)
 end
 
 ---@param buf uinteger
+---@return uv.uv_timer_t
+local function timer_get_or_create(buf)
+    local timer = state_buf_timers[buf]
+    if timer ~= nil then
+        return timer
+    end
+
+    ---@diagnostic disable-next-line: unnecessary-assert, call-non-callable
+    local new_timer = assert(uv.new_timer())
+    state_buf_timers[buf] = new_timer
+    return new_timer
+end
+
+---@param buf uinteger
 local function timer_and_req_cancel(buf)
     local req = state_buf_reqs[buf]
     if req ~= nil then
@@ -48,8 +63,20 @@ local function timer_and_req_cancel(buf)
         state_buf_reqs[buf] = nil
     end
 
-    require("nvim-tools.timers").timers_stop(state_buf_timers, buf)
+    local timer = state_buf_timers[buf]
+    if timer ~= nil then
+        uv.timer_stop(timer)
+    end
 end
+
+-- TODO: Inconsistent with document_highlight, where no period is affixed at the end.
+local group_name_root = "catharsis.lampshade."
+api.nvim_create_autocmd("BufWipeout", {
+    group = api.nvim_create_augroup(group_name_root .. "timer_cleanup", {}),
+    callback = function(ev)
+        state_buf_timers[ev.buf] = nil
+    end,
+})
 
 ---@param buf uinteger
 local function state_clear_all(buf)
@@ -246,10 +273,11 @@ local function req_debounced(buf, keep_fn)
         return
     end
 
-    require("nvim-tools.timers").timers_do_after_debounce(
-        state_buf_timers,
-        buf,
+    local timer = timer_get_or_create(buf)
+    uv.timer_start(
+        timer,
         ca_ctx.debounce,
+        0,
         vim.schedule_wrap(function()
             -- Avoid hard errors if this closes during debounce.
             if not api.nvim_buf_is_valid(buf) then
@@ -303,8 +331,6 @@ local function set_ns_win(win)
 
     return true
 end
-
-local group_name_root = "catharsis.lampshade."
 
 ---@param buf uinteger
 ---@return string

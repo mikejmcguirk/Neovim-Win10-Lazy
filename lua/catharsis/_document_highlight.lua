@@ -3,6 +3,7 @@ local fn = vim.fn
 local hl_user = vim.hl.priorities.user
 local lsp = vim.lsp
 local util = lsp.util
+local uv = vim.uv
 
 local DOC_HL = "textDocument/documentHighlight"
 local protocol = require("vim.lsp.protocol")
@@ -30,7 +31,7 @@ local state_client_ids_disabled = {} ---@type table<uinteger, true|nil>
 local state_ns = api.nvim_create_namespace("catharsis.document_highlight")
 local state_reqs = {} ---@type table<uinteger, { client_id:uinteger, id:uinteger }>
 local state_results = {} ---@type table<integer, mjm.lsp.documentHighlight.Result|nil>
-local state_timers = {} ---@type table<uinteger, uv.uv_timer_t>
+local state_buf_timers = {} ---@type table<uinteger, uv.uv_timer_t>
 
 ---@param buf uinteger
 ---@param client_id? uinteger
@@ -57,10 +58,35 @@ local function req_cancel(buf, client_id, client)
 end
 
 ---@param buf uinteger
+---@return uv.uv_timer_t
+local function timer_get_or_create(buf)
+    local timer = state_buf_timers[buf]
+    if timer ~= nil then
+        return timer
+    end
+
+    ---@diagnostic disable-next-line: unnecessary-assert, call-non-callable
+    local new_timer = assert(uv.new_timer())
+    state_buf_timers[buf] = new_timer
+    return new_timer
+end
+
+---@param buf uinteger
 local function timer_and_req_cancel(buf)
     req_cancel(buf)
-    require("nvim-tools.timers").timers_stop(state_timers, buf)
+    local timer = state_buf_timers[buf]
+    if timer ~= nil then
+        uv.timer_stop(timer)
+    end
 end
+
+local group_name = "catharsis.document_highlight"
+api.nvim_create_autocmd("BufWipeout", {
+    group = api.nvim_create_augroup(group_name .. ".timer_cleanup", {}),
+    callback = function(ev)
+        state_buf_timers[ev.buf] = nil
+    end,
+})
 
 ---@param res mjm.lsp.documentHighlight.Result
 ---@param buf uinteger
@@ -414,10 +440,12 @@ local function req_debounced(buf, f)
         return
     end
 
-    require("nvim-tools.timers").timers_do_after_debounce(
-        state_timers,
-        buf,
-        client.flags.debounce_text_changes or 150,
+    local timer = timer_get_or_create(buf)
+    local debounce = client.flags.debounce_text_changes or 150
+    uv.timer_start(
+        timer,
+        debounce,
+        0,
         vim.schedule_wrap(function()
             if not api.nvim_buf_is_valid(buf) then
                 return
@@ -436,11 +464,10 @@ local function req_debounced(buf, f)
     )
 end
 
+-- uv.timer_start(timer, debounce, 0, f)
 ------------------
 -- MARK: Events --
 ------------------
-
-local group_name = "mjm.lsp.document_highlight"
 
 ---@param buf uinteger
 local function buf_group_name_get(buf)
