@@ -1,6 +1,7 @@
 {
   "blink.cmp": { "branch": "main", "commit": "78336bc89ee5365633bcf754d93df01678b5c08f" },
   "bullets.vim": { "branch": "master", "commit": "81570b98ca44b4100b3ddcf8d9ca74b9a9b0c884" },
+  "catharsis.nvim": { "branch": "master", "commit": "4cd410fe8dc68b4d92bc4ed78986dd300cab4ae0" },
   "conform.nvim": { "branch": "master", "commit": "016802de402556da54c36bd7359b441266b01cdd" },
   "farsight.nvim": { "branch": "master", "commit": "e59d9cad182ae7e7097f3db582a70c7d504bd157" },
   "friendly-snippets": { "branch": "main", "commit": "b4d01b0fdf3c9a549961c2f9ffe8dc09be166219" },
