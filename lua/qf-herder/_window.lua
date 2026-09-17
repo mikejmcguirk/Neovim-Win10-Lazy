@@ -20,8 +20,8 @@ local function height_resolve(src_win, count, auto_height)
         return LIST_MAX_HEIGHT
     end
 
-    local ntq = require("nvim-tools.quickfix")
-    local size = ntq.get_list(src_win, { nr = 0, size = 0 }).size ---@type uinteger
+    local _tools = require("qf-herder._tools")
+    local size = _tools.get_list(src_win, { nr = 0, size = 0 }).size ---@type uinteger
     return size == 0 and 1 or math.min(size, LIST_MAX_HEIGHT)
 end
 
@@ -31,7 +31,7 @@ end
 ---@param height uinteger
 local function win_resize_with_spk(spk, tabpage, win, height)
     local old_spk = #spk > 0 and _util.ensure_spk(nil, tabpage, spk) or nil
-    pcall(require("nvim-tools.win").resize, win, -1, height, { anchor = "bottom" })
+    pcall(require("qf-herder._tools").resize, win, -1, height, { anchor = "bottom" })
     if old_spk ~= nil then
         api.nvim_set_option_value("spk", old_spk, { scope = "global" })
     end
@@ -102,8 +102,7 @@ end
 ---@return boolean
 function M.win_close_one_with_spk(win, tabpage, spk)
     local old_spk = #spk > 0 and _util.ensure_spk(nil, tabpage, spk) or nil
-    local _win = require("nvim-tools.win")
-    local ok, _, _, _ = _win.protected_close(win, true)
+    local ok, _, _, _ = require("qf-herder._tools").protected_close(win, true)
     if old_spk ~= nil then
         api.nvim_set_option_value("spk", old_spk, { scope = "global" })
     end
@@ -121,8 +120,7 @@ function M.win_close_multiple_with_spk(wins, tabpage, spk)
     end
 
     local old_spk = spk ~= nil and _util.ensure_spk(nil, tabpage, spk) or nil
-    local _win = require("nvim-tools.win")
-    local ok = _win.protected_close_multiple(wins, true)
+    local ok = require("qf-herder._tools").protected_close_multiple(wins, true)
     if old_spk ~= nil then
         api.nvim_set_option_value("spk", old_spk, { scope = "global" })
     end
@@ -143,11 +141,11 @@ function M.wins_close_with_spk(tabpages, spk, f)
         end
     end
 
-    local ntt = require("nvim-tools.table")
+    local _tools = require("qf-herder._tools")
     local tabpages_len = #tabpages
     if cur_idx > 0 then
         local cur_tabpage_wins = api.nvim_tabpage_list_wins(cur_tabpage)
-        ntt.i_keep(cur_tabpage_wins, f)
+        _tools.i_keep(cur_tabpage_wins, f)
         if #cur_tabpage_wins > 0 then
             M.win_close_multiple_with_spk(cur_tabpage_wins, cur_tabpage, spk)
         end
@@ -157,26 +155,25 @@ function M.wins_close_with_spk(tabpages, spk, f)
         end
     end
 
-    local ntw = require("nvim-tools.win")
     for i = 1, cur_idx - 1 do
         local wins = api.nvim_tabpage_list_wins(tabpages[i])
-        ntt.i_keep(wins, f)
-        ntw.protected_close_multiple(wins, true)
+        _tools.i_keep(wins, f)
+        _tools.protected_close_multiple(wins, true)
     end
 
     for i = cur_idx + 1, tabpages_len do
         local wins = api.nvim_tabpage_list_wins(tabpages[i])
-        ntt.i_keep(wins, f)
-        ntw.protected_close_multiple(wins, true)
+        _tools.i_keep(wins, f)
+        _tools.protected_close_multiple(wins, true)
     end
 end
 
 ---@param tabpages uinteger[]
 ---@return uinteger|nil
 function M.win_find_one(tabpages, f)
-    local ntt = require("nvim-tools.table")
+    local _tools = require("qf-herder._tools")
     for _, tabpage in ipairs(tabpages) do
-        local win, _ = ntt.i_find(api.nvim_tabpage_list_wins(tabpage), f)
+        local win, _ = _tools.i_find(api.nvim_tabpage_list_wins(tabpage), f)
         if win ~= nil then
             return win
         end

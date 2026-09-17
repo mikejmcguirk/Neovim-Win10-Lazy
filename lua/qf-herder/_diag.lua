@@ -1,8 +1,7 @@
 local api = vim.api
 local ds = vim.diagnostic.severity
 
-local ntt = require("nvim-tools.table")
-local ntq = require("nvim-tools.quickfix")
+local _tools = require("qf-herder._tools")
 
 local M = {}
 
@@ -21,7 +20,6 @@ local severity_map = {
 
 ---@param diags vim.Diagnostic[] Modified in place!
 local function keep_top_severity(diags)
-    local _tools = require("qf-herder._tools")
     local top_severity = _tools.i_fold(diags, 4, function(top, d)
         if top == 1 then
             return nil
@@ -96,7 +94,7 @@ local function sev_min_get(getopts)
     end
 
     ---@diagnostic disable-next-line: param-type-mismatch
-    local min = require("nvim-tools.table").i_min(sev)
+    local min = require("qf-herder._tools").i_min(sev)
     return min ~= nil and min or ds.ERROR
 end
 
@@ -119,7 +117,7 @@ local function sev_max_get(getopts)
     end
 
     ---@diagnostic disable-next-line: param-type-mismatch
-    local max = require("nvim-tools.table").i_max(sev)
+    local max = require("qf-herder._tools").i_max(sev)
     return max ~= nil and max or ds.HINT
 end
 
@@ -171,7 +169,7 @@ function M.diags_to_list(src_win, get_opts, top_only, f, cfg)
     if #diags == 0 then
         api.nvim_echo({ { get_empty_msg(get_opts), "" } }, false, {})
         if reuse_title and cfg.clear_on_empty then
-            local diag_nr = ntq.list_nr_with_title(src_win, title)
+            local diag_nr = _tools.list_nr_with_title(src_win, title)
             if diag_nr then
                 _util.clear_list(src_win, diag_nr)
             end
@@ -184,7 +182,7 @@ function M.diags_to_list(src_win, get_opts, top_only, f, cfg)
         keep_top_severity(diags)
     end
 
-    local items = ntt.i_filter_map_to(diags, diag_to_entry_map)
+    local items = _tools.i_filter_map_to(diags, diag_to_entry_map)
     table.sort(items, f)
     local action, set_nr = _util.set_nr_resolve(reuse_title, src_win, title)
     local what = { items = items, nr = set_nr, title = title }

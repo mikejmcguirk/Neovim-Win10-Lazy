@@ -1,7 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 
-local ntq = require("nvim-tools.quickfix")
+local _tools = require("qf-herder._tools")
 local _util = require("qf-herder._util")
 
 ----------------
@@ -64,7 +64,7 @@ end
 ---@param backup_cmd string
 ---@return nil
 local function file_nav_wrap(src_win, count1, silent, do_zzze, cmd, backup_cmd)
-    local list_info = ntq.get_list(src_win, { idx = 0, size = 0 })
+    local list_info = _tools.get_list(src_win, { idx = 0, size = 0 })
     if not ensure_entries_or_echo(list_info.size, silent) then
         return
     end
@@ -95,7 +95,7 @@ end
 ---@param cmd string
 ---@param do_zzze boolean
 local function bookends(src_win, silent, count, cmd, do_zzze)
-    local list_info = ntq.get_list(src_win, { idx = 0, size = 0 })
+    local list_info = _tools.get_list(src_win, { idx = 0, size = 0 })
     if not ensure_entries_or_echo(list_info.size, silent) then
         return
     end
@@ -127,7 +127,7 @@ local function idx_change(src_win, count1, cur_win, keep_focus, silent, math, do
         end
     end
 
-    local list_info = ntq.get_list(src_win, { idx = 0, size = 0 })
+    local list_info = _tools.get_list(src_win, { idx = 0, size = 0 })
     local idx_max = list_info.size
     if ensure_entries_or_echo(idx_max, silent) then
         local cmd = src_win == nil and "cc" or "ll"
@@ -151,7 +151,7 @@ local M = {}
 ---@param cfg qf-herder.nav.Cfg
 ---@return nil
 function M.q_prev(count1, cur_win, keep_focus, silent, cfg)
-    local wrap_math = require("nvim-tools.math").wrapping_sub
+    local wrap_math = _tools.wrapping_sub
     idx_change(nil, count1, cur_win, keep_focus, silent, wrap_math, cfg.do_zzze)
 end
 
@@ -162,7 +162,7 @@ end
 ---@param cfg qf-herder.nav.Cfg
 ---@return nil
 function M.q_next(count1, cur_win, keep_focus, silent, cfg)
-    local wrap_math = require("nvim-tools.math").wrapping_add
+    local wrap_math = _tools.wrapping_add
     idx_change(nil, count1, cur_win, keep_focus, silent, wrap_math, cfg.do_zzze)
 end
 
@@ -179,7 +179,7 @@ function M.l_prev(src_win, count1, cur_win, keep_focus, silent, cfg)
             api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
         end
     else
-        local wrap_math = require("nvim-tools.math").wrapping_sub
+        local wrap_math = _tools.wrapping_sub
         idx_change(src_win, count1, cur_win, keep_focus, silent, wrap_math, cfg.do_zzze)
     end
 end
@@ -197,7 +197,7 @@ function M.l_next(src_win, count1, cur_win, keep_focus, silent, cfg)
             api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
         end
     else
-        local wrap_math = require("nvim-tools.math").wrapping_add
+        local wrap_math = _tools.wrapping_add
         idx_change(src_win, count1, cur_win, keep_focus, silent, wrap_math, cfg.do_zzze)
     end
 end
@@ -219,7 +219,7 @@ function M.q_q(count, cur_win, keep_focus, silent, cfg)
         return
     end
 
-    local list_info = ntq.get_list(nil, { idx = 0, size = 0 })
+    local list_info = _tools.get_list(nil, { idx = 0, size = 0 })
     if not ensure_entries_or_echo(list_info.size, silent) then
         return
     end
@@ -256,7 +256,7 @@ function M.l_l(src_win, count, cur_win, keep_focus, silent, cfg)
         return
     end
 
-    local list_info = ntq.get_list(src_win, { idx = 0, size = 0 })
+    local list_info = _tools.get_list(src_win, { idx = 0, size = 0 })
     if not ensure_entries_or_echo(list_info.size, silent) then
         return
     end

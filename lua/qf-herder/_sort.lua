@@ -1,7 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 
-local ntq = require("nvim-tools.quickfix")
+local _tools = require("qf-herder._tools")
 local _util = require("qf-herder._util")
 
 local M = {}
@@ -17,7 +17,7 @@ function M.sort(src_win, count, f, cfg)
     end
 
     local nr = _util.resolve_list_nr(src_win, count)
-    local what_ret = ntq.get_list(src_win, { nr = nr, all = true }) ---@type table
+    local what_ret = _tools.get_list(src_win, { nr = nr, all = true }) ---@type table
     local size = what_ret.size
     if size == 0 then
         api.nvim_echo({ { "No entries", "" } }, false, {})
@@ -26,7 +26,7 @@ function M.sort(src_win, count, f, cfg)
         return
     end
 
-    local what_set = ntq.what_ret_to_set(what_ret)
+    local what_set = _tools.what_ret_to_set(what_ret)
     table.sort(what_set.items, f)
     local dest_nr = _util.set_list_checked(src_win, "u", what_set)
     if dest_nr < 1 then

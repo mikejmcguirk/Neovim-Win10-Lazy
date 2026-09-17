@@ -2,9 +2,7 @@ local api = vim.api
 local fn = vim.fn
 local uv = vim.uv
 
-local ntb = require("nvim-tools.buf")
-local ntt = require("nvim-tools.table")
-local ntq = require("nvim-tools.quickfix")
+local _tools = require("qf-herder._tools")
 
 -----------------
 -- MARK: State --
@@ -20,9 +18,9 @@ local state_timer = assert(uv.new_timer())
 
 ---@return uinteger|nil
 local function pvw_win_find()
-    local pvw_win, _ = ntt.i_find(api.nvim_tabpage_list_wins(0), function(win)
+    local pvw_win, _ = _tools.i_find(api.nvim_tabpage_list_wins(0), function(win)
         return api.nvim_get_option_value("pvw", { win = win })
-    end)
+    end, true)
 
     return pvw_win
 end
@@ -87,14 +85,14 @@ local function state_clear()
         api.nvim_buf_delete(buf, { force = true })
     end
 
-    ntt.clear(state_bufs)
-    ntt.clear(state_extmarks)
+    _tools.clear(state_bufs)
+    _tools.clear(state_extmarks)
 end
 
 ---@return boolean
 local function has_list_wins()
-    return ntt.i_any(api.nvim_list_tabpages(), function(tabpage)
-        return ntt.i_any(api.nvim_tabpage_list_wins(tabpage), function(win)
+    return _tools.i_any(api.nvim_list_tabpages(), function(tabpage)
+        return _tools.i_any(api.nvim_tabpage_list_wins(tabpage), function(win)
             local wintype = vim.call("win_gettype", win)
             return wintype == "quickfix" or wintype == "loclist"
         end)
@@ -114,7 +112,7 @@ end
 
 ---@return uinteger
 local function create_fallback_buf()
-    local buf = ntb.temp_buf_create("wipe", false, "nofile", PVW_FT, true)
+    local buf = _tools.temp_buf_create("wipe", false, "nofile", PVW_FT, true)
     api.nvim_buf_set_lines(buf, 0, 0, false, { "No valid bufnr for this list entry" })
     api.nvim_set_option_value("ma", false, { buf = buf })
     return buf
@@ -131,8 +129,7 @@ local function buf_get_lines(buf)
         return api.nvim_buf_get_lines(buf, 0, -1, false)
     end
 
-    local ntf = require("nvim-tools.fs")
-    local ok, text = ntf.file_read(api.nvim_buf_get_name(buf))
+    local ok, text = _tools.file_read(api.nvim_buf_get_name(buf))
     if ok and text ~= nil then
         return vim.split(text, "\n")
     else
@@ -186,7 +183,7 @@ end
 ---@param item_buf uinteger
 ---@return uinteger
 local function preview_buf_from_item_create(item_buf)
-    local preview_buf = ntb.temp_buf_create(nil, false, "nofile", "qf-rancher-preview", true)
+    local preview_buf = _tools.temp_buf_create(nil, false, "nofile", "qf-rancher-preview", true)
     preview_buf_set_lines_from_item_buf(item_buf, preview_buf)
     preview_buf_set_version(item_buf, preview_buf)
 
@@ -244,9 +241,7 @@ end
 ---@param entry vim.quickfix.entry
 ---@return [uinteger, uinteger, uinteger, uinteger] 0,0,0,0 indexed, end-exclusive
 local function entry_range_api_get(entry)
-    local ntr = require("nvim-tools.range")
-    ---@diagnostic disable-next-line: param-type-mismatch
-    return ntr.qf_to_api(ntr.qf_from_entry(entry))
+    return _tools.qf_to_api(_tools.qf_from_entry(entry))
 end
 
 ---@param entry vim.quickfix.entry
@@ -290,8 +285,7 @@ end
 ---@param qf_range_api [uinteger, uinteger, uinteger, uinteger]
 ---@param cfg qf-herder.preview.Cfg
 local function pvw_pos_set(qf_range_api, cfg)
-    local ntw = require("nvim-tools.win")
-    ntw.protected_set_cursor(state_pvw_win, { qf_range_api[1] + 1, qf_range_api[2] })
+    _tools.protected_set_cursor(state_pvw_win, { qf_range_api[1] + 1, qf_range_api[2] })
     if cfg.do_zzze then
         api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
         api.nvim_cmd({ cmd = "normal", args = { "ze" }, bang = true }, {})
@@ -312,7 +306,7 @@ local function update_preview_win_buf(cfg)
 
     local wintype = fn.win_gettype(state_list_win)
     local src_win = wintype == "loclist" and state_list_win or nil
-    local ok, err, entry = ntq.get_item_under_cursor(src_win)
+    local ok, err, entry = _tools.get_item_under_cursor(src_win)
     if not ok then
         api.nvim_echo({ { err, "WarningMsg" } }, false, {})
         return
@@ -403,7 +397,7 @@ local function pvw_open(cfg)
         return
     end
 
-    local ok, err, entry = ntq.get_item_under_cursor(wintype == "loclist" and list_win or nil)
+    local ok, err, entry = _tools.get_item_under_cursor(wintype == "loclist" and list_win or nil)
     if not ok then
         api.nvim_echo({ { err, "WarningMsg" } }, false, {})
         return

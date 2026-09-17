@@ -1,7 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 
-local ntq = require("nvim-tools.quickfix")
+local _tools = require("qf-herder._tools")
 
 local M = {}
 
@@ -14,21 +14,21 @@ function M.single()
     end
 
     local src_win = wintype == "loclist" and list_win or nil
-    local what_ret = ntq.get_list(src_win, { nr = 0, all = true }) ---@type table
+    local what_ret = _tools.get_list(src_win, { nr = 0, all = true }) ---@type table
     if #what_ret.items < 1 then
         return
     end
 
     local row, col = unpack(api.nvim_win_get_cursor(list_win))
-    local cur_idx = ntq.get_list(src_win, { idx = 0 }).idx ---@type uinteger
+    local cur_idx = _tools.get_list(src_win, { idx = 0 }).idx ---@type uinteger
     local new_idx = cur_idx > row and math.max(cur_idx - 1, 0) or cur_idx
     table.remove(what_ret.items, row)
     local adj_idx = math.min(new_idx, #what_ret.items)
 
-    local what_set = ntq.what_ret_to_set(what_ret)
+    local what_set = _tools.what_ret_to_set(what_ret)
     what_set.idx = adj_idx
-    ntq.set_list(src_win, "u", what_set)
-    require("nvim-tools.win").protected_set_cursor(0, { row, col })
+    _tools.set_list(src_win, "u", what_set)
+    _tools.protected_set_cursor(0, { row, col })
 end
 
 function M.visual()
@@ -46,15 +46,15 @@ function M.visual()
     end
 
     local src_win = wintype == "loclist" and list_win or nil
-    local what_ret = ntq.get_list(src_win, { nr = 0, all = true }) ---@type table
+    local what_ret = _tools.get_list(src_win, { nr = 0, all = true }) ---@type table
     if #what_ret.items < 1 then
         return
     end
 
-    local vregion = require("nvim-tools.misc").region_from_positions(".", "v", "v", false)
-    local vrange_4 = require("nvim-tools.range").from_region(vregion)
+    local vregion = _tools.region_from_positions(".", "v", "v", false)
+    local vrange_4 = _tools.range_from_region(vregion)
 
-    local cur_idx = ntq.get_list(src_win, { idx = 0 }).idx ---@type integer
+    local cur_idx = _tools.get_list(src_win, { idx = 0 }).idx ---@type integer
     local idx_dist = math.max(cur_idx - vrange_4[1], 0) ---@type integer
     local idx_move = math.min(idx_dist, vrange_4[3] - vrange_4[1] + 1) ---@type integer
     local new_idx = math.max(cur_idx - idx_move, 0) ---@type integer
@@ -66,9 +66,8 @@ function M.visual()
     end
 
     local adj_idx = math.min(new_idx, #what_ret.items) ---@type integer
-    ntq.set_list(src_win, "u", { nr = 0, items = what_ret.items, idx = adj_idx })
-
-    require("nvim-tools.win").protected_set_cursor(0, { vrange_4[1], col })
+    _tools.set_list(src_win, "u", { nr = 0, items = what_ret.items, idx = adj_idx })
+    _tools.protected_set_cursor(0, { vrange_4[1], col })
 end
 
 return M

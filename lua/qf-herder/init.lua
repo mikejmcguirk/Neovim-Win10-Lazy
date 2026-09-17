@@ -1,13 +1,175 @@
 local api = vim.api
 local fn = vim.fn
--- TODO: When cutting this plugin off, inline any functions that are only used here. We want to
--- require as few exterior modules as possible for plugin init. Exterior util functions should be
--- consolidated into as few modules as is reasonable.
-local ntt = require("nvim-tools.table")
 
----------------------------
--- MARK: Defaults/Schema --
----------------------------
+local M = {}
+
+---@param t any
+---@param prev any
+---@return any
+local function deepcopy(t, prev)
+    local t_type = type(t)
+    if t_type == "userdata" or t_type == "thread" then
+        return
+    end
+
+    if t_type ~= "table" then
+        return t
+    end
+
+    if prev[t] == true then
+        return
+    end
+
+    prev[t] = true
+    local copy = {}
+    for k, v in pairs(t) do
+        local dk = deepcopy(k, prev)
+        if dk ~= nil then
+            local dv = deepcopy(v, prev)
+            if dv ~= nil then
+                copy[dk] = dv
+            end
+        end
+    end
+
+    prev[t] = nil
+    return copy
+end
+
+---Evaluate if `t` is a |lua-dict|.
+---@param t any
+---@return 0|1|2|3
+---- 0: Not a |lua-table|.
+---- 1: Empty |lua-table|.
+---- 2: |lua-list|
+---- 3: |lua-dict| (may contain a list element).
+local function is_table(t)
+    if type(t) ~= "table" then
+        return 0
+    end
+
+    if next(t) == nil then
+        return 1
+    end
+
+    local len = #t
+    if len == 0 then
+        return 3
+    end
+
+    local count = 0
+    for k in pairs(t) do
+        count = count + 1
+        if type(k) ~= "number" or k < 1 or k > len or k ~= math.floor(k) then
+            return 3
+        end
+    end
+
+    return (count == len) and 2 or 3
+end
+
+---Differences from |vim.deepcopy()|:
+---- `userdata` and `thread` values are discarded rather than erroring. If either type is used as
+---  a table key, the value is discarded.
+---- `vim.NIL` is handled the same as other data.
+---- Always "noref" behavior. Repeated references to the same table each get a new copy. If a
+---  cyclic reference is detected, it is discarded.
+---- Assumes that neither table has a metatable.
+---@param t any
+---@return any
+function M._deepcopy(t)
+    return deepcopy(t, {})
+end
+
+---@param t table Modified in place!
+---@param defaults table
+---@param prev_defaults table<table, true>
+local function defaults_deep_do(t, defaults, prev_defaults)
+    if prev_defaults[defaults] == true then
+        return
+    end
+
+    prev_defaults[defaults] = true
+    for k, vd in pairs(defaults) do
+        local vd_table_type = is_table(vd)
+        if vd_table_type == 3 then
+            local v = t[k]
+            if is_table(v) ~= 3 then
+                v = {}
+                t[k] = v
+            end
+
+            defaults_deep_do(v, vd, prev_defaults)
+        else
+            local vd_type = type(vd)
+            if vd_type ~= "userdata" and vd_type ~= "thread" and t[k] == nil then
+                t[k] = deepcopy(vd, {})
+            end
+        end
+    end
+
+    prev_defaults[defaults] = nil
+end
+
+---Recursively merge values from `t2` into `t1` if they are missing in `t1`. Unlike
+---|merge_deep_left()|, a |lua-dict| value in `t2` will overwrite a non-dict value in `t1`.
+---
+---All values are deep-copied. If a cyclic reference is detected, merging is aborted.
+---@generic K, V
+---@param t table Modified in place!
+---@param defaults table
+---@return table Reference to `t`.
+local function defaults_deep(t, defaults)
+    defaults_deep_do(t, defaults, {})
+    return t
+end
+
+---Get a |lua-list| of all keys from `t`.
+---@generic K, V
+---@param t table<K, V>
+---@return K[]
+local function table_keys(t)
+    local ret = {}
+    local i = 1
+    for k, _ in pairs(t) do
+        ret[i] = k
+        i = i + 1
+    end
+
+    return ret
+end
+
+---Bespoke version because of future tbl_ deprecation
+---The tbl_ version also does not contain the t == nil guard.
+---Like the built-in, will only return non-nil if it is able to traverse the specific path
+---specified in the args to a non-nil value.
+---If no args, just return the table.
+---@param t? table Table to index
+---@param ... any Optional keys (0 or more, variadic) via which to index the table
+---@return any # Nested value indexed by key (if it exists), else nil
+local function get(t, ...)
+    if t == nil then
+        return nil
+    end
+
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return t
+    end
+
+    local v = t
+    local args = { ... }
+    for i = 1, nargs do
+        v = v[args[i]]
+        if v == nil then
+            return nil
+        elseif type(v) ~= "table" and i ~= nargs then
+            return nil
+        end
+    end
+
+    return v
+end
 
 ---@param expected string
 ---@param actual string
@@ -16,7 +178,344 @@ local function validator_err_make(expected, actual)
     return "Expected " .. expected .. ", found " .. actual
 end
 
-local M = {}
+---@param val any
+---@return boolean
+local function is_callable(val)
+    local val_type = type(val)
+    if val_type == "function" then
+        return true
+    end
+
+    local mt = getmetatable(val)
+    return mt ~= nil and type(rawget(mt, "__call")) == "function"
+end
+
+---@param val any
+---@param typ string
+---@return boolean, string
+local function string_type_is_valid(val, typ)
+    if typ ~= "callable" then
+        local val_type = type(val)
+        local ok = val_type == typ
+        return ok, ok and "" or validator_err_make(typ, val_type)
+    end
+
+    local ok = is_callable(val)
+    return ok, ok and "" or "Not callable: " .. vim.inspect(val)
+end
+
+---@param val any
+---@param validator string|string[]|fun(val:any): boolean, string
+---@return boolean, string
+local function validator_check(val, validator)
+    if type(validator) == "string" then
+        return string_type_is_valid(val, validator)
+    end
+
+    if vim.islist(validator) then
+        ---@cast validator string[]
+        for i = 1, #validator do
+            local ok, err = string_type_is_valid(val, validator[i])
+            if ok then
+                return ok, err
+            end
+        end
+
+        return false, validator_err_make(vim.inspect(validator), type(val))
+    end
+
+    if is_callable(validator) then
+        ---@cast validator function
+        return validator(val)
+    end
+
+    return false, "Invalid validator for " .. tostring(val)
+end
+
+---@param t table
+---@param s table
+---@param prev table<table, true>
+---@return boolean, string
+local function matches_schema_checked(t, s, prev)
+    if prev[t] ~= nil then
+        return false, "Cyclic reference detected in values."
+    end
+
+    local ok = true
+    local err = ""
+    prev[t] = true
+    for k, v in pairs(t) do
+        local vs = s[k]
+        if vs == nil then
+            ok = false
+            err = "[" .. tostring(k) .. "]" .. " has no validator."
+        else
+            local v_is_dict = is_table(v) == 3
+            local vs_is_dict = is_table(vs) == 3
+            if (not v_is_dict) and not vs_is_dict then
+                local ok_vc, err_vc = validator_check(v, vs)
+                if not ok_vc then
+                    ok = ok_vc
+                    err = "[" .. tostring(k) .. "]" .. err_vc
+                end
+            elseif v_is_dict and vs_is_dict then
+                local ok_msc, err_msc = matches_schema_checked(v, vs, prev)
+                if not ok_msc then
+                    ok = ok_msc
+                    err = "[" .. tostring(k) .. "]" .. err_msc
+                end
+            else
+                ok = false
+                err = "[" .. tostring(k) .. "]" .. " sub-table mismatch."
+            end
+        end
+    end
+
+    prev[t] = nil
+    return ok, err
+end
+
+---Inspired by futil-js `matchesSignature`
+---
+---Compare a |lua-dict| of values with a |lua-dict| schema. Returns `true` if all
+---validators pass. Returns `false` with an error `string` if not.
+---
+---Schema values should follow |vim.validate()| logic.
+
+---Values from `t` are allowed to be missing. Values from `t` without a corresponding signature
+---`s` will return false.
+---@param t table
+---@param s table
+---@return boolean, string
+local function matches_schema(t, s)
+    local table_type_t = is_table(t)
+    if table_type_t == 0 or table_type_t == 2 then
+        return false, "Config values are not a dictionary table."
+    end
+
+    if is_table(s) < 3 then
+        return false, "Schema values are not a dictionary table."
+    end
+
+    return matches_schema_checked(t, s, {})
+end
+
+---@param t1 table Modified in place!
+---@param t2 table
+---@param prev table<table, true>
+local function merge_deep_right_do(t1, t2, prev)
+    if prev[t2] == true then
+        return
+    end
+
+    prev[t2] = true
+    for k, v2 in pairs(t2) do
+        local v2_table_type = is_table(v2)
+        if v2_table_type == 0 then
+            local v2_type = type(v2)
+            if v2_type ~= "userdata" and v2_type ~= "thread" then
+                t1[k] = deepcopy(v2, {})
+            end
+        elseif v2_table_type == 3 then
+            local v1 = t1[k]
+            if is_table(v1) == 3 then
+                merge_deep_right_do(v1, v2, prev)
+            else
+                t1[k] = deepcopy(v2, {})
+            end
+        else
+            t1[k] = deepcopy(v2, {})
+        end
+    end
+
+    prev[t2] = nil
+end
+
+---Recursively merge `t2` into `t1`. Values from `t2` take precedence.
+---
+---All values are deep-copied. Cyclic references are discarded.
+---
+---Actions:
+---- `userdata` or `thread` values in `t2` will no-op.
+---- A |lua-dict| in `t2` will merge into a corresponding dict in `t1`.
+---- Otherwise, the value in `t2` will deepcopy into and over `t1`.
+---@param t1 table Modified in place!
+---@param t2 table
+---@return table Reference to `t1`.
+local function merge_deep_right(t1, t2)
+    merge_deep_right_do(t1, t2, {})
+    return t1
+end
+
+---@param t table Modified in place!
+---@param keys table
+---@param prev table<table, true>
+local function unset_keys_do(t, keys, prev)
+    if prev[keys] == true then
+        return
+    end
+
+    prev[keys] = true
+    for k, v in pairs(keys) do
+        if v == true then
+            t[k] = nil
+        elseif is_table(v) == 3 then
+            local tv = t[k]
+            if is_table(tv) == 3 then
+                unset_keys_do(tv, v, prev)
+            end
+        end
+    end
+
+    prev[keys] = nil
+end
+
+---Recursively set values in `t` to `nil` if the matching key/value pair in `keys` is true. If
+---a value in `keys` is a |lua-dict|, iterate recursively.
+---
+---If a cyclic reference is detected, iteration at that sub-table is aborted.
+---@param t table Modified in place!
+---@param keys table
+---@return table Reference to `t`.
+local function unset_keys(t, keys)
+    unset_keys_do(t, keys, {})
+    return t
+end
+
+---@generic T, U, M
+---@param ret table<any, M>
+---@param t1 table<any, any>
+---@param t2 table<any, any>
+---@param f fun(v1:T, v2:U): M
+---@param prev table<table<any, any>, true>
+local function zip_deep_with_do(ret, t1, t2, f, prev)
+    if prev[t1] == true then
+        return
+    end
+
+    prev[t1] = true
+
+    for k, v1 in pairs(t1) do
+        local v2 = t2[k]
+        if v2 ~= nil then
+            local v1_is_dict = is_table(v1) == 3
+            local v2_is_dict = is_table(v2) == 3
+            if v1_is_dict == true and v2_is_dict == true then
+                local v_new = {}
+                zip_deep_with_do(v_new, v1, v2, f, prev)
+                ret[k] = v_new
+            elseif v1_is_dict == false and v2_is_dict == false then
+                ret[k] = f(v1, v2)
+            end
+        end
+    end
+
+    prev[t1] = nil
+end
+
+---Recursively zip `t1` and `t2` into a new |lua-dict| based on the results of `f`.
+---
+---Only keys present in both tables are included (intersection). Structural mis-matches are
+---dropped.
+---@generic T, U, M
+---@param t1 table<any, any>
+---@param t2 table<any, any>
+---@param f fun(v1:T, v2:U): M
+local function zip_deep_with_to(t1, t2, f)
+    local ret = {}
+    zip_deep_with_do(ret, t1, t2, f, {})
+    return ret
+end
+
+---Added even though vim._assert_integer exists because it's a private function and it performs
+---conversion in addition to validation.
+---@param n any
+---@return boolean
+local function is_int(n)
+    return type(n) == "number" and n % 1 == 0
+end
+
+---@param n any
+---@return boolean
+local function is_uint(n)
+    return is_int(n) and n >= 0
+end
+
+---@class catharsis.types.ValidateListOpts
+---@field item_type? string|string[]|fun(x:any): boolean, string
+---@field len? integer Takes precedence over max and min len.
+---@field max_len? integer
+---@field min_len? integer
+
+---@generic T
+---@param t any
+---@param opts catharsis.types.ValidateListOpts
+---@return boolean, string
+local function valid_list(t, opts)
+    if not vim.islist(t) then
+        return false, "Not a valid list"
+    end
+
+    local list_len = #t
+    local len = opts.len
+    if len ~= nil then
+        if list_len ~= len then
+            return false, "List length must be " .. len
+        end
+    else
+        local min_len = opts.min_len
+        if min_len and list_len < min_len then
+            return false, "List length must be at least" .. min_len
+        end
+
+        local max_len = opts.max_len
+        if max_len and list_len > max_len then
+            return false, "List length must be at most" .. max_len
+        end
+    end
+
+    local item_type = opts.item_type
+    if item_type == nil then
+        return true, ""
+    end
+
+    if type(item_type) == "function" then
+        for i = 1, list_len do
+            local ok, err = item_type(t[i])
+            if not ok then
+                return false, err
+            end
+        end
+
+        return true, ""
+    end
+
+    local _tools = require("qf-herder._tools")
+    local predicate = type(item_type) == "table"
+            and function(v)
+                return _tools.i_includes(item_type, type(v))
+            end
+        or function(v)
+            return type(v) == item_type
+        end
+
+    if _tools.i_all(t, predicate) then
+        return true, ""
+    end
+
+    local bad_val, bad_idx = _tools.i_find(t, _tools.complement(predicate))
+    local fmt_str = "Invalid: Idx: %d, Val: %s, Type: %s, Expected: %s"
+    local bad_val_str = tostring(bad_val)
+    local bad_type = type(bad_val)
+    local expected = vim.inspect(item_type)
+    local msg = string.format(fmt_str, bad_idx, bad_val_str, bad_type, expected)
+
+    return false, msg
+end
+
+---------------------------
+-- MARK: Defaults/Schema --
+---------------------------
 
 ---@param val any
 ---@return boolean, string
@@ -32,7 +531,7 @@ local function ll_split_validate(val)
         "rightbelow",
     }
 
-    local ok = ntt.i_includes(ll_splits, val)
+    local ok = require("qf-herder._tools").i_includes(ll_splits, val)
     return ok, ok and "" or validator_err_make(vim.inspect(ll_splits), vim.inspect(val))
 end
 
@@ -46,7 +545,7 @@ local function qf_split_validate(val)
         "topleft",
     }
 
-    local ok = ntt.i_includes(qf_splits, val)
+    local ok = require("qf-herder._tools").i_includes(qf_splits, val)
     return ok, ok and "" or validator_err_make(vim.inspect(qf_splits), vim.inspect(val))
 end
 
@@ -54,7 +553,7 @@ end
 ---@return boolean, string
 local function spk_validate(val)
     local spk = { "", "cursor", "screen", "topline" }
-    local ok = ntt.i_includes(spk, val)
+    local ok = require("qf-herder._tools").i_includes(spk, val)
     return ok, ok and "" or validator_err_make(vim.inspect(spk), vim.inspect(val))
 end
 
@@ -70,7 +569,7 @@ local cases = { "smart", "ignore", "" }
 ---@param val any
 ---@return boolean, string
 local function case_validate(val)
-    local ok = ntt.i_includes(cases, val)
+    local ok = require("qf-herder._tools").i_includes(cases, val)
     return ok, ok and "" or validator_err_make(vim.inspect(cases), vim.inspect(val))
 end
 
@@ -141,7 +640,7 @@ local schema = {
         split_ll = ll_split_validate,
         split_qf = qf_split_validate,
         timeout = function(val)
-            return require("nvim-tools.types").is_uint(val)
+            return is_uint(val)
         end,
         update_list_wins = "boolean",
     },
@@ -247,7 +746,7 @@ local default_config = {
 
 ---@return boolean, string
 function M.__default_schema_check()
-    return ntt.matches_schema(default_config, schema)
+    return matches_schema(default_config, schema)
 end
 
 ---@class qf-herder.filter.Opts
@@ -332,32 +831,32 @@ end
 -- MARK: Config --
 ------------------
 
-local config = ntt.deepcopy(default_config)
+local config = M._deepcopy(default_config)
 ---@cast config qf-herder.Config
 
 ---@param new_config? qf-herder.config.Partial
 ---@return qf-herder.Config
 function M.config(new_config)
     if new_config == nil then
-        return ntt.deepcopy(config)
+        return M._deepcopy(config)
     end
 
-    local ok, err = ntt.matches_schema(new_config, schema)
+    local ok, err = matches_schema(new_config, schema)
     if not ok then
         if vim.v.vim_did_enter == 1 then
             error(err)
         end
 
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return ntt.deepcopy(config)
+        return M._deepcopy(config)
     end
 
-    ntt.merge_deep_right(config, new_config)
-    return ntt.deepcopy(config)
+    merge_deep_right(config, new_config)
+    return M._deepcopy(config)
 end
 
 function M.config_reset()
-    config = ntt.deepcopy(default_config)
+    config = M._deepcopy(default_config)
 end
 
 ---@param keys table
@@ -365,13 +864,13 @@ end
 function M.unset_keys(keys)
     vim.validate("keys", keys, "table")
 
-    ntt.unset_keys(config, keys)
-    local defaults_zipped = ntt.zip_deep_with_to(keys, default_config, function(_, dv)
+    unset_keys(config, keys)
+    local defaults_zipped = zip_deep_with_to(keys, default_config, function(_, dv)
         return dv
     end)
 
-    ntt.defaults_deep(config, defaults_zipped)
-    return ntt.deepcopy(config)
+    defaults_deep(config, defaults_zipped)
+    return M._deepcopy(config)
 end
 
 function M._config_get()
@@ -420,7 +919,7 @@ end
 ---@param buf? uinteger
 ---@return qf-herder.config.Partial
 function M.buf_config(new_config, buf)
-    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
+    vim.validate("buf", buf, is_uint)
     vim.validate("new_config", new_config, "table", true)
 
     buf = buf ~= 0 and buf or api.nvim_get_current_buf()
@@ -431,29 +930,28 @@ function M.buf_config(new_config, buf)
 
     local buf_config = buf_config_get_or_create(buf)
     if new_config == nil then
-        return ntt.deepcopy(buf_config)
+        return M._deepcopy(buf_config)
     end
 
-    local ok, err = ntt.matches_schema(new_config, schema)
+    local ok, err = matches_schema(new_config, schema)
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
     else
-        ntt.merge_deep_right(buf_config, new_config)
+        merge_deep_right(buf_config, new_config)
     end
 
-    return ntt.deepcopy(buf_config)
+    return M._deepcopy(buf_config)
 end
 
 ---@param bufs uinteger[]|nil
 function M.buf_config_clear(bufs)
     vim.validate("bufs", bufs, function()
-        local nty = require("nvim-tools.types")
-        return nty.valid_list(bufs, { item_type = "number" })
+        return valid_list(bufs, { item_type = "number" })
     end, true)
 
     if bufs == nil then
         for _, cfg in pairs(buf_configs) do
-            ntt.clear(cfg)
+            require("qf-herder._tools").clear(cfg)
         end
 
         return
@@ -462,7 +960,7 @@ function M.buf_config_clear(bufs)
     for _, buf in ipairs(bufs) do
         local buf_config = buf_configs[buf]
         if buf_config ~= nil then
-            ntt.clear(buf_config)
+            require("qf-herder._tools").clear(buf_config)
         end
     end
 end
@@ -471,7 +969,7 @@ end
 ---@param keys table
 ---@return qf-herder.config.Partial
 function M.buf_config_unset_keys(buf, keys)
-    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
+    vim.validate("buf", buf, is_uint)
     vim.validate("keys", keys, "table")
 
     buf = buf ~= 0 and buf or api.nvim_get_current_buf()
@@ -480,19 +978,19 @@ function M.buf_config_unset_keys(buf, keys)
         error(buf .. " is not valid")
     end
 
-    return ntt.deepcopy(ntt.unset_keys(buf_config_get_or_create(buf), keys))
+    return M._deepcopy(unset_keys(buf_config_get_or_create(buf), keys))
 end
 
 ---@return uinteger[]
 function M.buf_config_list_bufs()
-    local keys = ntt.keys(buf_configs)
+    local keys = table_keys(buf_configs)
     table.sort(keys)
     return keys
 end
 
 ---@return uinteger[]
 function M._buf_config_list_bufs_empty()
-    return ntt.i_keep(M.buf_config_list_bufs(), function(buf)
+    return require("qf-herder._tools").i_keep(M.buf_config_list_bufs(), function(buf)
         return next(buf_configs[buf]) == nil
     end)
 end
@@ -506,7 +1004,7 @@ end
 ---@param ... any
 ---@return table
 function M._config_merged_get(buf, usr_config, ...)
-    local cfg = ntt.deepcopy(ntt.get(config, ...))
+    local cfg = M._deepcopy(get(config, ...))
     if cfg == nil then
         error("Invalid config path")
     end
@@ -514,9 +1012,9 @@ function M._config_merged_get(buf, usr_config, ...)
     buf = buf ~= 0 and buf or api.nvim_get_current_buf()
     local buf_config = buf_configs[buf]
     if buf_config ~= nil then
-        local buf_cfg = ntt.get(buf_config, ...)
+        local buf_cfg = get(buf_config, ...)
         if buf_cfg ~= nil then
-            ntt.merge_deep_right(cfg, buf_cfg)
+            merge_deep_right(cfg, buf_cfg)
         end
     end
 
@@ -524,13 +1022,13 @@ function M._config_merged_get(buf, usr_config, ...)
         return cfg
     end
 
-    local sub_schema = ntt.get(schema, ...)
-    local ok, err = ntt.matches_schema(usr_config, sub_schema)
+    local sub_schema = get(schema, ...)
+    local ok, err = matches_schema(usr_config, sub_schema)
     if not ok then
         error(err)
     end
 
-    ntt.merge_deep_right(cfg, usr_config)
+    merge_deep_right(cfg, usr_config)
     return cfg
 end
 
@@ -922,7 +1420,7 @@ function M.nav.tabnew()
     require("qf-herder._nav").tabnew(false)
 end
 
-function M.nav.tabnew()
+function M.nav.tabnew_keep_focus()
     require("qf-herder._nav").tabnew(true)
 end
 
@@ -1006,13 +1504,13 @@ end
 
 ---@return string[]
 local function bufs_get_std_listed()
-    local bufs = ntt.i_keep(api.nvim_list_bufs(), function(buf)
+    local bufs = require("qf-herder._tools").i_keep(api.nvim_list_bufs(), function(buf)
         local buf_scope = { buf = buf }
         local bt = api.nvim_get_option_value("bt", buf_scope)
         return bt == "" and api.nvim_get_option_value("bl", buf_scope)
     end)
 
-    return ntt.i_filter_map_to(bufs, function(buf)
+    return require("qf-herder._tools").i_filter_map_to(bufs, function(buf)
         return api.nvim_buf_get_name(buf)
     end)
 end

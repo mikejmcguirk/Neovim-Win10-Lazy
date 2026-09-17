@@ -20,11 +20,35 @@ local cfg_keymap = config.keymap
 -- TODO: When cutting off, make as many of the external calls as possible local to this module
 -- to reduce requires.
 
+---@param str string
+---@return string[]
+function split_map(str)
+    local result = {}
+    local i = 1
+    while i <= #str do
+        if string.byte(str, i) == 60 then
+            local j = str:find(">", i)
+            if j then
+                table.insert(result, str:sub(i, j))
+                i = j + 1
+            else
+                table.insert(result, str:sub(i, i))
+                i = i + 1
+            end
+        else
+            table.insert(result, str:sub(i, i))
+            i = i + 1
+        end
+    end
+
+    return result
+end
+
 local prefix_ll = cfg_keymap.prefix_ll
-local prefix_ll_tbl = require("nvim-tools.str").split_map(prefix_ll)
+local prefix_ll_tbl = split_map(prefix_ll)
 local last_ll = prefix_ll_tbl[#prefix_ll_tbl]
 local prefix_qf = cfg_keymap.prefix_qf
-local prefix_qf_tbl = require("nvim-tools.str").split_map(prefix_qf)
+local prefix_qf_tbl = split_map(prefix_qf)
 local last_qf = prefix_qf_tbl[#prefix_qf_tbl]
 
 local prefix_diag = cfg_keymap.prefix_diag

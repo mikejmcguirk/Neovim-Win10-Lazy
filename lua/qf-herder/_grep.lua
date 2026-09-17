@@ -1,7 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 
-local ntt = require("nvim-tools.table")
+local _tools = require("qf-herder._tools")
 local _util = require("qf-herder._util")
 
 local base_cmd = { "rg", "--vimgrep", "-uu" }
@@ -19,7 +19,7 @@ end
 ---@param case "ignore"|"smart"|""
 ---@return string[]
 local function get_full_parts_rg(pattern, case, regex, locations)
-    local cmd = ntt.i_copy(base_cmd) ---@type string[]
+    local cmd = _tools.i_copy(base_cmd) ---@type string[]
     if fn.has("win32") == 1 then
         cmd[#cmd + 1] = "--crlf"
     end
@@ -40,7 +40,7 @@ local function get_full_parts_rg(pattern, case, regex, locations)
 
     cmd[#cmd + 1] = "--"
     cmd[#cmd + 1] = pattern
-    ntt.i_append(cmd, locations)
+    _tools.i_append(cmd, locations)
 
     return cmd
 end
@@ -81,7 +81,7 @@ local function pattern_get(is_vmode, mode, name, regex)
     if is_vmode then
         return pattern_visual_get(string.sub(mode, 1, 1))
     else
-        return require("nvim-tools.ui").input({ prompt = prompt_resolve(name, regex) })
+        return _tools.input({ prompt = prompt_resolve(name, regex) })
     end
 end
 
@@ -106,7 +106,7 @@ function M.rg(src_win, locations, name, regex, item_type, f, cfg)
     end
 
     local mode = api.nvim_get_mode().mode
-    local is_vmode = require("nvim-tools.misc").is_vmode(mode)
+    local is_vmode = _tools.is_vmode(mode)
     local ok_p, pattern = pattern_get(is_vmode, mode, name, regex)
     if not (ok_p and #pattern > 0) then
         api.nvim_echo({ { pattern, "WarningMsg" } }, true, {})

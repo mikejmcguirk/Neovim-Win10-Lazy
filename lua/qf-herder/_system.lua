@@ -1,8 +1,8 @@
 local api = vim.api
 local fn = vim.fn
 
+local _tools = require("qf-herder._tools")
 local _util = require("qf-herder._util")
-local ntt = require("nvim-tools.table")
 
 local M = {}
 
@@ -18,8 +18,7 @@ local function src_win_resolve(src_win, item_type)
         return src_win
     end
 
-    local ntb = require("nvim-tools.buf")
-    local temp_buf = ntb.temp_buf_create("wipe", false, "help", "help", false)
+    local temp_buf = _tools.temp_buf_create("wipe", false, "help", "help", false)
     return api.nvim_open_win(temp_buf, false, { split = "below", win = src_win })
 end
 
@@ -92,7 +91,7 @@ local function output_set_to_list(src_win, obj, what, ctx, cfg)
     end
 
     local src_win_res = src_win_resolve(src_win, item_type)
-    local what_set = ntt.deepcopy(what)
+    local what_set = require("qf-herder")._deepcopy(what)
     what_set.items = entries
     local dest_nr = _util.set_list_checked(src_win_res, ctx.action, what_set)
     if dest_nr < 1 then
@@ -126,7 +125,7 @@ end
 function M.cmd_to_list(src_win, cmd_parts, sync, what, ctx, cfg)
     local timeout = cfg.timeout
     local vim_system_opts = { text = true, timeout = timeout } ---@type vim.SystemOpts
-    what = ntt.deepcopy(what)
+    what = require("qf-herder")._deepcopy(what)
 
     if sync then
         local obj = vim.system(cmd_parts, vim_system_opts):wait(timeout)

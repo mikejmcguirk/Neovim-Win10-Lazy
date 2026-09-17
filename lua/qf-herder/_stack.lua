@@ -1,7 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 
-local ntq = require("nvim-tools.quickfix")
+local _tools = require("qf-herder._tools")
 local _util = require("qf-herder._util")
 
 local M = {}
@@ -34,7 +34,7 @@ local function clear_list(src_win, list_nr)
     local nr = _util.resolve_list_nr(src_win, list_nr)
     local what = { nr = nr, context = {}, items = {}, quickfixtextfunc = "", title = "" }
     local action = "r"
-    return _util.set_result_resolve(ntq.set_list(src_win, action, what), src_win, nr, action)
+    return _util.set_result_resolve(_tools.set_list(src_win, action, what), src_win, nr, action)
 end
 
 ---@param cur_nr uinteger
@@ -78,13 +78,13 @@ local function history_goto_abs(src_win, silent, count)
         return 0, 0
     end
 
-    local cur_nr = ntq.get_list(src_win, { nr = 0 }).nr ---@type uinteger
+    local cur_nr = _tools.get_list(src_win, { nr = 0 }).nr ---@type uinteger
     if not has_stack_or_echo(cur_nr, silent) then
         return 0, 0
     end
 
     -- By default, |:chi| and |:lhi| treat 0 as 1.
-    count = count == 0 and cur_nr or math.min(count, ntq.get_list(src_win, { nr = "$" }).nr)
+    count = count == 0 and cur_nr or math.min(count, _tools.get_list(src_win, { nr = "$" }).nr)
     history_goto(src_win, silent, count)
     return cur_nr, count
 end
@@ -95,12 +95,12 @@ end
 ---@param count1 uinteger
 ---@param cfg qf-herder.stack.Cfg
 local function nr_change(math, src_win, silent, count1, cfg)
-    local cur_nr = ntq.get_list(src_win, { nr = 0 }).nr ---@type uinteger
+    local cur_nr = _tools.get_list(src_win, { nr = 0 }).nr ---@type uinteger
     if not has_stack_or_echo(cur_nr, silent) then
         return
     end
 
-    local max_nr = ntq.get_list(src_win, { nr = "$" }).nr ---@type uinteger
+    local max_nr = _tools.get_list(src_win, { nr = "$" }).nr ---@type uinteger
     local new_nr = math(cur_nr, count1, 1, max_nr)
     history_goto(src_win, silent, new_nr)
     if new_nr ~= cur_nr then
@@ -116,14 +116,14 @@ end
 ---@param count1 uinteger
 ---@param cfg qf-herder.stack.Cfg
 function M.q_older(silent, count1, cfg)
-    nr_change(require("nvim-tools.math").wrapping_sub, nil, silent, count1, cfg)
+    nr_change(_tools.wrapping_sub, nil, silent, count1, cfg)
 end
 
 ---@param silent boolean
 ---@param count1 uinteger
 ---@param cfg qf-herder.stack.Cfg
 function M.q_newer(silent, count1, cfg)
-    nr_change(require("nvim-tools.math").wrapping_add, nil, silent, count1, cfg)
+    nr_change(_tools.wrapping_add, nil, silent, count1, cfg)
 end
 
 ---@param silent boolean
@@ -168,7 +168,7 @@ function M.l_older(src_win, silent, count1, cfg)
         return
     end
 
-    nr_change(require("nvim-tools.math").wrapping_sub, src_win, silent, count1, cfg)
+    nr_change(_tools.wrapping_sub, src_win, silent, count1, cfg)
 end
 
 ---@param src_win uinteger
@@ -184,7 +184,7 @@ function M.l_newer(src_win, silent, count1, cfg)
         return
     end
 
-    nr_change(require("nvim-tools.math").wrapping_add, src_win, silent, count1, cfg)
+    nr_change(_tools.wrapping_add, src_win, silent, count1, cfg)
 end
 
 ---@param src_win uinteger

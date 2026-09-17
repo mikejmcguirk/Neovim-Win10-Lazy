@@ -3,7 +3,7 @@ local fn = vim.fn
 
 local M = {}
 
-local ntq = require("nvim-tools.quickfix")
+local _tools = require("qf-herder._tools")
 local _util = require("qf-herder._util")
 
 ---@param entries vim.quickfix.entry[] Modified in place!
@@ -35,7 +35,7 @@ end
 ---@param name string
 ---@return boolean, string
 local function pattern_get(name)
-    return require("nvim-tools.ui").input({ prompt = "[filter] " .. name .. ": " })
+    return _tools.input({ prompt = "[filter] " .. name .. ": " })
 end
 
 ---@param src_win uinteger|nil
@@ -50,7 +50,7 @@ function M.filter(src_win, count, name, f, cfg)
     end
 
     local nr = _util.resolve_list_nr(src_win, count)
-    local what_ret = ntq.get_list(src_win, { nr = nr, all = true }) ---@type table
+    local what_ret = _tools.get_list(src_win, { nr = nr, all = true }) ---@type table
     local size = what_ret.size
     if size == 0 then
         api.nvim_echo({ { "No entries", "" } }, false, {})
@@ -63,7 +63,7 @@ function M.filter(src_win, count, name, f, cfg)
         return
     end
 
-    local what_set = ntq.what_ret_to_set(what_ret)
+    local what_set = _tools.what_ret_to_set(what_ret)
     local ok_r, re = pcall(vim.regex, pattern)
     if not ok_r then
         api.nvim_echo({ { re, "ErrorMsg" } }, true, {})
@@ -73,6 +73,8 @@ function M.filter(src_win, count, name, f, cfg)
     regex_keep(what_set.items, re, f)
     local dest_nr = _util.set_list_checked(src_win, "u", what_set)
     if dest_nr < 1 then
+        -- TODO: Doing a filter keep that clears the list produces this error even though it's
+        -- intended behavior.
         api.nvim_echo({ { "Unable to set new list", "ErrorMsg" } }, true, {})
         return
     end
