@@ -1,24 +1,24 @@
-local api = vim.api
+-- local api = vim.api
 local keymap = vim.keymap
 
-local herder = require("qf-herder")
-herder.config({
-    keymap = {
-        prefix_ll = "gl",
-        prefix_qf = "gq",
-    },
-})
+-- local herder = require("qf-herder")
+-- herder.config({
+--     keymap = {
+--         prefix_ll = "gl",
+--         prefix_qf = "gq",
+--     },
+-- })
 
-require("qf-herder.plugin")
-keymap.set({ "n", "x" }, "gw", "gq")
-keymap.set("n", "gww", "gqq")
+-- require("qf-herder.plugin")
+-- keymap.set({ "n", "x" }, "gw", "gq")
+-- keymap.set("n", "gww", "gqq")
 
-api.nvim_create_autocmd("FileType", {
-    group = api.nvim_create_augroup("mjm.herder-tmp.ftplugin", {}),
-    callback = function()
-        require("qf-herder.qf").do_ftplugin()
-    end,
-})
+-- api.nvim_create_autocmd("FileType", {
+--     group = api.nvim_create_augroup("mjm.herder-tmp.ftplugin", {}),
+--     callback = function()
+--         require("qf-herder.qf").do_ftplugin()
+--     end,
+-- })
 
 --------------
 
