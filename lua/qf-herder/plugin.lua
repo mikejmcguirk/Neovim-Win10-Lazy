@@ -79,7 +79,6 @@ local stack_newer = cfg_keymap.stack_newer
 local stack_older = cfg_keymap.stack_older
 
 local nmode = { "n" }
-local xmode = { "x" }
 local nxmode = { "n", "x" }
 
 local M = {}
@@ -104,8 +103,8 @@ M.maps = {
     -- MARK: Maps - Del --
     ----------------------
 
-{ nmode, "<Plug>(qf-herder-del-single)", {}, "", "Delete a single list item", function() qfr.del.single() end, },
-{ xmode, "<Plug>(qf-herder-del-visual)", {}, "", "Delete visual line selected list items", function() qfr.del.visual() end, },
+{ nxmode, "<Plug>(qf-herder-del-operator)", {}, "", "Delete list items linewise over a motion", function() qfr.del.in_qf() end, },
+{ nmode, "<Plug>(qf-herder-del-line)", {}, "", "Delete the list item under the cursor", function() qfr.del.in_qf_line() end, },
 
     ------------------------------
     -- MARK: Maps - Diagnostics --

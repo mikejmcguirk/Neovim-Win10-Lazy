@@ -1144,12 +1144,12 @@ end
 
 M.del = {}
 
-function M.del.single()
-    require("qf-herder._del").single()
+function M.del.in_qf()
+    require("qf-herder._del").del_in_qf()
 end
 
-function M.del.visual()
-    require("qf-herder._del").visual()
+function M.del.in_qf_line()
+    require("qf-herder._del").del_in_qf_line()
 end
 
 M.diags = {}

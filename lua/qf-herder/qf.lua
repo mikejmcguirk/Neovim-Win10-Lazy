@@ -28,8 +28,9 @@ function M.do_ftplugin()
     end
 
     local opts = { noremap = true, nowait = true }
-    api.nvim_buf_set_keymap(0, "x", "d", "<Plug>(qf-herder-del-visual)", { noremap = true })
-    api.nvim_buf_set_keymap(0, "n", "dd", "<Plug>(qf-herder-del-single)", opts)
+    api.nvim_buf_set_keymap(0, "n", "d", "<Plug>(qf-herder-del-operator)", opts)
+    api.nvim_buf_set_keymap(0, "x", "d", "<Plug>(qf-herder-del-operator)", { noremap = true })
+    api.nvim_buf_set_keymap(0, "n", "dd", "<Plug>(qf-herder-del-line)", opts)
     api.nvim_buf_set_keymap(0, "n", "p", "<Plug>(qf-herder-preview-toggle)", opts)
     api.nvim_buf_set_keymap(0, "n", "s", "<Plug>(qf-herder-split)", opts)
     api.nvim_buf_set_keymap(0, "n", "<C-s>", "<Plug>(qf-herder-split-keep-focus)", opts)

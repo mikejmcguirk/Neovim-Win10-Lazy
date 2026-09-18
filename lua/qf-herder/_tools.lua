@@ -571,6 +571,18 @@ function M.i_append(t1, ...)
     return t1
 end
 
+---Clears all |lua-list| elements in `t`.
+---@generic T
+---@param t T[] Modified in place!
+---@return T[] Reference to `t`.
+function M.i_clear(t)
+    for i = 1, #t do
+        t[i] = nil
+    end
+
+    return t
+end
+
 ---Assumes:
 ---- Length of `t` > 0
 ---- `start` and `stop` are valid.
@@ -601,6 +613,60 @@ function M.i_copy(t)
     end
 
     return i_copy_exact(t, 1, t_len)
+end
+
+---Assumes:
+---- t_len > 0.
+---- start and stop are already resolved and valid.
+---- landing <= start
+---@generic T
+---@param t T[] Modified in place!
+---@param t_len uinteger
+---@param start uinteger
+---@param stop uinteger
+---@param landing uinteger
+local function shift_down_exact(t, t_len, start, stop, landing)
+    if start > 1 then
+        local j = landing
+        for i = start, stop do
+            t[j] = t[i]
+            j = j + 1
+        end
+
+        for i = j, t_len do
+            t[i] = nil
+        end
+
+        return
+    end
+
+    for i = stop + 1, t_len do
+        t[i] = nil
+    end
+end
+
+---Removes values from `t` in-place from `start` to `stop`.
+---
+---NOTE: `stop` is inclusive.
+---
+---No-op if the resolved value of `start` is greater than `stop`.
+---@generic T
+---@param t T[] Modified in place!
+---@param start integer See |iter-indexing|.
+---@param stop integer See |iter-indexing|.
+---@return T[] Reference to `t`.
+function M.i_expel(t, start, stop)
+    local t_len = #t
+    if t_len == 0 or (start == 1 and stop == t_len) then
+        return M.i_clear(t)
+    end
+
+    if start <= stop then
+        shift_down_exact(t, t_len, stop + 1, t_len, start)
+        return t
+    end
+
+    return t
 end
 
 ---@generic T, U
