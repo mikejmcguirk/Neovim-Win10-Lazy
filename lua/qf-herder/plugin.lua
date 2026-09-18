@@ -1,5 +1,6 @@
 local api = vim.api
 
+-- TODO: Use same format as farsight.
 local hls = {
     { "QfRancherPreviewRange", "CurSearch" },
 }
@@ -16,15 +17,10 @@ QFR_NOT_LIST = "Current win is not an error list"
 local qfr = require("qf-herder")
 local config = qfr._config_get()
 
--- TODO: When cutting off, make as many of the external calls as possible local to this module
--- to reduce requires.
-
 local nmode = { "n" }
 local nxmode = { "n", "x" }
 
 local M = {}
-
--- TODO: Go through the plug map names and make more consistent. You'll have like "filter-ll" then "ll-sort". Sloppy.
 
 -- stylua: ignore
 M.maps = {
@@ -141,14 +137,14 @@ M.maps = {
     -- MARK: Maps - Sort --
     -----------------------
 
-{ nmode, "<Plug>(qf-herder-qf-sort-fname-asc)", {}, "", "Sort [count] quickfix list by filename asc", function() qfr.sort.qf_fname_asc() end },
-{ nmode, "<Plug>(qf-herder-qf-sort-fname-desc)", {}, "", "Sort [count] quickfix list by filename desc", function() qfr.sort.qf_fname_desc() end },
-{ nmode, "<Plug>(qf-herder-qf-sort-sev-asc)", {}, "", "Sort [count] quickfix list by sev asc", function() qfr.sort.qf_severity_asc() end },
-{ nmode, "<Plug>(qf-herder-qf-sort-sev-desc)", {}, "", "Sort [count] quickfix list by sev desc", function() qfr.sort.qf_severity_desc() end },
-{ nmode, "<Plug>(qf-herder-ll-sort-fname-asc)", {}, "", "Sort [count] location list by filename asc", function() qfr.sort.ll_fname_asc() end },
-{ nmode, "<Plug>(qf-herder-ll-sort-fname-desc)", {}, "", "Sort [count] location list by filename desc", function() qfr.sort.ll_fname_desc() end },
-{ nmode, "<Plug>(qf-herder-ll-sort-sev-asc)", {}, "", "Sort [count] location list by severity asc", function() qfr.sort.ll_severity_asc() end },
-{ nmode, "<Plug>(qf-herder-ll-sort-sev-desc)", {}, "", "Sort [count] location list by severity desc", function() qfr.sort.ll_severity_desc() end },
+{ nmode, "<Plug>(qf-herder-sort-qf-fname-asc)", {}, "", "Sort [count] quickfix list by filename asc", function() qfr.sort.qf_fname_asc() end },
+{ nmode, "<Plug>(qf-herder-sort-qf-fname-desc)", {}, "", "Sort [count] quickfix list by filename desc", function() qfr.sort.qf_fname_desc() end },
+{ nmode, "<Plug>(qf-herder-sort-qf-sev-asc)", {}, "", "Sort [count] quickfix list by sev asc", function() qfr.sort.qf_severity_asc() end },
+{ nmode, "<Plug>(qf-herder-sort-qf-sev-desc)", {}, "", "Sort [count] quickfix list by sev desc", function() qfr.sort.qf_severity_desc() end },
+{ nmode, "<Plug>(qf-herder-sort-ll-fname-asc)", {}, "", "Sort [count] location list by filename asc", function() qfr.sort.ll_fname_asc() end },
+{ nmode, "<Plug>(qf-herder-sort-ll-fname-desc)", {}, "", "Sort [count] location list by filename desc", function() qfr.sort.ll_fname_desc() end },
+{ nmode, "<Plug>(qf-herder-sort-ll-sev-asc)", {}, "", "Sort [count] location list by severity asc", function() qfr.sort.ll_severity_asc() end },
+{ nmode, "<Plug>(qf-herder-sort-ll-sev-desc)", {}, "", "Sort [count] location list by severity desc", function() qfr.sort.ll_severity_desc() end },
 
     ------------------------
     -- MARK: Maps - Stack --

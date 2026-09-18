@@ -1,20 +1,5 @@
 ## TODO:
 
-- [ ] Keep min error as a plug, but the Q/L map should be top priority
-
-- [ ] Move away from the "leader" keymap system. So like
-  - [ ] gt/gT in the list to sort
-    - eeehhhh. Maybe `s` instead.
-  - [ ] gf for filter, and like gfi for diags.
-    - [ ] Or maybe gi since that's insert mode
-  - And so on. Leave the plugs for stuff where the mapping doesn't survive.
-  - c in list to close
-
-- [ ] Add the cmd stuff.
-
-- [ ] Move hl group definitions back to modules
-  - Like how farsight does it
-
 - [ ] Create checkhealth
 - [ ] Disable the old rancher so this can be used.
 - [ ] Change all mentions of "herder" back to rancher.
