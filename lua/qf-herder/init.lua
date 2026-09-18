@@ -686,16 +686,6 @@ local default_config = {
         reuse_title = true, ---@type boolean
         sync = true, ---@type boolean
     },
-    -- Only checked on startup
-    ---@class qf-herder.keymap.Cfg
-    keymap = {
-        key_buf = "u", ---@type string
-        key_dir = "d", ---@type string
-        key_help = "h", ---@type string
-        prefix_grep = "g", ---@type string
-        prefix_ll = "<leader>l", ---@type string -- Must be lowercase
-        prefix_qf = "<leader>q", ---@type string -- Must be lowercase
-    },
     ---@class qf-herder.nav.Cfg
     nav = {
         do_zzze = true, ---@type boolean

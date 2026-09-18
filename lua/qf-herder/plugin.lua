@@ -15,45 +15,9 @@ QFR_NOT_LIST = "Current win is not an error list"
 
 local qfr = require("qf-herder")
 local config = qfr._config_get()
-local cfg_keymap = config.keymap
 
 -- TODO: When cutting off, make as many of the external calls as possible local to this module
 -- to reduce requires.
-
----@param str string
----@return string[]
-function split_map(str)
-    local result = {}
-    local i = 1
-    while i <= #str do
-        if string.byte(str, i) == 60 then
-            local j = str:find(">", i)
-            if j then
-                table.insert(result, str:sub(i, j))
-                i = j + 1
-            else
-                table.insert(result, str:sub(i, i))
-                i = i + 1
-            end
-        else
-            table.insert(result, str:sub(i, i))
-            i = i + 1
-        end
-    end
-
-    return result
-end
-
-local prefix_ll = cfg_keymap.prefix_ll
-local prefix_qf = cfg_keymap.prefix_qf
-
-local prefix_grep = cfg_keymap.prefix_grep
-local key_buf = cfg_keymap.key_buf
-local key_buf_re = string.upper(key_buf)
-local key_dir = cfg_keymap.key_dir
-local key_dir_re = string.upper(key_dir)
-local key_help = cfg_keymap.key_help
-local key_help_re = string.upper(key_help)
 
 local nmode = { "n" }
 local nxmode = { "n", "x" }
@@ -117,27 +81,27 @@ M.maps = {
     -- MARK: Maps - Grep --
     -----------------------
 
-{ nxmode, "<Plug>(qf-herder-rg-ll-bcd-fixed)", { prefix_ll .. prefix_grep .. key_dir }, "", "Ripgrep the bcd to the location list (fixed strings)", function() qfr.rg.ll_bcd_fixed() end, },
-{ nxmode, "<Plug>(qf-herder-rg-ll-bcd-regex)", { prefix_ll .. prefix_grep .. key_dir_re }, "", "Ripgrep the bcd to the location list (regex)", function() qfr.rg.ll_bcd_regex() end, },
-{ nxmode, "<Plug>(qf-herder-rg-ll-curbuf-fixed)", { prefix_ll .. prefix_grep .. key_buf }, "", "Ripgrep a single buf to the location list (fixed strings)", function() qfr.rg.ll_cur_buf_fixed() end, },
-{ nxmode, "<Plug>(qf-herder-rg-ll-curbuf-regex)", { prefix_ll .. prefix_grep .. key_buf_re }, "", "Ripgrep a single buf to the location list (regex)", function() qfr.rg.ll_cur_buf_regex() end, },
-{ nxmode, "<Plug>(qf-herder-rg-ll-help-fixed)", { prefix_ll .. prefix_grep .. key_help }, "", "Ripgrep help dirs to the location list (fixed strings)", function() qfr.rg.ll_help_fixed() end, },
-{ nxmode, "<Plug>(qf-herder-rg-ll-help-regex)", { prefix_ll .. prefix_grep .. key_help_re }, "", "Ripgrep help dirs to the location list (regex)", function() qfr.rg.ll_help_regex() end, },
-{ nxmode, "<Plug>(qf-herder-rg-qf-bufs-fixed)", { prefix_qf .. prefix_grep .. key_buf }, "", "Ripgrep all bufs to the quickfix list (fixed strings)", function() qfr.rg.qf_bufs_fixed() end, },
-{ nxmode, "<Plug>(qf-herder-rg-qf-bufs-regex)", { prefix_qf .. prefix_grep .. key_buf_re }, "", "Ripgrep all bufs to the quickfix list (regex)", function() qfr.rg.qf_bufs_regex() end, },
-{ nxmode, "<Plug>(qf-herder-rg-qf-tcd-fixed)", { prefix_qf .. prefix_grep .. key_dir }, "", "Ripgrep the tcd to the quickfix list (fixed strings)", function() qfr.rg.qf_tcd_fixed() end, },
-{ nxmode, "<Plug>(qf-herder-rg-qf-tcd-regex)", { prefix_qf .. prefix_grep .. key_dir_re }, "", "Ripgrep the tcd to the quickfix list (regex)", function() qfr.rg.qf_tcd_regex() end, },
+{ nxmode, "<Plug>(qf-herder-rg-ll-bcd-fixed)", { "gPd" }, "", "rg the bcd to the location list (fixed strings)", function() qfr.rg.ll_bcd_fixed() end, },
+{ nmode, "<Plug>(qf-herder-rg-ll-bcd-regex)", { "gPD" }, "", "rg the bcd to the location list (regex)", function() qfr.rg.ll_bcd_regex() end, },
+{ nxmode, "<Plug>(qf-herder-rg-ll-curbuf-fixed)", { "gPu" }, "", "rg a single buf to the location list (fixed strings)", function() qfr.rg.ll_cur_buf_fixed() end, },
+{ nmode, "<Plug>(qf-herder-rg-ll-curbuf-regex)", { "gPU" }, "", "rg a single buf to the location list (regex)", function() qfr.rg.ll_cur_buf_regex() end, },
+{ nxmode, "<Plug>(qf-herder-rg-ll-help-fixed)", { "gPh" }, "", "rg help dirs to the location list (fixed strings)", function() qfr.rg.ll_help_fixed() end, },
+{ nmode, "<Plug>(qf-herder-rg-ll-help-regex)", { "gPH" }, "", "rg help dirs to the location list (regex)", function() qfr.rg.ll_help_regex() end, },
+{ nxmode, "<Plug>(qf-herder-rg-qf-bufs-fixed)", { "gpu" }, "", "rg all bufs to the quickfix list (fixed strings)", function() qfr.rg.qf_bufs_fixed() end, },
+{ nmode, "<Plug>(qf-herder-rg-qf-bufs-regex)", { "gpU" }, "", "rg all bufs to the quickfix list (regex)", function() qfr.rg.qf_bufs_regex() end, },
+{ nxmode, "<Plug>(qf-herder-rg-qf-tcd-fixed)", { "gpd" }, "", "rg the tcd to the quickfix list (fixed strings)", function() qfr.rg.qf_tcd_fixed() end, },
+{ nmode, "<Plug>(qf-herder-rg-qf-tcd-regex)", { "gpD" }, "", "rg the tcd to the quickfix list (regex)", function() qfr.rg.qf_tcd_regex() end, },
 
     ----------------------
     -- MARK: Maps - Nav --
     ----------------------
 
-{ nmode, "<Plug>(qf-herder-ll-rewind)", { "[L" }, "", "Open the first or [count] loclist item", function() qfr.nav.l_rewind() end },
-{ nmode, "<Plug>(qf-herder-ll-last)", { "]L" }, "", "Open the last or [count] loclist item", function() qfr.nav.l_last() end },
 { nmode, "<Plug>(qf-herder-ll-prev)", { "[l" } , "", "Open the [wrapping count] prev loclist item", function() qfr.nav.l_prev() end },
 { nmode, "<Plug>(qf-herder-ll-next)", { "]l" } , "", "Open the [wrapping count] next loclist item", function() qfr.nav.l_next() end },
 { nmode, "<Plug>(qf-herder-ll-prev-keep-focus)", {}, "", "Open the [wrapping count] prev loclist item, keep focus", function() qfr.nav.l_prev_keep_focus() end },
 { nmode, "<Plug>(qf-herder-ll-next-keep-focus)", {}, "", "Open the [wrapping count] next loclist item, keep focus", function() qfr.nav.l_next_keep_focus() end },
+{ nmode, "<Plug>(qf-herder-ll-rewind)", { "[L" }, "", "Open the first or [count] loclist item", function() qfr.nav.l_rewind() end },
+{ nmode, "<Plug>(qf-herder-ll-last)", { "]L" }, "", "Open the last or [count] loclist item", function() qfr.nav.l_last() end },
 { nmode, "<Plug>(qf-herder-ll-pfile)", { "[<C-l>" }, "", "Open the [count] prev loclist file", function() qfr.nav.l_pfile() end },
 { nmode, "<Plug>(qf-herder-ll-nfile)", { "]<C-l>" }, "", "Open the [count] next loclist file", function() qfr.nav.l_nfile() end },
 
@@ -147,8 +111,8 @@ M.maps = {
 { nmode, "<Plug>(qf-herder-ll-vsplit-keep-focus)", {}, "", "Open the focused loclist item in a vsplit, keeping focus", function() qfr.nav.ll_vsplit_keep_focus() end },
 
 { nmode, "<Plug>(qf-herder-qf-prev)", { "[q" }, "", "Open the [wrapping count] prev quickfix item", function() qfr.nav.q_prev() end },
-{ nmode, "<Plug>(qf-herder-qf-prev-keep-focus)", {}, "", "Open the [wrapping count] prev quickfix item, keep focus", function() qfr.nav.q_prev_keep_focus() end },
 { nmode, "<Plug>(qf-herder-qf-next)", { "]q" }, "", "Open the [wrapping count] next quickfix item", function() qfr.nav.q_next() end },
+{ nmode, "<Plug>(qf-herder-qf-prev-keep-focus)", {}, "", "Open the [wrapping count] prev quickfix item, keep focus", function() qfr.nav.q_prev_keep_focus() end },
 { nmode, "<Plug>(qf-herder-qf-next-keep-focus)", {}, "", "Open the [wrapping count] next quickfix item, keep focus", function() qfr.nav.q_next_keep_focus() end },
 { nmode, "<Plug>(qf-herder-qf-rewind)", { "[Q" }, "", "Open the first or [count] quickfix item", function() qfr.nav.q_rewind() end },
 { nmode, "<Plug>(qf-herder-qf-last)", { "]Q" }, "", "Open the last or [count] quickfix item", function() qfr.nav.q_last() end },
