@@ -267,7 +267,7 @@ M.cmds = {
 { "Lnfile",  function(cargs) require("qf-herder._nav").l_nfile_cmd(cargs) end, { count = 0, desc = "Open the [count] next loclist file" } },
 { "Lpfile",  function(cargs) require("qf-herder._nav").l_pfile_cmd(cargs) end, { count = 0, desc = "Open the [count] prev loclist file" } },
 { "Lprev",  function(cargs) require("qf-herder._nav").l_prev_cmd(cargs) end, { count = 0, desc = "Open the [wrapping count] prev loclist item" } },
-{ "Lq",  function(cargs) require("qf-herder._nav").l_l_cmd(cargs) end, { count = 0, desc = "Open the current or [count] loclist item" } },
+{ "Ll",  function(cargs) require("qf-herder._nav").l_l_cmd(cargs) end, { count = 0, desc = "Open the current or [count] loclist item" } },
 { "Lrewind",  function(cargs) require("qf-herder._nav").l_rewind_cmd(cargs) end, { count = 0, desc = "Open the first or [count] loclist item" } },
 { "Qlast",  function(cargs) require("qf-herder._nav").q_last_cmd(cargs) end, { count = 0, desc = "Open the last or [count] quickfix item" } },
 { "Qnext",  function(cargs) require("qf-herder._nav").q_next_cmd(cargs) end, { count = 0, desc = "Open the [wrapping count] next quickfix item" } },
