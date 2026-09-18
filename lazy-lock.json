@@ -1,4 +1,5 @@
 {
+  "blink-cmp-dictionary": { "branch": "master", "commit": "898a958cece34da20524d04ebc032a92a9565643" },
   "blink.cmp": { "branch": "main", "commit": "78336bc89ee5365633bcf754d93df01678b5c08f" },
   "bullets.vim": { "branch": "master", "commit": "81570b98ca44b4100b3ddcf8d9ca74b9a9b0c884" },
   "catharsis.nvim": { "branch": "master", "commit": "63cd97c39afdd949f940f40794ce5cc366f89fc4" },

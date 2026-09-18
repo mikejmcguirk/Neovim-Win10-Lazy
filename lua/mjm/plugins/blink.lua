@@ -86,11 +86,18 @@ local blink_opts = {
         },
     },
     sources = {
-        default = { "lsp", "snippets", "buffer", "path" },
+        default = function()
+            local sources = { "lsp", "snippets", "buffer", "path" }
+            if require("nvim-tools.treesitter").is_in_node({ "comment" }, true) then
+                sources[#sources + 1] = "dictionary"
+            end
+
+            return sources
+        end,
         per_filetype = {
-            -- lua = { inherit_defaults = true, "lazydev" },
+            markdown = { "dictionary", "snippets", "buffer", "path" },
             sql = { "dadbod", "buffer", "path" },
-            text = { "buffer", "path" },
+            text = { "dictionary", "snippets", "buffer", "path" },
         },
         providers = {
             buffer = {
@@ -101,7 +108,7 @@ local blink_opts = {
                         require("nvim-tools.table").i_keep(bufs, function(buf)
                             local loaded = api.nvim_buf_is_loaded(buf)
                             local bt = api.nvim_get_option_value("bt", { buf = buf })
-                            return loaded and bt ~= "nofile"
+                            return loaded and (bt == "" or bt == "help")
                         end)
 
                         return bufs
@@ -151,7 +158,17 @@ local blink_opts = {
                 end,
             },
             dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink" },
-            lazydev = { module = "lazydev.integrations.blink", name = "LazyDev" },
+            dictionary = {
+                min_keyword_length = 1,
+                module = "blink-cmp-dictionary",
+                max_items = 10,
+                name = "Dict",
+                opts = {
+                    dictionary_files = function()
+                        return api.nvim_get_option_value("dict", { scope = "global" })
+                    end,
+                },
+            },
             lsp = { fallbacks = {} },
             path = {
                 opts = {
@@ -218,8 +235,9 @@ return {
     "saghen/blink.cmp",
     lazy = false,
     dependencies = {
-        "rafamadriz/friendly-snippets",
+        "Kaiser-Yang/blink-cmp-dictionary",
         "https://github.com/kristijanhusak/vim-dadbod-completion",
+        "rafamadriz/friendly-snippets",
     },
     version = "1.*",
     build = "cargo +nightly build --release",
@@ -234,5 +252,3 @@ return {
 
 -- MID: Is there not a spell source that can be used? Or does that run into the same issues as the
 -- dict source?
--- LOW: blink-cmp-words creates blocking calls and the other dictionary plugin creates hanging
--- fzf processes, so, if we want a dictionary, we have to make it
