@@ -660,6 +660,10 @@ local schema = {
 local default_config = {
     default_cmds_set = true, ---@type boolean -- Only checked on startup.
     default_keymaps_set = true, ---@type boolean -- Only checked on startup.
+    ---@class qf-herder.del.Cfg
+    del = {
+        auto_resize = true, ---@type boolean
+    },
     ---@class qf-herder.diagnostics.Cfg
     diagnostics = {
         clear_on_empty = true, ---@type boolean
@@ -748,6 +752,9 @@ local default_config = {
 function M.__default_schema_check()
     return matches_schema(default_config, schema)
 end
+
+---@class qf-herder.del.Opts
+---@field auto_resize? boolean
 
 ---@class qf-herder.filter.Opts
 ---@field open_results? boolean
@@ -1144,12 +1151,14 @@ end
 
 M.del = {}
 
-function M.del.in_qf()
-    require("qf-herder._del").del_in_qf()
+---@param opts qf-herder.del.Opts?
+function M.del.in_qf(opts)
+    require("qf-herder._del").del_in_qf(opts)
 end
 
-function M.del.in_qf_line()
-    require("qf-herder._del").del_in_qf_line()
+---@param opts qf-herder.del.Opts?
+function M.del.in_qf_line(opts)
+    require("qf-herder._del").del_in_qf_line(opts)
 end
 
 M.diags = {}
@@ -1677,12 +1686,6 @@ function M.stack.q_history(opts)
 end
 
 ---@param opts? qf-herder.stack.Opts
-function M.stack.q_clear(opts)
-    local _, _, cfg = cfg_get_from_opts(opts, "stack")
-    require("qf-herder._stack").q_clear(vim.v.count, cfg)
-end
-
----@param opts? qf-herder.stack.Opts
 function M.stack.q_free(opts)
     local _, _, cfg = cfg_get_from_opts(opts, "stack")
     require("qf-herder._stack").q_free(cfg)
@@ -1705,12 +1708,6 @@ function M.stack.l_history(opts)
     local win, _, cfg = cfg_get_from_opts(opts, "stack")
     local vcount = vim.v.count
     require("qf-herder._stack").l_history(win, false, vcount > 0 and vcount or nil, cfg)
-end
-
----@param opts? qf-herder.stack.Opts
-function M.stack.l_clear(opts)
-    local win, _, cfg = cfg_get_from_opts(opts, "stack")
-    require("qf-herder._stack").l_clear(win, vim.v.count, false, cfg)
 end
 
 ---@param opts? qf-herder.stack.Opts

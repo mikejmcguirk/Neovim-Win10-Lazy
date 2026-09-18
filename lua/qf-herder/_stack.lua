@@ -27,16 +27,6 @@ local function autosize_do(src_win, silent, cfg)
     end
 end
 
----@param src_win integer|nil
----@param list_nr integer|"$"
----@return integer
-local function clear_list(src_win, list_nr)
-    local nr = _util.resolve_list_nr(src_win, list_nr)
-    local what = { nr = nr, context = {}, items = {}, quickfixtextfunc = "", title = "" }
-    local action = "r"
-    return _util.set_result_resolve(_tools.set_list(src_win, action, what), src_win, nr, action)
-end
-
 ---@param cur_nr uinteger
 ---@param silent boolean
 ---@return boolean
@@ -137,13 +127,6 @@ function M.q_history(silent, count, cfg)
 end
 
 ---@param cfg qf-herder.stack.Cfg
-function M.q_clear(count, cfg)
-    if clear_list(nil, count) == 0 then
-        autosize_do(nil, false, cfg)
-    end
-end
-
----@param cfg qf-herder.stack.Cfg
 function M.q_free(cfg)
     local result = vim.call("setqflist", {}, "f") ---@type -1|0
     if result == 0 and cfg.update_list_wins then
@@ -219,24 +202,6 @@ function M._history(src_win, silent, count, cfg)
 end
 
 ---@param src_win uinteger
----@param count uinteger
----@param silent boolean
----@param cfg qf-herder.stack.Cfg
-function M.l_clear(src_win, count, silent, cfg)
-    if fn.getloclist(src_win, { id = 0 }).id == 0 then
-        if not silent then
-            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
-        end
-
-        return
-    end
-
-    if clear_list(src_win, count) == 0 then
-        autosize_do(src_win, silent, cfg)
-    end
-end
-
----@param src_win uinteger
 ---@param silent boolean
 ---@param cfg qf-herder.stack.Cfg
 function M.l_free(src_win, silent, cfg)
@@ -279,12 +244,6 @@ function M.q_history_cmd(cargs)
     M.q_history(false, (cargs.range > 0 and cargs.count or nil), cfg)
 end
 
----@param cargs vim.api.keyset.create_user_command.command_args
-function M.q_clear_cmd(cargs)
-    local _, _, cfg = require("qf-herder")._config_merged_from_win(0, "stack")
-    M.q_clear(cargs.count, cfg)
-end
-
 function M.q_free_cmd()
     local _, _, cfg = require("qf-herder")._config_merged_from_win(0, "stack")
     M.q_free(cfg)
@@ -306,12 +265,6 @@ end
 function M.l_history_cmd(cargs)
     local win, _, cfg = require("qf-herder")._config_merged_from_win(0, "stack")
     M.l_history(win, cargs.smods.silent or false, (cargs.range > 0 and cargs.count or nil), cfg)
-end
-
----@param cargs vim.api.keyset.create_user_command.command_args
-function M.l_clear_cmd(cargs)
-    local win, _, cfg = require("qf-herder")._config_merged_from_win(0, "stack")
-    M.l_clear(win, cargs.count, cargs.smods.silent or false, cfg)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args
