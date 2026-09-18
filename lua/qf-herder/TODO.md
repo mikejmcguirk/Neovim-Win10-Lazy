@@ -9,8 +9,6 @@
     - [ ] Or maybe gi since that's insert mode
   - And so on. Leave the plugs for stuff where the mapping doesn't survive.
   - c in list to close
-  - ctrl+q for qf toggle? But where does loclist go. Shift q?
-  - `D` to delete list.
 
 - [ ] Add the cmd stuff.
 

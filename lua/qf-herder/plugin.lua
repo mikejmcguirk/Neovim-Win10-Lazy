@@ -210,11 +210,11 @@ M.maps = {
 { nmode, "<Plug>(qf-herder-qf-older)", { prefix_qf .. stack_older }, "", "Go to a [wrapping count] older quickfix list", function() qfr.stack.q_older() end },
 { nmode, "<Plug>(qf-herder-qf-newer)", { prefix_qf .. stack_newer }, "", "Go to a [wrapping count] newer quickfix list", function() qfr.stack.q_newer() end },
 { nmode, "<Plug>(qf-herder-qf-history)", { prefix_qf .. last_qf_upper }, "", "Go to the [count] quickfix list or view the entire stack", function() qfr.stack.q_history() end },
-{ nmode, "<Plug>(qf-herder-qf-free)", { prefix_qf .. stack_free }, "", "Free the quickfix stack", function() qfr.stack.q_free() end },
+{ nmode, "<Plug>(qf-herder-qf-free)", {}, "", "Free the quickfix stack", function() qfr.stack.q_free() end },
 { nmode, "<Plug>(qf-herder-ll-older)", { prefix_ll .. stack_older }, "", "Go to a [wrapping count] older location list", function() qfr.stack.l_older() end },
 { nmode, "<Plug>(qf-herder-ll-newer)", { prefix_ll .. stack_newer }, "", "Go to a [wrapping count] newer location list", function() qfr.stack.l_newer() end },
 { nmode, "<Plug>(qf-herder-ll-history)", { prefix_ll .. last_ll_upper }, "", "Go to the [count] location list or view the entire stack", function() qfr.stack.l_history() end },
-{ nmode, "<Plug>(qf-herder-ll-free)", { prefix_ll .. stack_free }, "", "Free the location list stack", function() qfr.stack.l_free() end },
+{ nmode, "<Plug>(qf-herder-ll-free)", {}, "", "Free the location list stack", function() qfr.stack.l_free() end },
 
 }
 
@@ -305,11 +305,9 @@ M.cmds = {
 { "Qolder",  function(cargs) require("qf-herder._stack").q_older_cmd(cargs) end, { count = 0, desc = "Go to a [wrapping count] older quickfix list" } },
 { "Qnewer",  function(cargs) require("qf-herder._stack").q_newer_cmd(cargs) end, { count = 0, desc = "Go to a [wrapping count] newer quickfix list" } },
 { "Qhistory",  function(cargs) require("qf-herder._stack").q_history_cmd(cargs) end, { count = 0, desc = "Go to the [count] quickfix list or view the entire stack" } },
-{ "Qfree",  function() require("qf-herder._stack").q_free_cmd() end, { desc = "Free the quickfix stack" } },
 { "Lolder",  function(cargs) require("qf-herder._stack").l_older_cmd(cargs) end, { count = 0, desc = "Go to a [wrapping count] older location list" } },
 { "Lnewer",  function(cargs) require("qf-herder._stack").l_newer_cmd(cargs) end, { count = 0, desc = "Go to a [wrapping count] newer location list" } },
 { "Lhistory",  function(cargs) require("qf-herder._stack").l_history_cmd(cargs) end, { count = 0, desc = "Go to the [count] location list or view the entire stack" } },
-{ "Lfree",  function(cargs) require("qf-herder._stack").l_free_cmd(cargs) end, { desc = "Free the location list stack" } },
 
 }
 
