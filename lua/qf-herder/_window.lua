@@ -372,18 +372,6 @@ function M.q_close_cmd()
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args
-function M.q_toggle_cmd(cargs)
-    local _, _, cfg = require("qf-herder")._config_merged_from_win(0, "window")
-    M.qf_toggle(cargs.count, cfg)
-end
-
----@param cargs vim.api.keyset.create_user_command.command_args
-function M.q_resize_cmd(cargs)
-    local _, _, cfg = require("qf-herder")._config_merged_from_win(0, "window")
-    M.qf_resize(0, cargs.count, cfg)
-end
-
----@param cargs vim.api.keyset.create_user_command.command_args
 function M.l_open_cmd(cargs)
     local _, _, cfg = require("qf-herder")._config_merged_from_win(0, "window")
     M.ll_open(cargs.count, cargs.smods.silent or false, cfg)
@@ -393,18 +381,6 @@ end
 function M.l_close_cmd(cargs)
     local src_win, _, cfg = require("qf-herder")._config_merged_from_win(0, "window")
     M.ll_close(src_win, cargs.smods.silent or false, cfg)
-end
-
----@param cargs vim.api.keyset.create_user_command.command_args
-function M.l_toggle_cmd(cargs)
-    local _, _, cfg = require("qf-herder")._config_merged_from_win(0, "window")
-    M.ll_toggle(cargs.count, cargs.smods.silent or false, cfg)
-end
-
----@param cargs vim.api.keyset.create_user_command.command_args
-function M.l_resize_cmd(cargs)
-    local src_win, _, cfg = require("qf-herder")._config_merged_from_win(0, "window")
-    M.ll_resize(src_win, cargs.count, cargs.smods.silent or false, cfg)
 end
 
 return M
