@@ -47,8 +47,6 @@ end
 local prefix_ll = cfg_keymap.prefix_ll
 local prefix_qf = cfg_keymap.prefix_qf
 
-local prefix_diag = cfg_keymap.prefix_diag
-
 local prefix_grep = cfg_keymap.prefix_grep
 local key_buf = cfg_keymap.key_buf
 local key_buf_re = string.upper(key_buf)
@@ -57,20 +55,12 @@ local key_dir_re = string.upper(key_dir)
 local key_help = cfg_keymap.key_help
 local key_help_re = string.upper(key_help)
 
-local prefix_filter = cfg_keymap.prefix_filter
-local key_text = cfg_keymap.key_text
-local key_text_upper = string.upper(key_text)
-
-local prefix_sort = cfg_keymap.prefix_sort
-local key_fname = cfg_keymap.key_fname
-local key_fname_upper = string.upper(key_fname)
-local sev_asc = prefix_diag
-local sev_desc = string.upper(sev_asc)
-
 local nmode = { "n" }
 local nxmode = { "n", "x" }
 
 local M = {}
+
+-- TODO: Go through the plug map names and make more consistent. You'll have like "filter-ll" then "ll-sort". Sloppy.
 
 -- stylua: ignore
 M.maps = {
@@ -114,14 +104,14 @@ M.maps = {
     -- MARK: Maps - Filter --
     -----------------------
 
-{ nmode, "<Plug>(qf-herder-filter-ll-fname-keep)", { prefix_ll .. prefix_filter .. key_fname }, "", "Keep matching filenames", function() qfr.filter.ll_fname_keep() end, },
-{ nmode, "<Plug>(qf-herder-filter-ll-fname-discard)", { prefix_ll .. prefix_filter .. key_fname_upper }, "", "Discard matching filenames", function() qfr.filter.ll_fname_discard() end, },
-{ nmode, "<Plug>(qf-herder-filter-ll-text-keep)", { prefix_ll .. prefix_filter .. key_text }, "", "Keep matching filenames", function() qfr.filter.ll_text_keep() end, },
-{ nmode, "<Plug>(qf-herder-filter-ll-text-discard)", { prefix_ll .. prefix_filter .. key_text_upper }, "", "Discard matching filenames", function() qfr.filter.ll_text_discard() end, },
-{ nmode, "<Plug>(qf-herder-filter-qf-fname-keep)", { prefix_qf .. prefix_filter .. key_fname }, "", "Keep matching filenames", function() qfr.filter.qf_fname_keep() end, },
-{ nmode, "<Plug>(qf-herder-filter-qf-fname-discard)", { prefix_qf .. prefix_filter .. key_fname_upper }, "", "Discard matching filenames", function() qfr.filter.qf_fname_discard() end, },
-{ nmode, "<Plug>(qf-herder-filter-qf-text-keep)", { prefix_qf .. prefix_filter .. key_text }, "", "Keep matching filenames", function() qfr.filter.qf_text_keep() end, },
-{ nmode, "<Plug>(qf-herder-filter-qf-text-discard)", { prefix_qf .. prefix_filter .. key_text_upper }, "", "Discard matching filenames", function() qfr.filter.qf_text_discard() end, },
+{ nmode, "<Plug>(qf-herder-filter-ll-fname-keep)", {}, "", "Keep matching filenames", function() qfr.filter.ll_fname_keep() end, },
+{ nmode, "<Plug>(qf-herder-filter-ll-fname-discard)", {}, "", "Discard matching filenames", function() qfr.filter.ll_fname_discard() end, },
+{ nmode, "<Plug>(qf-herder-filter-ll-text-keep)", {}, "", "Keep matching filenames", function() qfr.filter.ll_text_keep() end, },
+{ nmode, "<Plug>(qf-herder-filter-ll-text-discard)", {}, "", "Discard matching filenames", function() qfr.filter.ll_text_discard() end, },
+{ nmode, "<Plug>(qf-herder-filter-qf-fname-keep)", {}, "", "Keep matching filenames", function() qfr.filter.qf_fname_keep() end, },
+{ nmode, "<Plug>(qf-herder-filter-qf-fname-discard)", {}, "", "Discard matching filenames", function() qfr.filter.qf_fname_discard() end, },
+{ nmode, "<Plug>(qf-herder-filter-qf-text-keep)", {}, "", "Keep matching filenames", function() qfr.filter.qf_text_keep() end, },
+{ nmode, "<Plug>(qf-herder-filter-qf-text-discard)", {}, "", "Discard matching filenames", function() qfr.filter.qf_text_discard() end, },
 
     -----------------------
     -- MARK: Maps - Grep --
@@ -142,37 +132,31 @@ M.maps = {
     -- MARK: Maps - Nav --
     ----------------------
 
-{ nmode, "<Plug>(qf-herder-ll-ll)", {}, "", "Open the current or [count] loclist item", function() qfr.nav.l_l() end },
-{ nmode, "<Plug>(qf-herder-ll-ll-keep-focus)", {}, "", "Open the current or [count] loclist item, keep focus", function() qfr.nav.l_l_keep_focus() end },
-
 { nmode, "<Plug>(qf-herder-ll-rewind)", { "[L" }, "", "Open the first or [count] loclist item", function() qfr.nav.l_rewind() end },
 { nmode, "<Plug>(qf-herder-ll-last)", { "]L" }, "", "Open the last or [count] loclist item", function() qfr.nav.l_last() end },
-
 { nmode, "<Plug>(qf-herder-ll-prev)", { "[l" } , "", "Open the [wrapping count] prev loclist item", function() qfr.nav.l_prev() end },
 { nmode, "<Plug>(qf-herder-ll-next)", { "]l" } , "", "Open the [wrapping count] next loclist item", function() qfr.nav.l_next() end },
 { nmode, "<Plug>(qf-herder-ll-prev-keep-focus)", {}, "", "Open the [wrapping count] prev loclist item, keep focus", function() qfr.nav.l_prev_keep_focus() end },
 { nmode, "<Plug>(qf-herder-ll-next-keep-focus)", {}, "", "Open the [wrapping count] next loclist item, keep focus", function() qfr.nav.l_next_keep_focus() end },
-
 { nmode, "<Plug>(qf-herder-ll-pfile)", { "[<C-l>" }, "", "Open the [count] prev loclist file", function() qfr.nav.l_pfile() end },
 { nmode, "<Plug>(qf-herder-ll-nfile)", { "]<C-l>" }, "", "Open the [count] next loclist file", function() qfr.nav.l_nfile() end },
 
+{ nmode, "<Plug>(qf-herder-ll-ll)", {}, "", "Open the current or [count] loclist item", function() qfr.nav.l_l() end },
+{ nmode, "<Plug>(qf-herder-ll-ll-keep-focus)", {}, "", "Open the current or [count] loclist item, keep focus", function() qfr.nav.l_l_keep_focus() end },
 { nmode, "<Plug>(qf-herder-ll-vsplit)", {}, "", "Open the focused loclist item in a vsplit", function() qfr.nav.ll_vsplit() end },
 { nmode, "<Plug>(qf-herder-ll-vsplit-keep-focus)", {}, "", "Open the focused loclist item in a vsplit, keeping focus", function() qfr.nav.ll_vsplit_keep_focus() end },
-
-{ nmode, "<Plug>(qf-herder-qf-qq)", {}, "", "Open the current or [count] quickfix item", function() qfr.nav.q_q() end },
-{ nmode, "<Plug>(qf-herder-qf-qq-keep-focus)", {}, "", "Open the current or [count] quickfix item, keep focus", function() qfr.nav.q_q_keep_focus() end },
 
 { nmode, "<Plug>(qf-herder-qf-prev)", { "[q" }, "", "Open the [wrapping count] prev quickfix item", function() qfr.nav.q_prev() end },
 { nmode, "<Plug>(qf-herder-qf-prev-keep-focus)", {}, "", "Open the [wrapping count] prev quickfix item, keep focus", function() qfr.nav.q_prev_keep_focus() end },
 { nmode, "<Plug>(qf-herder-qf-next)", { "]q" }, "", "Open the [wrapping count] next quickfix item", function() qfr.nav.q_next() end },
 { nmode, "<Plug>(qf-herder-qf-next-keep-focus)", {}, "", "Open the [wrapping count] next quickfix item, keep focus", function() qfr.nav.q_next_keep_focus() end },
-
 { nmode, "<Plug>(qf-herder-qf-rewind)", { "[Q" }, "", "Open the first or [count] quickfix item", function() qfr.nav.q_rewind() end },
 { nmode, "<Plug>(qf-herder-qf-last)", { "]Q" }, "", "Open the last or [count] quickfix item", function() qfr.nav.q_last() end },
-
 { nmode, "<Plug>(qf-herder-qf-pfile)", { "[<C-q>" }, "", "Open the [count] prev quickfix file", function() qfr.nav.q_pfile() end },
 { nmode, "<Plug>(qf-herder-qf-nfile)", { "]<C-q>" }, "", "Open the [count] next quickfix file", function() qfr.nav.q_nfile() end },
 
+{ nmode, "<Plug>(qf-herder-qf-qq)", {}, "", "Open the current or [count] quickfix item", function() qfr.nav.q_q() end },
+{ nmode, "<Plug>(qf-herder-qf-qq-keep-focus)", {}, "", "Open the current or [count] quickfix item, keep focus", function() qfr.nav.q_q_keep_focus() end },
 { nmode, "<Plug>(qf-herder-qf-vsplit)", {}, "", "Open the focused quickfix item in a vsplit", function() qfr.nav.qf_vsplit() end },
 { nmode, "<Plug>(qf-herder-qf-vsplit-keep-focus)", {}, "", "Open the focused quickfix item in a vsplit, keeping focus", function() qfr.nav.qf_vsplit_keep_focus() end },
 
@@ -193,14 +177,14 @@ M.maps = {
     -- MARK: Maps - Sort --
     -----------------------
 
-{ nmode, "<Plug>(qf-herder-qf-sort-fname-asc)", { prefix_qf .. prefix_sort .. key_fname }, "", "Sort [count] quickfix list by filename asc", function() qfr.sort.qf_fname_asc() end },
-{ nmode, "<Plug>(qf-herder-qf-sort-fname-desc)", { prefix_qf .. prefix_sort .. key_fname_upper }, "", "Sort [count] quickfix list by filename desc", function() qfr.sort.qf_fname_desc() end },
-{ nmode, "<Plug>(qf-herder-qf-sort-sev-asc)", { prefix_qf .. prefix_sort .. sev_asc }, "", "Sort [count] quickfix list by sev asc", function() qfr.sort.qf_severity_asc() end },
-{ nmode, "<Plug>(qf-herder-qf-sort-sev-desc)", { prefix_qf .. prefix_sort .. sev_desc }, "", "Sort [count] quickfix list by sev desc", function() qfr.sort.qf_severity_desc() end },
-{ nmode, "<Plug>(qf-herder-ll-sort-fname-asc)", { prefix_ll .. prefix_sort .. key_fname }, "", "Sort [count] location list by filename asc", function() qfr.sort.ll_fname_asc() end },
-{ nmode, "<Plug>(qf-herder-ll-sort-fname-desc)", { prefix_ll .. prefix_sort .. key_fname_upper }, "", "Sort [count] location list by filename desc", function() qfr.sort.ll_fname_desc() end },
-{ nmode, "<Plug>(qf-herder-ll-sort-sev-asc)", { prefix_ll .. prefix_sort .. sev_asc }, "", "Sort [count] location list by severity asc", function() qfr.sort.ll_severity_asc() end },
-{ nmode, "<Plug>(qf-herder-ll-sort-sev-desc)", { prefix_ll .. prefix_sort .. sev_desc }, "", "Sort [count] location list by severity desc", function() qfr.sort.ll_severity_desc() end },
+{ nmode, "<Plug>(qf-herder-qf-sort-fname-asc)", {}, "", "Sort [count] quickfix list by filename asc", function() qfr.sort.qf_fname_asc() end },
+{ nmode, "<Plug>(qf-herder-qf-sort-fname-desc)", {}, "", "Sort [count] quickfix list by filename desc", function() qfr.sort.qf_fname_desc() end },
+{ nmode, "<Plug>(qf-herder-qf-sort-sev-asc)", {}, "", "Sort [count] quickfix list by sev asc", function() qfr.sort.qf_severity_asc() end },
+{ nmode, "<Plug>(qf-herder-qf-sort-sev-desc)", {}, "", "Sort [count] quickfix list by sev desc", function() qfr.sort.qf_severity_desc() end },
+{ nmode, "<Plug>(qf-herder-ll-sort-fname-asc)", {}, "", "Sort [count] location list by filename asc", function() qfr.sort.ll_fname_asc() end },
+{ nmode, "<Plug>(qf-herder-ll-sort-fname-desc)", {}, "", "Sort [count] location list by filename desc", function() qfr.sort.ll_fname_desc() end },
+{ nmode, "<Plug>(qf-herder-ll-sort-sev-asc)", {}, "", "Sort [count] location list by severity asc", function() qfr.sort.ll_severity_asc() end },
+{ nmode, "<Plug>(qf-herder-ll-sort-sev-desc)", {}, "", "Sort [count] location list by severity desc", function() qfr.sort.ll_severity_desc() end },
 
     ------------------------
     -- MARK: Maps - Stack --

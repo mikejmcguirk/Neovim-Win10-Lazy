@@ -75,7 +75,10 @@ local function history_goto_abs(src_win, silent, count)
 
     -- By default, |:chi| and |:lhi| treat 0 as 1.
     count = count == 0 and cur_nr or math.min(count, _tools.get_list(src_win, { nr = "$" }).nr)
-    history_goto(src_win, silent, count)
+    if not (silent and cur_nr == count) then
+        history_goto(src_win, silent, count)
+    end
+
     return cur_nr, count
 end
 

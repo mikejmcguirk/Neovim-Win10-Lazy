@@ -32,19 +32,31 @@ function M.do_ftplugin()
     api.nvim_buf_set_keymap(0, "x", "d", "<Plug>(qf-herder-del-operator)", { noremap = true })
     api.nvim_buf_set_keymap(0, "n", "dd", "<Plug>(qf-herder-del-line)", opts)
     api.nvim_buf_set_keymap(0, "n", "p", "<Plug>(qf-herder-preview-toggle)", opts)
+
     api.nvim_buf_set_keymap(0, "n", "s", "<Plug>(qf-herder-split)", opts)
     api.nvim_buf_set_keymap(0, "n", "<C-s>", "<Plug>(qf-herder-split-keep-focus)", opts)
     api.nvim_buf_set_keymap(0, "n", "x", "<Plug>(qf-herder-tabnew)", opts)
     api.nvim_buf_set_keymap(0, "n", "<C-x>", "<Plug>(qf-herder-tabnew-keep-focus)", opts)
 
     if fn.win_gettype(0) == "loclist" then
+        api.nvim_buf_set_keymap(0, "n", "q", "<Plug>(qf-herder-ll-close)", opts)
+        api.nvim_buf_set_keymap(0, "n", "gi", "<Plug>(qf-herder-ll-resize)", opts)
         api.nvim_buf_set_keymap(0, "n", "D", "<Plug>(qf-herder-ll-free)", opts)
-        api.nvim_buf_set_keymap(0, "n", "r", "<Plug>(qf-herder-ll-resize)", opts)
+
         api.nvim_buf_set_keymap(0, "n", "o", "<Plug>(qf-herder-ll-ll)", opts)
         api.nvim_buf_set_keymap(0, "n", "<C-o>", "<Plug>(qf-herder-ll-ll-keep-focus)", opts)
-        api.nvim_buf_set_keymap(0, "n", "q", "<Plug>(qf-herder-ll-close)", opts)
         api.nvim_buf_set_keymap(0, "n", "v", "<Plug>(qf-herder-ll-vsplit)", opts)
         api.nvim_buf_set_keymap(0, "n", "<C-v>", "<Plug>(qf-herder-ll-vsplit-keep-focus)", opts)
+
+        api.nvim_buf_set_keymap(0, "n", "rF", "<Plug>(qf-herder-ll-sort-fname-desc)", opts)
+        api.nvim_buf_set_keymap(0, "n", "rI", "<Plug>(qf-herder-ll-sort-sev-desc)", opts)
+        api.nvim_buf_set_keymap(0, "n", "rf", "<Plug>(qf-herder-ll-sort-fname-asc)", opts)
+        api.nvim_buf_set_keymap(0, "n", "ri", "<Plug>(qf-herder-ll-sort-sev-asc)", opts)
+
+        api.nvim_buf_set_keymap(0, "n", "if", "<Plug>(qf-herder-filter-ll-fname-keep)", opts)
+        api.nvim_buf_set_keymap(0, "n", "iF", "<Plug>(qf-herder-filter-ll-fname-discard)", opts)
+        api.nvim_buf_set_keymap(0, "n", "ie", "<Plug>(qf-herder-filter-ll-text-keep)", opts)
+        api.nvim_buf_set_keymap(0, "n", "iE", "<Plug>(qf-herder-filter-ll-text-discard)", opts)
 
         api.nvim_buf_set_keymap(0, "n", "gq", "<Plug>(qf-herder-ll-history)", opts)
         api.nvim_buf_set_keymap(0, "n", "<", "<Plug>(qf-herder-ll-older)", opts)
@@ -52,13 +64,24 @@ function M.do_ftplugin()
         api.nvim_buf_set_keymap(0, "n", "{", "<Plug>(qf-herder-ll-prev-keep-focus)", opts)
         api.nvim_buf_set_keymap(0, "n", "}", "<Plug>(qf-herder-ll-next-keep-focus)", opts)
     else
+        api.nvim_buf_set_keymap(0, "n", "q", "<Plug>(qf-herder-qf-close)", opts)
+        api.nvim_buf_set_keymap(0, "n", "gi", "<Plug>(qf-herder-qf-resize)", opts)
         api.nvim_buf_set_keymap(0, "n", "D", "<Plug>(qf-herder-qf-free)", opts)
-        api.nvim_buf_set_keymap(0, "n", "r", "<Plug>(qf-herder-qf-resize)", opts)
+
         api.nvim_buf_set_keymap(0, "n", "o", "<Plug>(qf-herder-qf-qq)", opts)
         api.nvim_buf_set_keymap(0, "n", "<C-o>", "<Plug>(qf-herder-qf-qq-keep-focus)", opts)
-        api.nvim_buf_set_keymap(0, "n", "q", "<Plug>(qf-herder-qf-close)", opts)
         api.nvim_buf_set_keymap(0, "n", "v", "<Plug>(qf-herder-qf-vsplit)", opts)
         api.nvim_buf_set_keymap(0, "n", "<C-v>", "<Plug>(qf-herder-qf-vsplit-keep-focus)", opts)
+
+        api.nvim_buf_set_keymap(0, "n", "rF", "<Plug>(qf-herder-qf-sort-fname-desc)", opts)
+        api.nvim_buf_set_keymap(0, "n", "rI", "<Plug>(qf-herder-qf-sort-sev-desc)", opts)
+        api.nvim_buf_set_keymap(0, "n", "rf", "<Plug>(qf-herder-qf-sort-fname-asc)", opts)
+        api.nvim_buf_set_keymap(0, "n", "ri", "<Plug>(qf-herder-qf-sort-sev-asc)", opts)
+
+        api.nvim_buf_set_keymap(0, "n", "if", "<Plug>(qf-herder-filter-qf-fname-keep)", opts)
+        api.nvim_buf_set_keymap(0, "n", "iF", "<Plug>(qf-herder-filter-qf-fname-discard)", opts)
+        api.nvim_buf_set_keymap(0, "n", "ie", "<Plug>(qf-herder-filter-qf-text-keep)", opts)
+        api.nvim_buf_set_keymap(0, "n", "iE", "<Plug>(qf-herder-filter-qf-text-discard)", opts)
 
         api.nvim_buf_set_keymap(0, "n", "gq", "<Plug>(qf-herder-qf-history)", opts)
         api.nvim_buf_set_keymap(0, "n", "<", "<Plug>(qf-herder-qf-older)", opts)

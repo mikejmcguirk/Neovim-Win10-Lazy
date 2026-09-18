@@ -6,14 +6,43 @@ local _util = require("qf-herder._util")
 
 local M = {}
 
+---@param src_win uinteger?
+---@param qf_id uinteger
+---@param restore boolean
+---@return uinteger, [uinteger, uinteger]?
+---Current |Window-ID|, cursor position if current win is a relevant list win.
+local function save_cur_pos_checked(src_win, qf_id, restore)
+    local cur_win = api.nvim_get_current_win()
+    if not restore then
+        return cur_win
+    end
+
+    local win_type = fn.win_gettype(cur_win)
+    if src_win ~= nil then
+        if win_type == "loclist" and fn.getloclist(cur_win, { id = 0 }).id == qf_id then
+            return cur_win, api.nvim_win_get_cursor(cur_win)
+        end
+    else
+        if win_type == "quickfix" then
+            return cur_win, api.nvim_win_get_cursor(cur_win)
+        end
+    end
+
+    return cur_win
+end
+
 ---@param src_win uinteger|nil
 ---@param count uinteger
 ---@param f fun(a:vim.quickfix.entry, b:vim.quickfix.entry): boolean
 ---@param cfg qf-herder.sort.Cfg
 function M.sort(src_win, count, f, cfg)
-    if src_win ~= nil and fn.getloclist(src_win, { id = 0 }).id == 0 then
-        api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
-        return
+    local qf_id = 0
+    if src_win ~= nil then
+        qf_id = fn.getloclist(src_win, { id = 0 }).id
+        if qf_id == 0 then
+            api.nvim_echo({ { QFR_NO_LL, "" } }, false, {})
+            return
+        end
     end
 
     local nr = _util.resolve_list_nr(src_win, count)
@@ -26,6 +55,7 @@ function M.sort(src_win, count, f, cfg)
         return
     end
 
+    local cur_win, cur_pos = save_cur_pos_checked(src_win, qf_id, cfg.restore_cursor)
     local what_set = _tools.what_ret_to_set(what_ret)
     table.sort(what_set.items, f)
     local dest_nr = _util.set_list_checked(src_win, "u", what_set)
@@ -36,6 +66,10 @@ function M.sort(src_win, count, f, cfg)
 
     if cfg.open_results then
         _util.set_nr_and_open(src_win, dest_nr, true)
+    end
+
+    if cur_pos ~= nil then
+        _tools.protected_set_cursor(cur_win, cur_pos)
     end
 end
 

@@ -689,26 +689,12 @@ local default_config = {
     -- Only checked on startup
     ---@class qf-herder.keymap.Cfg
     keymap = {
-        diag_err = "e", ---@type string -- Must be lowercase
-        diag_hint = "n", ---@type string -- Must be lowercase
-        diag_info = "o", ---@type string -- Must be lowercase
-        diag_warn = "w", ---@type string -- Must be lowercase
-        key_fname = "f", ---@type string -- Must be lowercase
         key_buf = "u", ---@type string
-        prefix_diag = "i", ---@type string -- Must be lowercase
         key_dir = "d", ---@type string
-        prefix_filter = "r", ---@type string
         key_help = "h", ---@type string
-        key_text = "e", ---@type string -- Must be lowercase
         prefix_grep = "g", ---@type string
         prefix_ll = "<leader>l", ---@type string -- Must be lowercase
         prefix_qf = "<leader>q", ---@type string -- Must be lowercase
-        prefix_sort = "t", ---@type string
-        stack_clear = "e", ---@type string
-        stack_newer = "]", ---@type string
-        stack_older = "[", ---@type string
-        win_close = "o", ---@type string
-        win_open = "p", ---@type string
     },
     ---@class qf-herder.nav.Cfg
     nav = {
@@ -722,6 +708,8 @@ local default_config = {
     ---@class qf-herder.sort.Cfg
     sort = {
         open_results = true, ---@type boolean
+        -- Applies if the sorted list is in the current window.
+        restore_cursor = true, ---@type boolean
     },
     ---@class qf-herder.stack.Cfg
     stack = {
@@ -799,6 +787,7 @@ end
 
 ---@class qf-herder.sort.Opts
 ---@field open_results? boolean
+---@field restore_cursor? boolean
 
 ---@class qf-herder.stack.Opts
 ---@field update_list_wins? boolean
