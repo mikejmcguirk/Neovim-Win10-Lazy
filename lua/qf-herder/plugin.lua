@@ -45,11 +45,7 @@ function split_map(str)
 end
 
 local prefix_ll = cfg_keymap.prefix_ll
-local prefix_ll_tbl = split_map(prefix_ll)
-local last_ll = prefix_ll_tbl[#prefix_ll_tbl]
 local prefix_qf = cfg_keymap.prefix_qf
-local prefix_qf_tbl = split_map(prefix_qf)
-local last_qf = prefix_qf_tbl[#prefix_qf_tbl]
 
 local prefix_diag = cfg_keymap.prefix_diag
 
@@ -70,13 +66,6 @@ local key_fname = cfg_keymap.key_fname
 local key_fname_upper = string.upper(key_fname)
 local sev_asc = prefix_diag
 local sev_desc = string.upper(sev_asc)
-
-local last_ll_upper = string.upper(last_ll)
-local last_qf_upper = string.upper(last_qf)
-local stack_clear = cfg_keymap.stack_clear
-local stack_free = string.upper(stack_clear)
-local stack_newer = cfg_keymap.stack_newer
-local stack_older = cfg_keymap.stack_older
 
 local nmode = { "n" }
 local nxmode = { "n", "x" }
@@ -153,34 +142,44 @@ M.maps = {
     -- MARK: Maps - Nav --
     ----------------------
 
-{ nmode, "<Plug>(qf-herder-ll-last)", { "]" .. last_ll_upper }, "", "Open the last or [count] loclist item", function() qfr.nav.l_last() end },
 { nmode, "<Plug>(qf-herder-ll-ll)", {}, "", "Open the current or [count] loclist item", function() qfr.nav.l_l() end },
 { nmode, "<Plug>(qf-herder-ll-ll-keep-focus)", {}, "", "Open the current or [count] loclist item, keep focus", function() qfr.nav.l_l_keep_focus() end },
-{ nmode, "<Plug>(qf-herder-ll-next)", { "]" .. last_ll } , "", "Open the [wrapping count] next loclist item", function() qfr.nav.l_next() end },
-{ nmode, "<Plug>(qf-herder-ll-next-keep-focus)", { "]" .. last_ll }, "", "Open the [wrapping count] next loclist item, keep focus", function() qfr.nav.l_next_keep_focus() end },
-{ nmode, "<Plug>(qf-herder-ll-nfile)", { "]<C-" .. last_ll_upper .. ">" }, "", "Open the [count] next loclist file", function() qfr.nav.l_nfile() end },
-{ nmode, "<Plug>(qf-herder-ll-pfile)", { "[<C-" .. last_ll_upper .. ">" }, "", "Open the [count] prev loclist file", function() qfr.nav.l_pfile() end },
-{ nmode, "<Plug>(qf-herder-ll-prev)", { "[" .. last_ll } , "", "Open the [wrapping count] prev loclist item", function() qfr.nav.l_prev() end },
-{ nmode, "<Plug>(qf-herder-ll-prev-keep-focus)", { "[" .. last_ll }, "", "Open the [wrapping count] prev loclist item, keep focus", function() qfr.nav.l_prev_keep_focus() end },
-{ nmode, "<Plug>(qf-herder-ll-rewind)", { "[" .. last_ll_upper }, "", "Open the first or [count] loclist item", function() qfr.nav.l_rewind() end },
-{ nmode, "<Plug>(qf-herder-ll-vsplit)", {}, "", "Open the current loclist item in a vsplit", function() qfr.nav.ll_vsplit() end },
-{ nmode, "<Plug>(qf-herder-ll-vsplit-keep-focus)", {}, "", "Open the current loclist item in a vsplit, keeping focus", function() qfr.nav.ll_vsplit_keep_focus() end },
-{ nmode, "<Plug>(qf-herder-qf-last)", { "]" .. last_qf_upper }, "", "Open the last or [count] quickfix item", function() qfr.nav.q_last() end },
-{ nmode, "<Plug>(qf-herder-qf-next)", { "]" .. last_qf }, "", "Open the [wrapping count] next quickfix item", function() qfr.nav.q_next() end },
-{ nmode, "<Plug>(qf-herder-qf-next-keep-focus)", {}, "", "Open the [wrapping count] next quickfix item, keep focus", function() qfr.nav.q_next_keep_focus() end },
-{ nmode, "<Plug>(qf-herder-qf-nfile)", { "]<C-" .. last_qf_upper .. ">" }, "", "Open the [count] next quickfix file", function() qfr.nav.q_nfile() end },
-{ nmode, "<Plug>(qf-herder-qf-pfile)", { "[<C-" .. last_qf_upper .. ">" }, "", "Open the [count] prev quickfix file", function() qfr.nav.q_pfile() end },
-{ nmode, "<Plug>(qf-herder-qf-prev)", { "[" .. last_qf }, "", "Open the [wrapping count] prev quickfix item", function() qfr.nav.q_prev() end },
-{ nmode, "<Plug>(qf-herder-qf-prev-keep-focus)", {}, "", "Open the [wrapping count] prev quickfix item, keep focus", function() qfr.nav.q_prev_keep_focus() end },
+
+{ nmode, "<Plug>(qf-herder-ll-rewind)", { "[L" }, "", "Open the first or [count] loclist item", function() qfr.nav.l_rewind() end },
+{ nmode, "<Plug>(qf-herder-ll-last)", { "]L" }, "", "Open the last or [count] loclist item", function() qfr.nav.l_last() end },
+
+{ nmode, "<Plug>(qf-herder-ll-prev)", { "[l" } , "", "Open the [wrapping count] prev loclist item", function() qfr.nav.l_prev() end },
+{ nmode, "<Plug>(qf-herder-ll-next)", { "]l" } , "", "Open the [wrapping count] next loclist item", function() qfr.nav.l_next() end },
+{ nmode, "<Plug>(qf-herder-ll-prev-keep-focus)", {}, "", "Open the [wrapping count] prev loclist item, keep focus", function() qfr.nav.l_prev_keep_focus() end },
+{ nmode, "<Plug>(qf-herder-ll-next-keep-focus)", {}, "", "Open the [wrapping count] next loclist item, keep focus", function() qfr.nav.l_next_keep_focus() end },
+
+{ nmode, "<Plug>(qf-herder-ll-pfile)", { "[<C-l>" }, "", "Open the [count] prev loclist file", function() qfr.nav.l_pfile() end },
+{ nmode, "<Plug>(qf-herder-ll-nfile)", { "]<C-l>" }, "", "Open the [count] next loclist file", function() qfr.nav.l_nfile() end },
+
+{ nmode, "<Plug>(qf-herder-ll-vsplit)", {}, "", "Open the focused loclist item in a vsplit", function() qfr.nav.ll_vsplit() end },
+{ nmode, "<Plug>(qf-herder-ll-vsplit-keep-focus)", {}, "", "Open the focused loclist item in a vsplit, keeping focus", function() qfr.nav.ll_vsplit_keep_focus() end },
+
 { nmode, "<Plug>(qf-herder-qf-qq)", {}, "", "Open the current or [count] quickfix item", function() qfr.nav.q_q() end },
 { nmode, "<Plug>(qf-herder-qf-qq-keep-focus)", {}, "", "Open the current or [count] quickfix item, keep focus", function() qfr.nav.q_q_keep_focus() end },
-{ nmode, "<Plug>(qf-herder-qf-rewind)", { "[" .. last_qf_upper }, "", "Open the first or [count] quickfix item", function() qfr.nav.q_rewind() end },
-{ nmode, "<Plug>(qf-herder-qf-vsplit)", {}, "", "Open the current quickfix item in a vsplit", function() qfr.nav.qf_vsplit() end },
-{ nmode, "<Plug>(qf-herder-qf-vsplit-keep-focus)", {}, "", "Open the current quickfix item in a vsplit, keeping focus", function() qfr.nav.qf_vsplit_keep_focus() end },
-{ nmode, "<Plug>(qf-herder-split)", {}, "", "Open the current list item in a split", function() qfr.nav.split() end },
-{ nmode, "<Plug>(qf-herder-split-keep-focus)", {}, "", "Open the current list item in a split, keeping focus", function() qfr.nav.split_keep_focus() end },
-{ nmode, "<Plug>(qf-herder-tabnew)", {}, "", "Open the current list item in a new tab", function() qfr.nav.tabnew() end },
-{ nmode, "<Plug>(qf-herder-tabnew-keep-focus)", {}, "", "Open the current list item in a new tab, keeping focus", function() qfr.nav.tabnew_keep_focus() end },
+
+{ nmode, "<Plug>(qf-herder-qf-prev)", { "[q" }, "", "Open the [wrapping count] prev quickfix item", function() qfr.nav.q_prev() end },
+{ nmode, "<Plug>(qf-herder-qf-prev-keep-focus)", {}, "", "Open the [wrapping count] prev quickfix item, keep focus", function() qfr.nav.q_prev_keep_focus() end },
+{ nmode, "<Plug>(qf-herder-qf-next)", { "]q" }, "", "Open the [wrapping count] next quickfix item", function() qfr.nav.q_next() end },
+{ nmode, "<Plug>(qf-herder-qf-next-keep-focus)", {}, "", "Open the [wrapping count] next quickfix item, keep focus", function() qfr.nav.q_next_keep_focus() end },
+
+{ nmode, "<Plug>(qf-herder-qf-rewind)", { "[Q" }, "", "Open the first or [count] quickfix item", function() qfr.nav.q_rewind() end },
+{ nmode, "<Plug>(qf-herder-qf-last)", { "]Q" }, "", "Open the last or [count] quickfix item", function() qfr.nav.q_last() end },
+
+{ nmode, "<Plug>(qf-herder-qf-pfile)", { "[<C-q>" }, "", "Open the [count] prev quickfix file", function() qfr.nav.q_pfile() end },
+{ nmode, "<Plug>(qf-herder-qf-nfile)", { "]<C-q>" }, "", "Open the [count] next quickfix file", function() qfr.nav.q_nfile() end },
+
+{ nmode, "<Plug>(qf-herder-qf-vsplit)", {}, "", "Open the focused quickfix item in a vsplit", function() qfr.nav.qf_vsplit() end },
+{ nmode, "<Plug>(qf-herder-qf-vsplit-keep-focus)", {}, "", "Open the focused quickfix item in a vsplit, keeping focus", function() qfr.nav.qf_vsplit_keep_focus() end },
+
+{ nmode, "<Plug>(qf-herder-split)", {}, "", "Open the focused list item in a split", function() qfr.nav.split() end },
+{ nmode, "<Plug>(qf-herder-split-keep-focus)", {}, "", "Open the focused list item in a split, keeping focus", function() qfr.nav.split_keep_focus() end },
+{ nmode, "<Plug>(qf-herder-tabnew)", {}, "", "Open the focused list item in a new tab", function() qfr.nav.tabnew() end },
+{ nmode, "<Plug>(qf-herder-tabnew-keep-focus)", {}, "", "Open the focused list item in a new tab, keeping focus", function() qfr.nav.tabnew_keep_focus() end },
 
     --------------------------
     -- MARK: Maps - Preview --
@@ -207,13 +206,13 @@ M.maps = {
     -- MARK: Maps - Stack --
     ------------------------
 
-{ nmode, "<Plug>(qf-herder-qf-older)", { prefix_qf .. stack_older }, "", "Go to a [wrapping count] older quickfix list", function() qfr.stack.q_older() end },
-{ nmode, "<Plug>(qf-herder-qf-newer)", { prefix_qf .. stack_newer }, "", "Go to a [wrapping count] newer quickfix list", function() qfr.stack.q_newer() end },
-{ nmode, "<Plug>(qf-herder-qf-history)", { prefix_qf .. last_qf_upper }, "", "Go to the [count] quickfix list or view the entire stack", function() qfr.stack.q_history() end },
+{ nmode, "<Plug>(qf-herder-qf-older)", {}, "", "Go to a [wrapping count] older quickfix list", function() qfr.stack.q_older() end },
+{ nmode, "<Plug>(qf-herder-qf-newer)", {}, "", "Go to a [wrapping count] newer quickfix list", function() qfr.stack.q_newer() end },
+{ nmode, "<Plug>(qf-herder-qf-history)", {}, "", "Go to the [count] quickfix list or view the entire stack", function() qfr.stack.q_history() end },
 { nmode, "<Plug>(qf-herder-qf-free)", {}, "", "Free the quickfix stack", function() qfr.stack.q_free() end },
-{ nmode, "<Plug>(qf-herder-ll-older)", { prefix_ll .. stack_older }, "", "Go to a [wrapping count] older location list", function() qfr.stack.l_older() end },
-{ nmode, "<Plug>(qf-herder-ll-newer)", { prefix_ll .. stack_newer }, "", "Go to a [wrapping count] newer location list", function() qfr.stack.l_newer() end },
-{ nmode, "<Plug>(qf-herder-ll-history)", { prefix_ll .. last_ll_upper }, "", "Go to the [count] location list or view the entire stack", function() qfr.stack.l_history() end },
+{ nmode, "<Plug>(qf-herder-ll-older)", {}, "", "Go to a [wrapping count] older location list", function() qfr.stack.l_older() end },
+{ nmode, "<Plug>(qf-herder-ll-newer)", {}, "", "Go to a [wrapping count] newer location list", function() qfr.stack.l_newer() end },
+{ nmode, "<Plug>(qf-herder-ll-history)", {}, "", "Go to the [count] location list or view the entire stack", function() qfr.stack.l_history() end },
 { nmode, "<Plug>(qf-herder-ll-free)", {}, "", "Free the location list stack", function() qfr.stack.l_free() end },
 
 }
