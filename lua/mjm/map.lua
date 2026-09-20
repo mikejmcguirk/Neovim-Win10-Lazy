@@ -47,9 +47,6 @@ end
 set("n", "q", "<nop>") -- Create multicursor layer.
 -- TODO: Use q= for some kind of alignment function
 set("n", "qf", "q=")
-set("n", "qc", function()
-    api.nvim_buf_clear_namespace(0, api.nvim_create_namespace("nvim.multicursor"), 0, -1)
-end)
 
 set("n", "qQ", function()
     local ns = api.nvim_create_namespace("nvim.multicursor")
@@ -66,35 +63,43 @@ end, { expr = true })
 set("n", "qH", "[C")
 set("n", "qL", "]C")
 
+set("n", "qc", function()
+    api.nvim_buf_clear_namespace(0, api.nvim_create_namespace("nvim.multicursor"), 0, -1)
+end)
+
+-- TODO: qn/qN in Normal mode, move cursor to start of current cword, drop a cursor, and go to the
+-- next match. In visual mode, move the cursor to the next match, with the same `o` alignment as
+-- the previous.
+
 -- Set per-buffer.
 set("n", "gQ", function()
     api.nvim_echo({ { "Formatter not configured" } }, true, {})
 end)
 
-set("n", "W", "b")
-set("n", "<M-w>", "W")
-set("n", "<M-W>", "B")
+set({ "n", "x", "o" }, "W", "b")
+set({ "n", "x", "o" }, "<M-w>", "W")
+set({ "n", "x", "o" }, "<M-W>", "B")
 
-set("n", "E", "ge")
-set("n", "<M-e>", "E")
-set("n", "<M-E>", "gE")
+set({ "n", "x", "o" }, "E", "ge")
+set({ "n", "x", "o" }, "<M-e>", "E")
+set({ "n", "x", "o" }, "<M-E>", "gE")
 
-set("n", "ge", function()
+set({ "n", "x", "o" }, "ge", function()
     print("Use `E`")
 end)
 
-set("n", "gE", function()
+set({ "n", "x", "o" }, "gE", function()
     print("Use `<M-E>`")
 end)
 
 ---Credit llakala
 set({ "n", "x" }, "g:", "q:")
 
-set("n", "b", function()
+set({ "n", "x", "o" }, "b", function()
     print("Use `W`")
 end)
 
-set("n", "B", function()
+set({ "n", "x", "o" }, "B", function()
     print("Use `<M-W>`")
 end)
 
