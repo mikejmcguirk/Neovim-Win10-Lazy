@@ -71,8 +71,32 @@ set("n", "gQ", function()
     api.nvim_echo({ { "Formatter not configured" } }, true, {})
 end)
 
+set("n", "W", "b")
+set("n", "<M-w>", "W")
+set("n", "<M-W>", "B")
+
+set("n", "E", "ge")
+set("n", "<M-e>", "E")
+set("n", "<M-E>", "gE")
+
+set("n", "ge", function()
+    print("Use `E`")
+end)
+
+set("n", "gE", function()
+    print("Use `<M-E>`")
+end)
+
 ---Credit llakala
 set({ "n", "x" }, "g:", "q:")
+
+set("n", "b", function()
+    print("Use `W`")
+end)
+
+set("n", "B", function()
+    print("Use `<M-W>`")
+end)
 
 --Credit llakala
 --NOTE: These maps are good real estate to be replaced with something more useful.
