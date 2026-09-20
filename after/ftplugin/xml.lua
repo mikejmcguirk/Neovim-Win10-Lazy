@@ -1,6 +1,6 @@
 require("mjm.utils").set_buf_space_indent(0, 2)
 
-vim.keymap.set("n", Mjm_Format_Lhs, function()
+vim.keymap.set("n", "gQ", function()
     require("mjm.utils").fallback_formatter(0)
 end, { buf = 0 })
 

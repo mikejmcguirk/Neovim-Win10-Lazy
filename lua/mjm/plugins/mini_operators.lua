@@ -39,6 +39,7 @@ return {
 
         local desc_line = " line"
         set("n", "gtt", "^gtg_", { remap = true, desc = odesc_s .. desc_line })
+        set("n", "gtgt", "^gtg_", { remap = true, desc = odesc_s .. desc_line })
         set("x", "gt", function()
             do_sort("visual", { sort = { func = nil } })
         end, { desc = odesc_s .. " selection" })

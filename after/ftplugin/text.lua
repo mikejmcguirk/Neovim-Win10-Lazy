@@ -29,7 +29,7 @@ set("n", "gK", function()
     require("mjm.utils").check_word_under_cursor()
 end, buf_0)
 
-set("n", Mjm_Format_Lhs, function()
+set("n", "gQ", function()
     require("mjm.utils").fallback_formatter(0)
 end, buf_0)
 

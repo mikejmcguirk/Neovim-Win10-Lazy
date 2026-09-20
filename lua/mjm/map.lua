@@ -6,14 +6,78 @@ local vimv = vim.v
 
 _G.I_Dedent = "<C-m>"
 
------------------------
--- MARK: Normal Mode --
------------------------
+-- These mappings break any plugin, including mini.operators, that assumes you can recursively
+-- map `_`.
+-- set({ "n", "x", "o" }, "_", "g_")
+-- set({ "n", "x", "o" }, "g_", "g<end>")
 
-set("n", "@@", function()
-    local reg = fn.reg_recorded()
-    return reg == "" and "" or ("@" .. reg)
+---Credit llakala
+set({ "n", "x" }, "+", function()
+    if fn.reg_recording() ~= "" then
+        return "q"
+    end
+
+    local char = fn.getcharstr()
+    return "q" .. (char == "+" and "q" or char)
 end, { expr = true })
+
+set("n", "<bs>", "@")
+set("n", "<bs><bs>", "@@")
+set(
+    "x",
+    "<bs>",
+    "mode() ==# 'V' ? ':normal! @'.getcharstr().'<CR>' : '@'",
+    { silent = true, expr = true, desc = ":help v_@-default" }
+)
+
+for _, lhs in ipairs({ "<C-bs>", "<S-bs>" }) do
+    set("n", lhs, function()
+        local reg = fn.reg_recorded()
+        return reg == "" and "" or ("@" .. reg)
+    end, { expr = true })
+
+    set(
+        "x",
+        lhs,
+        "mode() ==# 'V' ? ':normal! @<C-R>=reg_recorded()<CR><CR>' : 'Q'",
+        { silent = true, expr = true, desc = ":help v_Q-default" }
+    )
+end
+
+set("n", "q", "<nop>") -- Create multicursor layer.
+-- TODO: Use q= for some kind of alignment function
+set("n", "qf", "q=")
+set("n", "qc", function()
+    api.nvim_buf_clear_namespace(0, api.nvim_create_namespace("nvim.multicursor"), 0, -1)
+end)
+
+set("n", "qQ", function()
+    local ns = api.nvim_create_namespace("nvim.multicursor")
+    -- Don't make it rain with duplicate cursors if they already exist.
+    if #api.nvim_buf_get_extmarks(0, ns, 0, -1, { limit = 1 }) == 0 then
+        return "gQ"
+    else
+        return ""
+    end
+end, { expr = true })
+
+-- TODO: Custom functions for `qh` and `ql` to cycle cursors, where it creates a multi-cursor in
+-- the previous spot then deletes it at the new location, so we aren't creating new cursors.
+set("n", "qH", "[C")
+set("n", "qL", "]C")
+
+-- Set per-buffer.
+set("n", "gQ", function()
+    api.nvim_echo({ { "Formatter not configured" } }, true, {})
+end)
+
+---Credit llakala
+set({ "n", "x" }, "g:", "q:")
+
+--Credit llakala
+--NOTE: These maps are good real estate to be replaced with something more useful.
+set({ "n", "x" }, "g/", "q/")
+set({ "n", "x" }, "g?", "q?")
 
 -----------------
 -- LEADER MAPS --
@@ -22,10 +86,6 @@ end, { expr = true })
 -- I use this as a prefix for inserting boilerplate code. Don't want this falling back to other
 -- behavior on timeout
 set("n", "<leader>-", "<nop>")
-
-set("n", Mjm_Format_Lhs, function()
-    api.nvim_echo({ { "Formatter not configured" } }, true, {})
-end)
 
 --------------------------
 -- MARK: NORMAL Z LAYER --
@@ -401,42 +461,6 @@ set("n", "]`", "<nop>")
 set("n", "['", "[`")
 set("n", "]'", "]`")
 
------------------------
--- NORMAL <BS> LAYER --
------------------------
-
--- MAYBE: Thinking of moving these keys to the leader layer behind <bs>. These can all be set
--- from the cmdline, and stuff like diagnostic config does not fit naturally as "builtin" keymaps.
--- Counterpoint: <bs> is not an especially important namespace to free. And, this would have to
--- be considered relative to the nature of other builtins. [q]q do not "need" to be keymaps but
--- obviously make sense. Being able to toggle spell in particular is useful.
-
-set("n", "<bs>", "<nop>")
-set("n", "<bs>d", function()
-    require("mjm.diagnostics").toggle_virt_lines()
-end)
-
-set("n", "<bs>s", function()
-    ---@type boolean
-    local cur_spell = api.nvim_get_option_value("spell", { scope = "local" })
-    api.nvim_set_option_value("spell", not cur_spell, { scope = "local" })
-end)
-
-set("n", "<bs><M-s>", "<cmd>set spell?<cr>")
-
-set("n", "<bs>w", function()
-    ---@type boolean
-    local cur_wrap = api.nvim_get_option_value("wrap", { scope = "local" })
-    api.nvim_set_option_value("wrap", not cur_wrap, { scope = "local" })
-end)
-
-set("n", "<bs><M-w>", "<cmd>set wrap?<cr>")
-
--- LOW: It is incongruous that I have spellnav on [w]w (to make room for ts-text-objects) but
--- then have spell still as s here, with wrap on w. The problem is that [w]w is a valuable key
--- because it's fairly ergonamic, and there's no practical need to use it for navigating w/W
--- text objects. s is also a great key to use for a text object.
-
 --------------------
 -- MODE SWITCHING --
 --------------------
@@ -447,12 +471,11 @@ set("n", "<C-c>", function()
     return "<esc>"
 end, { expr = true, silent = true })
 
--- Mostly a re-creation of the default, with the echo blank added.
 set("n", "<C-l>", function()
-    api.nvim_cmd({ cmd = "nohlsearch" })
-    api.nvim_cmd({ cmd = "diffupdate" })
-    api.nvim_buf_clear_namespace(0, api.nvim_create_namespace("nvim.multicursor"), 0, -1)
-    api.nvim_cmd({ cmd = "norm", args = { "<C-L>" }, bang = true })
+    api.nvim_cmd({ cmd = "nohlsearch" }) -- Nvim default
+    api.nvim_cmd({ cmd = "diffupdate" }) -- Nvim default
+    -- Skip clearing multicursors
+    api.nvim_cmd({ cmd = "norm", args = { "<C-L>" }, bang = true }) -- Nvim default
     api.nvim_cmd({ cmd = "echo", args = { '""' } })
 end)
 
@@ -469,26 +492,27 @@ for _, map in pairs({ "i", "a", "A" }) do
         return map
     end, { expr = true })
 end
-
--- Since gr is used for LSP maps
--- MAYBE: The obvious mappings are move U to redo, gr to <C-r>, and gR to <M-r>. But this is a
--- non-trivial departure from vanilla vim, which is relevant in the server context. I could make
--- a server-safe vimrc, but that's more complexity
-set("n", "<M-r>", "gr")
+-- MID: `I` in charwise visual mode should start insert at the beginning of the selection.
 
 set("n", "v", "mvv")
 set("n", "V", "mvV")
 set("n", "<C-v>", "mv<C-v>")
-set("n", "gV", "`[v`]")
+set("n", "<M-v>", "gv")
+
+set("n", "gv", "`[v`]")
+set("n", "gV", "`[V`]")
+set("n", "g<C-v>", "`[<C-v>`]")
 
 -- LOW: When doing gv, first check the locations of the '< and '> marks. If gv would take you
--- past top or botline, set a pcmark
+-- past top or botline, set a pcmark wow
 
--- Deal with default behavior where you type just to the bound of a window, so Nvim scrolls to
--- the next column so you can see what you're typing, but then you exit insert mode, meaning
--- the character no longer can exist, but Neovim still has you scrolled to the side
+-- `ze` to deal with default behavior where you type just to the bound of a window, so Nvim
+-- scrolls to the next column so you can see what you're typing, but then you exit insert mode,
+-- meaning the character no longer can exist, but Neovim still has you scrolled to the side
+-- `<right>` for Helix-style insert exit, so `i<C-c>` does not move the cursor, but `a<C-c>` moves
+-- one to the right.
 -- NOTE: This also applies to replace mode, but not single replace char
-set("i", "<C-c>", "<esc>ze")
+set("i", "<C-c>", "<right><esc>ze")
 set({ "x", "o" }, "<C-c>", "<esc>")
 
 -----------------

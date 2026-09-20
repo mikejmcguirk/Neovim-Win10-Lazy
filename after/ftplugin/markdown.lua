@@ -48,7 +48,7 @@ set("n", "gK", function()
 end, buf_0)
 
 -- MAYBE: Use prettier instead
-set("n", Mjm_Format_Lhs, function()
+set("n", "gQ", function()
     require("mjm.utils").fallback_formatter(0)
 end, buf_0)
 

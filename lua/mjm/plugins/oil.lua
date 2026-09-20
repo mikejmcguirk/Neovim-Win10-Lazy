@@ -3,7 +3,7 @@ local set = vim.keymap.set
 local uv = vim.uv
 
 local function close_oil()
-    if api.nvim_get_option_value("modified", { buf = 0 }) then
+    if api.nvim_get_option_value("mod", { buf = 0 }) then
         api.nvim_echo({ { "Oil buffer has unsaved changes" } }, false, {})
     else
         require("oil").close()
@@ -13,7 +13,6 @@ end
 return {
     "stevearc/oil.nvim",
     dependencies = { "nvim-tree/nvim-web-devicons" },
-    ---@module 'oil'
     ---@type oil.SetupOpts
     opts = {
         columns = { "size", "permissions" },

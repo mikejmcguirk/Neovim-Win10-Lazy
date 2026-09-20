@@ -7,6 +7,16 @@
 
 ## MID:
 
+- MULTICURSOR:
+  * Discussions:
+    + https://github.com/neovim/neovim/discussions?discussions_q=label%3Amulticursor < Neovim Github discussions
+  * [ ] Big idea: Make `q` the multicursor key
+    * Bias - This is prompted by seeing a lot of people on the Neovim Github doing it
+    * Deeper motivation - When I am working with multicursors, I am finding myself wanting to do a lot of things like putting the cursor at the current CWORD and then jumping to the next one. Or wanting to drop a cursor and go down a line. This stuff all needs a namespace to live in, and `Q` is awkward because it's a shift key.
+      + I never find myself wanting to save multiple macros on multiple letters. Mapping `Q` to `qq` and `@` to `@q` would make things much simpler. You could replay the macro per line in Visual mode.
+        + You could also use `gQ` as the macro key, so `Q` stays as toggling the individual cursor, which is the default and intuitive. And then remap cursor restoration.
+    * The neovim discussions have people doing/suggesting mappings for this.
+
 - [ ] https://github.com/modem-dev/hunk - Diff viewing is becoming more of a chokepoint. I don't know what tools you put together to do it, but it needs to be like, you make a new tab in Nvim, and you have the list of changed files in the quickfix list, and when you open a file it opens a diff view, and if you use quickfix bracket navigation it keeps both windows updated.
 - [ ] https://github.com/sindrets/diffview.nvim
 - [ ] The blink.cmp dictionary removed the plenary dep. Try installing again and see if the hung fzf issue still appears
