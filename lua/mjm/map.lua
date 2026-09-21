@@ -11,6 +11,10 @@ _G.I_Dedent = "<C-m>"
 -- set({ "n", "x", "o" }, "_", "g_")
 -- set({ "n", "x", "o" }, "g_", "g<end>")
 
+------------------
+-- MARK: Macros --
+------------------
+
 ---Credit llakala
 set({ "n", "x" }, "+", function()
     if fn.reg_recording() ~= "" then
@@ -44,10 +48,11 @@ for _, lhs in ipairs({ "<C-bs>", "<S-bs>" }) do
     )
 end
 
-set("n", "q", "<nop>") -- Create multicursor layer.
--- TODO: Use q= for some kind of alignment function
-set("n", "qf", "q=")
+-----------------------
+-- MARK: Multicursor --
+-----------------------
 
+set("n", "q", "<nop>") -- Create multicursor layer.
 set("n", "qQ", function()
     local ns = api.nvim_create_namespace("nvim.multicursor")
     -- Don't make it rain with duplicate cursors if they already exist.
@@ -58,18 +63,60 @@ set("n", "qQ", function()
     end
 end, { expr = true })
 
--- TODO: Custom functions for `qh` and `ql` to cycle cursors, where it creates a multi-cursor in
--- the previous spot then deletes it at the new location, so we aren't creating new cursors.
-set("n", "qH", "[C")
-set("n", "qL", "]C")
+set("n", "qW", function()
+    require("mjm.mc").cwords(true, vimv.count1, { leave = true })
+end)
+
+set("n", "qw", function()
+    require("mjm.mc").cwords(false, vimv.count1, { leave = true })
+end)
+
+-- TODO: Use q= for some kind of alignment function
+set("n", "qf", "q=")
+
+set("n", "qh", function()
+    require("mjm.mc").jump(true, vimv.count1, { leave = true })
+end)
+
+set("n", "qH", function()
+    require("mjm.mc").jump(true, vimv.count1, { leave = false })
+end)
+
+set("n", "qj", function()
+    require("mjm.mc").vertical(false, vimv.count1)
+end)
+
+set("n", "qk", function()
+    require("mjm.mc").vertical(true, vimv.count1)
+end)
+
+set("n", "ql", function()
+    require("mjm.mc").jump(false, vimv.count1, { leave = true })
+end)
+
+set("n", "qL", function()
+    require("mjm.mc").jump(false, vimv.count1, { leave = false })
+end)
 
 set("n", "qc", function()
     api.nvim_buf_clear_namespace(0, api.nvim_create_namespace("nvim.multicursor"), 0, -1)
 end)
 
+set("n", "qN", function()
+    require("mjm.mc").matches(true, vimv.count1)
+end)
+
+set("n", "qn", function()
+    require("mjm.mc").matches(false, vimv.count1)
+end)
+
 -- TODO: qn/qN in Normal mode, move cursor to start of current cword, drop a cursor, and go to the
 -- next match. In visual mode, move the cursor to the next match, with the same `o` alignment as
 -- the previous.
+
+-------------------
+-- MARK: Various --
+-------------------
 
 -- Set per-buffer.
 set("n", "gQ", function()
