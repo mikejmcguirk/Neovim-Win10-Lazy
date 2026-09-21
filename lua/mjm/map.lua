@@ -52,6 +52,14 @@ end
 -- MARK: Multicursor --
 -----------------------
 
+-- set("x", "(", function()
+--     require("mjm.mc").rotate_mc(true, vimv.count1)
+-- end)
+--
+-- set("x", ")", function()
+--     require("mjm.mc").rotate_mc(false, vimv.count1)
+-- end)
+
 set("n", "q", "<nop>") -- Create multicursor layer.
 set("n", "qQ", function()
     local ns = api.nvim_create_namespace("nvim.multicursor")
@@ -72,7 +80,9 @@ set("n", "qw", function()
 end)
 
 -- TODO: Use q= for some kind of alignment function
-set("n", "qf", "q=")
+set({ "n", "x" }, "qf", "q=")
+
+-- TODO: qh/ql should work in Visual Mode.
 
 set("n", "qh", function()
     require("mjm.mc").jump(true, vimv.count1, { leave = true })
@@ -98,7 +108,7 @@ set("n", "qL", function()
     require("mjm.mc").jump(false, vimv.count1, { leave = false })
 end)
 
-set("n", "qc", function()
+set({ "n", "x" }, "qc", function()
     api.nvim_buf_clear_namespace(0, api.nvim_create_namespace("nvim.multicursor"), 0, -1)
 end)
 
@@ -109,10 +119,6 @@ end)
 set("n", "qn", function()
     require("mjm.mc").matches(false, vimv.count1)
 end)
-
--- TODO: qn/qN in Normal mode, move cursor to start of current cword, drop a cursor, and go to the
--- next match. In visual mode, move the cursor to the next match, with the same `o` alignment as
--- the previous.
 
 -------------------
 -- MARK: Various --

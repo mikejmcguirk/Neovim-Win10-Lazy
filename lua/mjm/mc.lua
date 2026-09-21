@@ -53,7 +53,7 @@ end
 ---@param opts? nvim-tools.mc.GetOpts
 ---@return [uinteger, uinteger][], [uinteger, uinteger]
 ---Both 0,0 indexed
-function M.mc_get(buf, opts)
+local function mc_get(buf, opts)
     opts = opts ~= nil and require("nvim-tools.table").deepcopy(opts) or {}
     vim.validate("opts.insert_main", opts.insert_main, "boolean", true)
     vim.validate("opts.keep_oob", opts.keep_oob, "boolean", true)
@@ -205,7 +205,7 @@ function M.jump(upward, count1, opts)
     vim.validate("count1", count1, require("nvim-tools.types").is_count1)
 
     local buf = api.nvim_get_current_buf()
-    local mc_positions, cur_pos_ext = M.mc_get(buf)
+    local mc_positions, cur_pos_ext = mc_get(buf)
     local mc_positions_len = #mc_positions
     if mc_positions_len == 0 then
         return false
@@ -255,7 +255,7 @@ local function add_mcursor_at_text(pos, buf, pattern, offset)
 
     if not range_contains_mcursor(cword_range, buf) then
         local mark_pos = { cword_range[1], cword_range[2] }
-        cword_range[2] = cword_range[2] + offset
+        mark_pos[2] = mark_pos[2] + offset
         api.nvim_mcursor(buf, require("nvim-tools.pos").ext_to_mark_pos(mark_pos))
     end
 end
@@ -279,6 +279,29 @@ local function search_flags_get(upward, wrap)
     end
 
     return table.concat(flags, "")
+end
+
+---@param pattern string
+---@param count1 uinteger
+---@param pattern string
+---@param wrap boolean
+---@return [uinteger, uinteger][]
+local function search_results_collect(upward, count1, pattern, wrap)
+    local results = {} ---@type [uinteger, uinteger][]
+    local flags = search_flags_get(upward, wrap)
+    local remaining = count1
+    fn.search(pattern, flags, 0, 500, function()
+        local row = vim.call("line", ".") - 1
+        local col = vim.call("col", ".") - 1
+        ---@cast row uinteger
+        ---@cast col uinteger
+        results[#results + 1] = { row, col }
+
+        remaining = remaining - 1
+        return remaining > 0 and 1 or 0
+    end)
+
+    return results
 end
 
 ---@param opts mjm.mc.CwordOpts Modified in place!
@@ -329,21 +352,8 @@ function M.cwords(upward, count1, opts)
     end
 
     local ctx = cword_opts_to_ctx(opts)
-    local results = {} ---@type [uinteger, uinteger][]
     local pattern = "\\M" .. ntb.text_from_range(cword_range, buf)
-    local flags = search_flags_get(upward, ctx.wrap)
-    local remaining = count1
-    fn.search(pattern, flags, 0, 500, function()
-        local row = vim.call("line", ".") - 1
-        local col = vim.call("col", ".") - 1
-        ---@cast row uinteger
-        ---@cast col uinteger
-        results[#results + 1] = { row, col }
-
-        remaining = remaining - 1
-        return remaining > 0 and 1 or 0
-    end)
-
+    local results = search_results_collect(upward, count1, pattern, ctx.wrap)
     local results_len = #results
     if results_len == 0 then
         return
@@ -397,29 +407,15 @@ function M.matches(upward, count1, opts)
         return
     end
 
-    local cur_pos_ext = require("nvim-tools.win").cursor_ext_get(0)
-    local buf = api.nvim_get_current_buf()
-
     local ctx = matches_opts_to_ctx(opts)
-    local results = {} ---@type [uinteger, uinteger][]
-    local flags = search_flags_get(upward, ctx.wrap)
-    local remaining = count1
-    fn.search(reg_text, flags, 0, 500, function()
-        local row = vim.call("line", ".") - 1
-        local col = vim.call("col", ".") - 1
-        ---@cast row uinteger
-        ---@cast col uinteger
-        results[#results + 1] = { row, col }
-
-        remaining = remaining - 1
-        return remaining > 0 and 1 or 0
-    end)
-
+    local results = search_results_collect(upward, count1, reg_text, ctx.wrap)
     local results_len = #results
     if results_len == 0 then
         return
     end
 
+    local cur_pos_ext = require("nvim-tools.win").cursor_ext_get(0)
+    local buf = api.nvim_get_current_buf()
     local ntb = require("nvim-tools.buf")
     local cursor_range = ntb.line_match_under_cursor(cur_pos_ext, buf, reg_text)
     local offset = 0 ---@type uinteger
@@ -438,7 +434,66 @@ function M.matches(upward, count1, opts)
     main_cursor_move(cur_pos_ext, dest_pos, on_match)
 end
 
+---@param buf uinteger
+---@return [uinteger, uinteger, uinteger, uinteger][], [uinteger, uinteger, uinteger, uinteger]
+local function mc_visuals_get(buf)
+    local ns_vis = api.nvim_create_namespace("nvim.multicursor.visual")
+    local extmarks = api.nvim_buf_get_extmarks(buf, ns_vis, 0, -1, { details = true })
+    local ntt = require("nvim-tools.table")
+    local ntr = require("nvim-tools.range")
+    local converted = ntt.i_filter_map_to(extmarks, ntr.api_from_extmark)
+
+    local ntm = require("nvim-tools.misc")
+    local vregion = ntm.region_from_positions(".", "v", "v")
+    local vrange = ntr.from_region(vregion)
+    if api.nvim_get_option_value("sel", { scope = "global" }) ~= "exclusive" then
+        vrange[4] = vrange[4] + 1
+    end
+
+    ntr.qf_to_api(vrange)
+    return converted, vrange
+end
+-- TODO: Need to add keep_oob opt here.
+
+---@param upward boolean
+---@param count1 uinteger
+function M.rotate_mc(upward, count1)
+    -- TODO: Extremely hacky.
+    if api.nvim__mcursor_cascading() then
+        return
+    end
+
+    vim.validate("upward", upward, "boolean")
+    vim.validate("count1", count1, require("nvim-tools.types").is_count1)
+
+    local buf = api.nvim_get_current_buf()
+    local converted, vrange = mc_visuals_get(buf)
+    local ntr = require("nvim-tools.range")
+    local at = ntr.ranges_bisect(converted, vrange)
+    if ntr.cmp_(converted[at], vrange) ~= 0 then
+        table.insert(converted, at, vrange)
+    end
+
+    local ntt = require("nvim-tools.table")
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local texts = ntt.i_filter_map_ctx_to(converted, buf, function(b, r)
+        return api.nvim_buf_get_text(b, r[1], r[2], r[3], r[4])
+    end)
+
+    ntt.i_rotate(texts, count1, upward and -1 or 1)
+    for i = #converted, 1, -1 do
+        local c = converted[i]
+        api.nvim_buf_set_text(0, c[1], c[2], c[3], c[4], texts[i])
+    end
+end
+-- TODO: This function does not intelligently keep the old visual selection and cursor position
+-- around when replacing with the new text. Am loathe to try coding in this behavior when the
+-- underlying architecture is still being developed.
+
 return M
+
+-- TODO-DEP: Hold on this until the finalized interfaces drop and the surrounding ecosystem is
+-- more mature.
 
 -- TODO: Backwards searches catch the result under cursor unless the cursor is on the very first
 -- character. Unsure how to fix in a non-hacky way.
