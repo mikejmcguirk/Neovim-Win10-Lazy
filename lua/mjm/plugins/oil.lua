@@ -10,6 +10,15 @@ local function close_oil()
     end
 end
 
+local close_no_save = {
+    function()
+        local oil = require("oil")
+        oil.discard_all_changes()
+        oil.close()
+    end,
+    mode = "n",
+}
+
 return {
     "stevearc/oil.nvim",
     dependencies = { "nvim-tree/nvim-web-devicons" },
@@ -27,14 +36,8 @@ return {
             ["`"] = { "actions.open_cwd", mode = "n" }, -- Vinegar style mapping.
             ["-"] = { "actions.parent", mode = "n" }, -- Vinegar mapping
             ["<C-^>"] = { close_oil, mode = "n" }, -- Vinegar mapping
-            ["q"] = {
-                function()
-                    local oil = require("oil")
-                    oil.discard_all_changes()
-                    oil.close()
-                end,
-                mode = "n",
-            },
+            ["<C-w>c"] = close_no_save,
+            ["<C-w><C-c>"] = close_no_save,
             ["Q"] = {
                 function()
                     require("oil").save({ confirm = nil }, function(err)
