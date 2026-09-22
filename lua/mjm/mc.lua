@@ -94,7 +94,9 @@ local function jump_find_idx(mc_positions, curpos_ext, upward, count1, wrap)
     else
         -- LOW: Hacky, but unsure how else to correct without inserting curpos_ext into
         -- mc_positions, which is a non-trivial cost.
-        if ntp.cmp_tbl(curpos_ext, mc_positions[idx_start]) < 0 then
+        -- in_bounds var because bisect can return the index past the end.
+        local in_bounds = idx_start <= #mc_positions
+        if in_bounds and ntp.cmp_tbl(curpos_ext, mc_positions[idx_start]) < 0 then
             idx_start = idx_start - 1
         end
 
@@ -220,6 +222,8 @@ function M.jump(upward, count1, opts)
     main_cursor_move(cur_pos_ext, mc_positions[idx], ctx.leave)
     return true
 end
+-- TODO-DEP: This now merges cursors if follow mode is on. Wait to fix until the internals are
+-- more baked in.
 
 ---@param range [uinteger, uinteger, uinteger, uinteger] 0,0,0,0 indexed, end-exclusive
 ---@param buf uinteger
