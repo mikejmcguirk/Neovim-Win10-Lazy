@@ -1,3 +1,0 @@
-{
-  "diagnostics.disable": ["luadoc-miss-see-name", "trailing-space"]
-}
