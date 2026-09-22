@@ -104,7 +104,7 @@ api.nvim_create_autocmd("LspProgress", {
 -- MID: Combine these into one table to it can be passed into a map_accum function.
 local levels = { "Error", "Warn", "Info", "Hint" }
 ---@type string[]
-local signs = mjm.v.has_nerd_font and { "󰅚 ", "󰀪 ", "󰋽 ", "󰌶 " }
+local signs = Mjm_Has_Nerd_Font and { "󰅚 ", "󰀪 ", "󰋽 ", "󰌶 " }
     or { "E:", "W:", "I:", "H:" }
 
 -- NOTE: My diagnostics.lua contains the delete for the default diagnostic status cache augroup
@@ -204,7 +204,7 @@ api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
     end),
 })
 
-local format_icons = mjm.v.has_nerd_font and { unix = "", dos = "", mac = "" }
+local format_icons = Mjm_Has_Nerd_Font and { unix = "", dos = "", mac = "" }
     or { unix = "unix", dos = "dos", mac = "mac" }
 
 local bt_map = {

@@ -36,5 +36,5 @@ vim.keymap.set("n", "<leader>-e", function()
     add_pragma("#[expect()]")
 end)
 
----@diagnostic disable-next-line: undefined-field
-mjm.lsp.start(vim.lsp.config["rust_analyzer"], { bufnr = 0 })
+---@diagnostic disable-next-line: param-type-mismatch
+require("mjm.lsp").start(vim.lsp.config["rust_analyzer"], { bufnr = 0 })

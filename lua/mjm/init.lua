@@ -1,6 +1,7 @@
 local api = vim.api
 
-require("mjm.mjm")
+Mjm_Shiftwidth = 4
+Mjm_Has_Nerd_Font = true
 
 vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
 vim.keymap.set({ "n", "x" }, "\\", "<Nop>")

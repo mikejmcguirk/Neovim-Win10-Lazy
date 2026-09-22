@@ -91,8 +91,5 @@ set("n", "<leader>--", function()
     add_annotation("")
 end, { buf = 0 })
 
--- mjm.lsp.start(vim.lsp.config["lua_ls"], { bufnr = 0 })
-mjm.lsp.start(vim.lsp.config["emmylua_ls"], { bufnr = 0 })
-
--- TODO: https://github.com/lewis6991/dotfiles/blob/main/config/nvim/lsp/luals.lua
--- Code for making lua_ls load as a backup if emmylua_ls isn't present.
+---@diagnostic disable-next-line: param-type-mismatch
+require("mjm.lsp").start(vim.lsp.config["emmylua_ls"], { bufnr = 0 })

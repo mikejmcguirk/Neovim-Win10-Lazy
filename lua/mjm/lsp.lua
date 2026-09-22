@@ -5,9 +5,7 @@ local set = vim.keymap.set
 lsp.log.set_level(vim.log.levels.ERROR)
 
 set("n", "gr", "<nop>")
--- Don't undo <C-s> signature help default. I have nothing to add to it.
-local lsp_map_defaults = { "gra", "gri", "grn", "grr", "grt", "gO" }
-for _, map in ipairs(lsp_map_defaults) do
+for _, map in ipairs({ "gra", "gri", "grn", "grr", "grt", "gO" }) do
     if #vim.call("maparg", map, "n") > 0 then
         vim.keymap.del("n", map)
     end
@@ -48,7 +46,6 @@ local function set_lsp_maps(ev)
             lsp.codelens.enable()
         end
     end
-    -- MID: Unsure how either `unable` or `run` handle LSPs that don't support codeLens.
 
     -- textDocument/declaration --
     set("n", "grd", function()
@@ -103,7 +100,6 @@ local function set_lsp_maps(ev)
     end
 
     -- textDocument/hover --
-    -- Default border now set with winborder
 
     -- textDocument/implementation --
     set("n", "gri", function()
@@ -227,24 +223,43 @@ api.nvim_create_autocmd("LspDetach", {
     end),
 })
 
--- MID: Make textDocument/documentLink work.
+local M = {}
+
+---@param config vim.lsp.Config
+---@param opts vim.lsp.start.Opts?
+---@return nil
+function M.start(config, opts)
+    vim.validate("config", config, "table")
+    vim.validate("opts", opts, "table", true)
+    opts = opts or {}
+
+    local start_opts = vim.deepcopy(opts, true) ---@type vim.lsp.start.Opts
+    start_opts.bufnr = vim._resolve_bufnr(start_opts.bufnr) ---@type integer
+    if api.nvim_get_option_value("buftype", { buf = start_opts.bufnr }) ~= "" then
+        return
+    end
+
+    start_opts.reuse_client = config.reuse_client
+    ---@diagnostic disable-next-line: invisible, access-invisible
+    start_opts._root_markers = config.root_markers
+    if type(config.root_dir) == "function" then
+        config.root_dir(start_opts.bufnr, function(root_dir)
+            config = vim.deepcopy(config, true)
+            ---@diagnostic disable-next-line: need-check-nil
+            config.root_dir = root_dir
+            vim.schedule(function()
+                lsp.start(config, start_opts)
+            end)
+        end)
+    else
+        lsp.start(config, start_opts)
+    end
+end
+
+return M
+
+-- LOW: If no attached LSPs support a method, the keymap should print a message saying so.
+-- LOW: It would be neat if keymaps were auto attached/detached based on the attached LSPs,
+-- rather than bluntly on attach.
+-- LOW: Make textDocument/documentLink work.
 -- - Tough because the default `gx` mapping handles so many things.
--- MID: If you have an LSP, it should be possible to type something like grv and replace a variable
--- with its corresponding literal. I think rust-analyzer has this as a code action. Is there a more
--- generalizable way to do it
--- MID: "Find under cursor" function. If no LSP, then it gets the current cword and finds all
--- instances of it in the current buffer. If an LSP is attached, it uses documentHighlight to
--- get the locations then pipes those to fzf-lua or the location list.
--- - Neovim includes a "symbols_to_items" function that might be useful
--- - This idea can also be expanded to [w]w navigation based on the current word/symbol. But
--- this then prompts a re-evaluation of having spell mapped to `w`. Which then prompts a
--- re-evaluation of the `s` TS text object. This might be a case where, like conditionals and
--- diagnostic jumping, conditional-specific bracket nav is not useful enough to justify the
--- move mapping. TS incremental selection does a lot to alleviate pressure on TS Text Objects for
--- those kinds of selections. And bracket naving locals is something I've never done.
--- MID:DEP: You could do the keymaps as a table that are read and mapped when an LSP attaches, then
--- read and de-mapped if the last LSP is detached. Have not run into a use case where this is
--- necessary though.
--- MID: Bring back the "map_no_support" concept. Was removed because, if you have multiple LSPs,
--- it could map for the non-supporting LSP even though another one supports it. Should not be hard
--- to check other attached clients, but not immediate priority due to lack of use case.

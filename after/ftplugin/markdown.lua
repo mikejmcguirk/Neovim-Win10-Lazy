@@ -69,7 +69,7 @@ set("n", "gF", function()
     require("nvim-text-tools").remove_checkbox()
 end, { buf = 0 })
 
----@diagnostic disable-next-line: undefined-field
-mjm.lsp.start(vim.lsp.config["markdown_oxide"], { bufnr = 0 })
+---@diagnostic disable-next-line: param-type-mismatch
+require("mjm.lsp").start(vim.lsp.config["markdown_oxide"], { bufnr = 0 })
 
 -- MAYBE: Potential friction point: Bullets overrides autopairs <cr> mapping

@@ -57,8 +57,8 @@ api.nvim_set_option_value("scs", true, scope_global)
 api.nvim_set_option_value("et", true, scope_global)
 api.nvim_set_option_value("sr", true, scope_global)
 api.nvim_set_option_value("sts", 0, scope_global)
-api.nvim_set_option_value("sw", mjm.v.shiftwidth, scope_global)
-api.nvim_set_option_value("ts", mjm.v.shiftwidth, scope_global)
+api.nvim_set_option_value("sw", Mjm_Shiftwidth, scope_global)
+api.nvim_set_option_value("ts", Mjm_Shiftwidth, scope_global)
 
 -------------------
 -- MARK: Display --
