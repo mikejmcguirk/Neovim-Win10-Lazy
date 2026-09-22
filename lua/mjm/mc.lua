@@ -492,6 +492,14 @@ end
 
 return M
 
+-- TODO: Split visual selection into multiple cursors
+-- TODO: I/A split selections by line for insert before/after (every visual mode can function like
+-- block mode)
+-- TODO: Split visual selection by regex
+-- TODO: Within a visual selection, split by search matches
+-- TODO: Based on the primary cursor's selection, add a new cursor with the same visual selection
+-- above or below if it exists.
+
 -- TODO-DEP: Hold on this until the finalized interfaces drop and the surrounding ecosystem is
 -- more mature.
 

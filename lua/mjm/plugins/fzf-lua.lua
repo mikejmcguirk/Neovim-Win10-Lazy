@@ -1,6 +1,5 @@
 local api = vim.api
 local fn = vim.fn
-local fs = vim.fs
 local set = vim.keymap.set
 
 local fzflua_opts = {
@@ -132,11 +131,11 @@ return {
                 return
             end
 
-            fzf_lua.fzf_exec("tr -d '\\r' < " .. vim.fn.shellescape(dict_file))
+            fzf_lua.fzf_exec("tr -d '\\r' < " .. fn.shellescape(dict_file))
         end)
 
         local function fuzzy_spell_correct()
-            local word = vim.fn.expand("<cword>")
+            local word = fn.expand("<cword>")
             if type(word) ~= "string" then
                 return
             end
@@ -154,7 +153,7 @@ return {
                 return
             end
 
-            fzf_lua.fzf_exec("tr -d '\\r' < " .. vim.fn.shellescape(dict_file), {
+            fzf_lua.fzf_exec("tr -d '\\r' < " .. fn.shellescape(dict_file), {
                 prompt = 'Suggestions for "' .. word_lower .. '": ',
                 actions = {
                     ["default"] = function(selected, _)
@@ -195,8 +194,8 @@ return {
                     -- MID: Bad hotkey for this.
                     ["ctrl-w"] = function(_, _)
                         ---@type string
-                        local spellfile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add"
-                        vim.fn.writefile({ word_lower }, spellfile, "a")
+                        local spellfile = fn.stdpath("config") .. "/spell/en.utf-8.add"
+                        fn.writefile({ word_lower }, spellfile, "a")
                         api.nvim_cmd({ cmd = "mkspell", args = { spellfile }, bang = true }, {})
                     end,
                 },
@@ -210,71 +209,7 @@ return {
         end
 
         set("n", "<leader>fds", fuzzy_spell_correct)
-
-        local function fzf_system_dirs()
-            local excludes = {
-                ".git",
-                "node_modules",
-                "target",
-                "build",
-                ".cache",
-                "__pycache",
-                "obj",
-            }
-
-            local cmd_parts = {
-                "fdfind",
-                "--type",
-                "d",
-                "--base-directory",
-                os.getenv("HOME"),
-                "--absolute-path",
-                "--hidden",
-                "--no-ignore",
-            }
-
-            for _, exclude in ipairs(excludes) do
-                cmd_parts[#cmd_parts + 1] = "--exclude"
-                cmd_parts[#cmd_parts + 1] = exclude
-            end
-
-            local cmd = table.concat(cmd_parts, " ")
-            fzf_lua.fzf_exec(cmd, {
-                prompt = "Home Search ",
-                preview = "ls --color=always -la --group-directories-first {} | head -100",
-                actions = {
-                    ["default"] = function(selected)
-                        if selected == nil or #selected == 0 then
-                            return
-                        end
-
-                        require("nvim-tools.tab").open_new_tab(nil, true, fn.tabpagenr("$"))
-                        -- Doesn't produce cmdline output.
-                        vim.cmd("tcd " .. fs.normalize(selected[1]))
-                    end,
-                },
-            })
-        end
-
-        vim.keymap.set("n", "<leader>f~", fzf_system_dirs, {
-            desc = "Search for a dir from home. Open in a new tab with tcd",
-            silent = true,
-        })
     end,
 }
 
--- LOW: Command line attached/full screen layout. Starts pointing more toward the Helix-style
--- endgame (IMO) for pickers, where they are built into the editor as an extension of the cmdline
--- LOW: Do need to explore the snacks plugin. Issues with fzflua:
--- - customization is clunky
--- - mixed opinions on fuzzy finding
--- - I'm not actually totally sure I want to be using external sys calls for searching
---   - Related to this, one of the big original selling points of Fzflua was learning more about
---   fzf, but that has kinda stalled, in part because customization is hard
--- - opportunities in an alternate picker
---   - frecency (not as big a deal to me as others, but does help)
---   - better customization
---   - load times
--- LOW: Turn let g:/w:/b:/t: into pickers
--- LOW: Make a thesaurus picker
--- LOW: rename this file to fzf-lua
+-- LOW: Thesaurus picker

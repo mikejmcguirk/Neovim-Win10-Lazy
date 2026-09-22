@@ -20,13 +20,8 @@ return {
                     return true
                 end
 
-                if string.find(title, "use cast to remove nil", 1, true) ~= nil then
-                    return false
-                end
-
                 return string.find(title, "Change to parameter", 1, true) == nil
             end,
-
             ---@param _ integer
             ---@param action lsp.Command|lsp.CodeAction
             python = function(_, action)

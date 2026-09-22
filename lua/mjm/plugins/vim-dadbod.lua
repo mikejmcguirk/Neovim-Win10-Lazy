@@ -5,7 +5,7 @@ return {
     "tpope/vim-dadbod",
     dependencies = { "kristijanhusak/vim-dadbod-ui" },
     init = function()
-        api.nvim_set_var("db_ui_use_nerd_fonts", 1)
+        api.nvim_set_var("db_ui_use_nerd_fonts", _G.Mjm_Has_Nerd_Font and 1 or 0)
         api.nvim_create_user_command("Dadbod", function()
             -- This cannot be a scratch buf per se, as DBUI will not use it as a query window.
             -- - Do not set scratchbuf == true in nvim_create_buf
