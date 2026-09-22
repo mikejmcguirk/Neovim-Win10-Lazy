@@ -42,7 +42,6 @@ local function is_git_tracked(path)
 
     local cmd = { "git", "ls-files", "--error-unmatch", "--", path }
     local output = vim.system(cmd):wait()
-
     return output.code == 0
 end
 
@@ -50,17 +49,19 @@ end
 local function del_cur_buf_from_disk(cargs)
     local buf = api.nvim_get_current_buf() ---@type integer
     local bufname = api.nvim_buf_get_name(buf) ---@type string
-    if api.nvim_get_option_value("buftype", { buf = buf }) ~= "" then
+    if api.nvim_get_option_value("bt", { buf = buf }) ~= "" then
         return
     end
+
     if bufname == "" then
         if cargs.bang then
             api.nvim_cmd({ cmd = "bwipeout", bang = true }, {})
         end
+
         return
     end
 
-    if (not cargs.bang) and api.nvim_get_option_value("modified", { buf = buf }) then
+    if (not cargs.bang) and api.nvim_get_option_value("mod", { buf = buf }) then
         api.nvim_echo({ { "Buf is modified", "" } }, false, {})
         return
     end
@@ -81,7 +82,7 @@ local function del_cur_buf_from_disk(cargs)
             return
         end
 
-        ut.pbuf_rm(buf, true, true, true, false)
+        require("nvim-tools.buf").protected_del(buf, false, { force = cargs.bang })
     end
 
     ut.harpoon_rm_buf({ bufname = bufname })
@@ -101,9 +102,11 @@ local function mv_cur_buf(cargs)
     if bufname == "" then
         return
     end
+
     if api.nvim_get_option_value("buftype", { buf = buf }) ~= "" then
         return
     end
+
     if (not buf) or not bufname then
         return
     end
@@ -177,4 +180,4 @@ end, { bang = true, nargs = 1, complete = "file_in_path" })
 -- Quick refresh if Treesitter bugs out
 api.nvim_create_user_command("We", "silent up | e", {})
 
--- LOW: Redo the Abolish subvert cmd with the preview handler Does this plugin already exist?
+-- LOW: Redo the Abolish subvert cmd with the preview handler. Does this plugin already exist?

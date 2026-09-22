@@ -145,8 +145,26 @@ set({ "n", "x", "o" }, "gE", function()
     print("Use `<M-E>`")
 end)
 
+set("x", "p", "P")
+set("x", "P", "p")
+set("n", "<M-p>", '"+p')
+set("n", "<M-P>", '"+P')
+set("x", "<M-p>", '"+P')
+set("x", "<M-P>", '"+p')
+
+set("n", "[p", '<Cmd>exe "iput! " . v:register<CR>')
+set("n", "]p", '<Cmd>exe "iput "  . v:register<CR>')
+set("n", "[<M-p>", '<Cmd>exe "iput! " . "+"<CR>')
+set("n", "]<M-p>", '<Cmd>exe "iput "  . "+"<CR>')
+
+set({ "n", "x" }, "<M-d>", '"_d')
+set({ "n", "x" }, "<M-D>", '"_D')
+
 ---Credit llakala
 set({ "n", "x" }, "g:", "q:")
+
+set({ "n", "x" }, "<M-c>", '"_c')
+set({ "n", "x" }, "<M-C>", '"_C')
 
 set({ "n", "x", "o" }, "b", function()
     print("Use `W`")

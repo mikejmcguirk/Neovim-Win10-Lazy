@@ -361,9 +361,9 @@ local eval = "(nvim_get_current_win()==#g:actual_curwin || &laststatus==3)" ---@
 local stl_str = "%{%" .. eval .. " ? v:lua.Mjm_Stl.active() : v:lua.Mjm_Stl.inactive()%}"
 api.nvim_set_option_value("stl", stl_str, { scope = "global" })
 
--- MID: Show which treesitter parser(s) are running.
 -- MID: https://github.com/neovim/neovim/pull/35428
 
+-- LOW: Show which treesitter parser(s) are running.
 -- LOW: Build a character index component for spec-ops debugging
 -- LOW: Re-check if the virtual column component is usable for spec-ops debugging or if I need to
 -- build my own. That might be tough though because you have to binary search each cursor movement

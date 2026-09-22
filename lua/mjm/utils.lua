@@ -1,10 +1,6 @@
-mjm.util = {}
-
 local api = vim.api
 local fn = vim.fn
-local uv = vim.uv
 
----@class MjmUtils
 local M = {}
 
 ---@param buf integer
@@ -28,7 +24,6 @@ local function fix_bookend_blanks(buf, start_idx, end_idx)
 
     local blank_line = (line == "") or line:match("^%s*$")
     local last_line = api.nvim_buf_line_count(buf) == 1
-
     if last_line or not blank_line then
         return
     end
@@ -226,8 +221,9 @@ function M.harpoon_rm_buf(opts)
     end
 
     local ok, harpoon = pcall(require, "harpoon")
-    if (not ok) or not harpoon then
+    if (not ok) or harpoon == nil then
         api.nvim_echo({ { "Unable to require harpoon", "ErrorMsg" } }, true, { err = true })
+        return
     end
 
     local list = harpoon:list()
@@ -261,8 +257,9 @@ end
 ---@param new_bufname string
 function M.harpoon_mv_buf(old_bufname, new_bufname)
     local ok, harpoon = pcall(require, "harpoon")
-    if (not ok) or not harpoon then
+    if (not ok) or harpoon == nil then
         api.nvim_echo({ { "Unable to require harpoon", "ErrorMsg" } }, true, {})
+        return
     end
 
     local list = harpoon:list()
@@ -296,101 +293,6 @@ function M.harpoon_mv_buf(old_bufname, new_bufname)
 
     local extensions = require("harpoon.extensions")
     extensions.extensions:emit(extensions.event_names.REMOVE)
-end
-
----@return integer[]
-local function get_listed_bufs()
-    local bufs = api.nvim_list_bufs() ---@type integer[]
-    local listed_bufs = {} ---@type integer[]
-    for _, buf in ipairs(bufs) do
-        if api.nvim_get_option_value("bl", { buf = buf }) then
-            listed_bufs[#listed_bufs + 1] = buf
-        end
-    end
-
-    return listed_bufs
-end
-
--- https://github.com/neovim/neovim/pull/33402
--- When nvim_buf_delete is run without the unload flag, it goes beyond
--- deleting the buffer into deleting shada state, including the '"' mark
--- FUTURE: Whenever nvim_buf_del is created, use that for deleting buffers
-
-function M.is_empty_buf(buf)
-    if api.nvim_buf_line_count(buf) > 1 then
-        return false
-    end
-
-    local first_line = api.nvim_buf_get_lines(buf, 0, 1, false) ---@type string[]
-    if (not first_line[1]) or #first_line[1] == 0 then
-        return true
-    else
-        return false
-    end
-end
-
----@param buf integer
----@param force boolean
----@param wipeout boolean
----@param no_save boolean
----@param suppress_errs boolean
----@return boolean, [string, string|integer?][]|nil, boolean|nil, vim.api.keyset.echo_opts|nil
-function M.pbuf_rm(buf, force, wipeout, no_save, suppress_errs)
-    vim.validate("buf", buf, "number")
-    vim.validate("force", force, "boolean")
-    vim.validate("wipeout", wipeout, "boolean")
-
-    if not api.nvim_buf_is_valid(buf) then
-        local chunks = { { "Buf " .. buf .. " is not valid" } } ---@type [string,string|integer?][]
-        if suppress_errs then
-            return true, nil, nil, nil
-        end
-
-        return false, chunks, true, { err = true }
-    end
-
-    if #api.nvim_buf_get_name(buf) == 0 and not force and not M.is_empty_buf(buf) then
-        if suppress_errs then
-            return true, nil, nil, nil
-        end
-
-        local chunks = { { "Buf " .. " has no filename" } }
-        return false, chunks, true, { err = true }
-    end
-
-    local delete_opts = { force = force }
-    if not wipeout then
-        local listed_bufs = get_listed_bufs()
-        for i = 1, #listed_bufs, -1 do
-            if listed_bufs[i] == buf then
-                table.remove(listed_bufs, i)
-                break
-            end
-        end
-
-        if #listed_bufs < 1 then
-            ---@type [string,string|integer?][]
-            local chunks = { { "Cannot unload the last buffer" } }
-            return false, chunks, false, {}
-        end
-
-        api.nvim_set_option_value("buflisted", false, { buf = buf })
-        delete_opts.unload = true
-    end
-
-    if (not no_save) and api.nvim_get_option_value("modifiable", { buf = buf }) then
-        api.nvim_buf_call(buf, function()
-            api.nvim_cmd({ cmd = "update", mods = { silent = true } }, {})
-        end)
-    end
-
-    local ok, err = pcall(api.nvim_buf_delete, buf, delete_opts) ---@type boolean, nil
-    if ok then
-        return true, nil, nil, nil
-    end
-    ---@type [string, string|integer?][]
-    local chunks = { { err or ("Unknown error deleting buf " .. buf) } }
-    return false, chunks, true, { err = true }
 end
 
 return M
