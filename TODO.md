@@ -1,45 +1,52 @@
-## OBJECTIVES:
-
-- Align Neovim with my mental model of how it should work.
-
-## CONSTRAINTS:
-
-- This series of docs needs to live within the idea of reducing regret within Neovim as a tool, rather than addressing it as a piece of critical infrastructure.
-  * Nothing here can spawn a "CRITICAL" TODO annotation
-  * Any plugin change needs to be able to be backed out at any point. Can't be in an "it's too late, it's already begun" type situation
-- Top and config level docs should not have nested headers. Over-complicated
-
-## TRAVERSAL
-
-- TODO > MID > LOW
-- Plugin ordering
-  - rancher
-  - Re-update of catharsis/farsight based on rancher learnings
-  - nvim-tools
-  - docgen
-  - nvim-tools reduce
-
 ## TODO:
 
-- Rename TODO files so they can link to each other
-- For all plugins:
-  * Update config modules to how rancher is now done
-  * Rename ctx > cfg for sub-lists
-- EmmyLua conversion
-  * Go through all config files and handle diagnostics
-  * Change `integer` > `uinteger` where needed
-- See what old multicursor functionality we can move over.
-
-## TODO-DEP:
-
-- [ ] If we start using Odin more often and seriously: https://github.com/cephei8/odin.nvim
-  * This plugin should be installed or its features ported.
-    + The compiler stuff might be useful for Rancher
+- [ ] Finish farsight (target: when v0.13 comes out)
 - [ ] When we have plugins to push to Github:
   - [ ] Figure out how to push plugin updates to feature branches without every update showing up in lazy.nvim
   - [ ] How do you block direct pushes to master?
 
+- [ ] nvim-tools needs to come out with this because it's a dep
+- [ ] Use farsight as the model for rancher. (Data structures, ci, etc.)
+- [ ] Same for farsight + rancher > catharsis
+- [ ] Release plugin template based on learnings from all three
+
+## TODO-DEP:
+
+VERSION BASED CODE REMOVALS
+
+- [ ] 0.14
+  - [ ] nvim-tools bcd_get
+  - [ ] nvim_create_autocmd: change buffer to buf
+  - [ ] nvim-tools win_resize wrapper
+  - [ ] Manual creating of the "Dimmed" highlight group in plugins
+  - [ ] For any uses of nvim_win_call or nvim_buf_call with multiple returns, remove any table packing logic
+  - [ ] Remove optional tables from API calls
+- [ ] 0.15
+  - [ ] nvim-tools nonnil wrapper
+
 ## MID:
+
+- [ ] Handle non-version controlled files
+  - [ ] General troubleshooting inits can stay
+  - [ ] Other stuff should probably be deleted
+- [ ] https://github.com/neovim/neovim/pull/40948 - Implement this as a map for Oil (`1-` to open cwd. Higher counts go upward)
+
+- [ ] Turn annotator into a plugin.
+- [ ] Turn text tools into a plugin.
+  - [ ] This needs to have the list visual mode selections in order to be a sufficient value-add over vim-bullets
+  - [ ] Should also have proper multicursor support
+
+- [ ] Decide if there's enough meat on an operator plugin to spend time making one. If not, internalize the cursor'd yank code and figure out a more elegant solution for the gu mappings
+  - [ ] Remote operation research:
+    - [ ] Determine if this is too big an idea for Nvim
+    - Flash remote
+    - https://github.com/goldfeld/vim-seek
+  * [ ] Swap motions ideas:
+    * [ ] Normal: You do `)iw`, it sees if you are in an inner word, then finds the next inner word and swaps them. `(iw` would do the same but with the previous. This is basically like the treesitter text objects swap but extended to other text objects. (You could also implement lookahead to find the next inner word, then use that as the swap for the origin)
+      * [ ] Use double count to define both how many rotations to perform and how many objects to rotate
+        * [ ] `)2iw` means rotate the current and next two inner words
+        - [ ] `2)2iw` means rotate those inner words twice. Position 1 moves to position 3, 2 to 1, and 3 to 2.
+          - This means that `2)iw` would do nothing. There should be some kind of built-in hl_on display so that the user knows a swap happened, even if it has no actual outcome.
 
 - [ ] Investigate this: https://github.com/chrisgrieser/nvim-various-textobjs
   - [ ] Is this a plugin worth using? A plugin worth using as the basis for other things?
@@ -48,37 +55,16 @@
   * It looks like tmux is the remaining case where it doesn't work. Lots of different things colliding here.
 * [ ] https://github.com/neovim/neovim/commit/bbd0fdd36dcd684e09836ff41517e0e7ea6d802e - More efficient string parsing method
 
-- [ ] Remote operation research:
-  - [ ] Determine if this is too big an idea for Nvim
-  - Flash remote
-  - https://github.com/goldfeld/vim-seek
-
-* [ ] Swap motions ideas:
-  * [ ] Normal: You do `)iw`, it sees if you are in an inner word, then finds the next inner word and swaps them. `(iw` would do the same but with the previous. This is basically like the treesitter text objects swap but extended to other text objects. (You could also implement lookahead to find the next inner word, then use that as the swap for the origin)
-    * [ ] Use double count to define both how many rotations to perform and how many objects to rotate
-      * [ ] `)2iw` means rotate the current and next two inner words
-      - [ ] `2)2iw` means rotate those inner words twice. Position 1 moves to position 3, 2 to 1, and 3 to 2.
-        - This means that `2)iw` would do nothing. There should be some kind of built-in hl_on display so that the user knows a swap happened, even if it has no actual outcome.
-- https://github.com/neovim/neovim/pull/40948 - Implement this as a map for Oil (`1-` to open cwd. Higher counts go upward)
-
 ## LOW:
 
-- [ ] Could you implement an nvim-tools "sort_by_key" function that maps then sorts the map? How would you get back to the originals though?
-  - https://github.com/neovim/neovim/commit/f33c92348a77ae4cb62504b4cf71d1b7443bcf0e
+- [ ] https://github.com/neovim/neovim/pull/38906 - Use this for plugin logging.
+- [ ] For plugin docgen, my understanding is there is an emmylua annotation that has the same functionality as `nodoc`. It would be better to use the built-in emmy annotation.
 
-- [ ] Come up with a principled way to check for the truncated line in search plugins:
-  - Use case: Jump plugins in wrapped buffers
-  - Problems:
-    * If you put jump tokens on a truncated line, you have to redraw with valid = false. This is slow
-    * There is not a great way to find out if it is showing. You could look for the @ screenchar (or whatever the fillchar is), but this is a lot of logic
-    * You could also see if the next line has a valid screenpos value, but this is slow and not totally reliable
-    * Whether or not the line even shows depends on the user's display option
-    * Also causes an issue where jumping into the line can force it to be scrolled to the middle of the window, so then do you also have to add a "norm! zb" call?
-- [ ] In-process LSP that pushes diagnostics for lines over a certain length. Could expand this into other general linting tools. Perhaps then move into a compiled language
-  * Could also include fallback formatter
-- [ ] https://github.com/neovim/neovim/pull/38906 - Would be good to use this for plugin/docgen logging
+## PR
 
-- [ ] Doc updates PRs:
+- [ ] ts-text-object move should be able to distinguish between move selection and grow selection in visual mode
+- [ ] ts-text-object select should place the cursor at the end closest to the cursor's location when the selection was initiated
+- [ ] Doc updates:
   - [ ] getchar andd getcharstr opts are not documented
   - [ ] getqflist and getloclist returns are any
   - [ ] nvim_win_get_config in the doc isn't tied to the _ret type. Maybe intentional
@@ -87,24 +73,6 @@
   - [ ] setcursorcharpos
   - [ ] wordcount
   - [ ] The opts type for vim.keymap.set does not show in the docs
-
-- [ ] PR: ts-text-object move should be able to distinguish between move selection and grow selection in visual mode
-- [ ] PR: ts-text-object select should place the cursor at the end closest to the cursor's location when the selection was initiated
-- [ ] PR: It should be possible to get the length of a line without allocating heap
-* [ ] PR: Get SQLite into Neovim
-
-- [ ] PR: Harpoon
-  - [ ] Replace vim.loop with vim.uv
-  - [ ] Obscure bug where, if harpoon initializes without a cwd, it enter errors
-    - I'm not sure how to re-produce this
-
-- [ ] For bracket jumping:
-  - Save a pcmark for the first jump
-  - Don't save subsequent pcmarks unless they leave the screen
-  - If the user does a few jumps on the screen, they can go to where they were before they started jumping, without going through the intermediate jumps
-  - Complex though because what do you consider "leaving" a series of jumps. Would tie into un-owned state.
-
-- [ ] There is apparently some emmylua annotation that's built-in supported to that LSP, that has the same meaning as Neovim's bespoke nodoc annotation. Should try to use that if possible.
 
 ## STALKING:
 
