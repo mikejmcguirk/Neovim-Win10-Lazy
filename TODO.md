@@ -104,6 +104,8 @@
   - If the user does a few jumps on the screen, they can go to where they were before they started jumping, without going through the intermediate jumps
   - Complex though because what do you consider "leaving" a series of jumps. Would tie into un-owned state.
 
+- [ ] There is apparently some emmylua annotation that's built-in supported to that LSP, that has the same meaning as Neovim's bespoke nodoc annotation. Should try to use that if possible.
+
 ## STALKING:
 
 - https://github.com/ofseed/nvim
