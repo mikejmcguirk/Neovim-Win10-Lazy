@@ -1,5 +1,16 @@
 ## TODO:
 
+- [ ] https://github.com/neovim/neovim/pull/42092
+  - This PR changes multiple annotation types in Neovim.
+  - [ ] Update the relevant rancher annotations and variable names
+    - Example: quickfix.entry is now quickfix.ret.item
+  - [ ] Read the whole diff to see if this is relevant to farsight or catharsis
+  - [ ] Also, for CONTRIBUTING, in all plugins, add a note that LuaJIT + Neovim nightly are recommended for dev work.
+  - [ ] https://github.com/neovim/neovim/commit/affa765b076d9c48aaed38b8b40d6b3d91d736f1
+    - This might also be relevant because it changes quickfix annotations.
+  - [ ] https://github.com/neovim/neovim/commit/767f7eee77aca8bb53ed61b9961817e027225107
+    - This fixes the winborder type annotation. Still relevant for preview.
+
 - [ ] Finish farsight (target: when v0.13 comes out)
 - [ ] When we have plugins to push to Github:
   - [ ] Figure out how to push plugin updates to feature branches without every update showing up in lazy.nvim
@@ -25,6 +36,9 @@ VERSION BASED CODE REMOVALS
   - [ ] nvim-tools nonnil wrapper
 
 ## MID:
+
+- [ ] https://github.com/neovim/neovim/commit/20fa4b1be00e16242cdf9e977846370eeed2ec54
+  - This relates to nil return handling in emmylua. Worth exploring to see if it helps with the nags I've seen in the nvim-tools table module.
 
 - [ ] Handle non-version controlled files
   - [ ] General troubleshooting inits can stay
