@@ -125,10 +125,7 @@ local function set_lsp_maps(ev)
     end
 
     -- textDocument/linkedEditingRange
-    -- the docs recommend trying with html:
-    -- if client:supports_method("textDocument/linkedEditingRange") then
-    --     vim.lsp.linked_editing_range.enable(true, { client_id = client.id })
-    -- end
+    -- Enabled per-client in `on_init`.
 
     -- textDocument/references --
     set("n", "grr", function()
