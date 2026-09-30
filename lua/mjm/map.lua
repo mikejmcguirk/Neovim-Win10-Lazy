@@ -79,6 +79,8 @@ set("n", "qw", function()
     require("mjm.mc").cwords(false, vimv.count1, { leave = true })
 end)
 
+set({ "x" }, "qi", "zq/")
+
 -- TODO: Use q= for some kind of alignment function
 set({ "n", "x" }, "qf", "q=")
 
