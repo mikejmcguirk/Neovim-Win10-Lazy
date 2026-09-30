@@ -5,7 +5,7 @@
   "catharsis.nvim": { "branch": "master", "commit": "0cf4e3bf6e376d8f14995cbef13098bd58b4da42" },
   "catppuccin": { "branch": "main", "commit": "edefef779ab08ce1a4a404713e3012b0d202bd35" },
   "conform.nvim": { "branch": "master", "commit": "016802de402556da54c36bd7359b441266b01cdd" },
-  "farsight.nvim": { "branch": "master", "commit": "e7109e8c310c4c9e51f81bbe07ae9caa91f6d9e9" },
+  "farsight.nvim": { "branch": "master", "commit": "2263b1db34b4c8fa505226c6194d691bbbd88a2b" },
   "friendly-snippets": { "branch": "main", "commit": "b4d01b0fdf3c9a549961c2f9ffe8dc09be166219" },
   "fzf-lua": { "branch": "main", "commit": "eab53acb3fd36479f084f854b4418d02b5c70382" },
   "gitsigns.nvim": { "branch": "main", "commit": "070a5d7b985546cc57e1fc61e5bc507fecac6045" },
