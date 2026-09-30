@@ -1,5 +1,7 @@
 ## TODO:
 
+- [ ] Replace uses of nvim_mcursor
+
 - [ ] https://github.com/neovim/neovim/pull/42092
   - This PR changes multiple annotation types in Neovim.
   - [ ] Update the relevant rancher annotations and variable names

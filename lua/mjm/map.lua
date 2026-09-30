@@ -131,20 +131,25 @@ set("n", "gQ", function()
     api.nvim_echo({ { "Formatter not configured" } }, true, {})
 end)
 
-set({ "n", "x", "o" }, "W", "b")
-set({ "n", "x", "o" }, "<M-w>", "W")
-set({ "n", "x", "o" }, "<M-W>", "B")
+-- - Using alt allows us to get more usage out of individual keys.
+-- - ge/gE are clunky maps for what they do
+-- - We would like to free up the `b` key
+-- - Keep WORD motions on caps because, if you put them on alt, you would have to do the same for
+-- iW/aW, leaving no sensical purpose for prime vomode real estate.
+-- - Therefore, accept tradeoff of backwards motions being on alt
 
-set({ "n", "x", "o" }, "E", "ge")
-set({ "n", "x", "o" }, "<M-e>", "E")
-set({ "n", "x", "o" }, "<M-E>", "gE")
+set({ "n", "x", "o" }, "<M-w>", "b")
+set({ "n", "x", "o" }, "<M-S-w>", "B")
+
+set({ "n", "x", "o" }, "<M-e>", "ge")
+set({ "n", "x", "o" }, "<M-S-e>", "gE")
 
 set({ "n", "x", "o" }, "ge", function()
-    print("Use `E`")
+    print("Use `<M-e>`")
 end)
 
 set({ "n", "x", "o" }, "gE", function()
-    print("Use `<M-E>`")
+    print("Use `<M-S-e>`")
 end)
 
 set("x", "p", "P")
@@ -169,11 +174,11 @@ set({ "n", "x" }, "<M-c>", '"_c')
 set({ "n", "x" }, "<M-C>", '"_C')
 
 set({ "n", "x", "o" }, "b", function()
-    print("Use `W`")
+    print("Use `<M-e>`")
 end)
 
 set({ "n", "x", "o" }, "B", function()
-    print("Use `<M-W>`")
+    print("Use `<M-S-e>`")
 end)
 
 --Credit llakala
