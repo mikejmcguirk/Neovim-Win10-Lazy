@@ -1,8 +1,11 @@
 ---@type table<string, string[]>
 local formatters_by_ft = {
-    css = { "prettier" },
+    css = { "biome" },
+    -- css = { "prettier" },
     go = { "gofumpt" },
-    html = { "prettier" },
+    html = { "biome" },
+    -- html = { "prettier" },
+    javascript = { "biome" },
     json = { "prettier" },
     lua = { "stylua" },
     odin = { "odinfmt" },
@@ -11,6 +14,7 @@ local formatters_by_ft = {
     rust = { "rustfmt" },
     sh = { "shfmt" },
     toml = { "taplo" },
+    typescript = { "biome" },
     typst = { "typstyle" },
 }
 
