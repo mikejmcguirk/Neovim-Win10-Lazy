@@ -174,11 +174,11 @@ set({ "n", "x" }, "<M-c>", '"_c')
 set({ "n", "x" }, "<M-C>", '"_C')
 
 set({ "n", "x", "o" }, "b", function()
-    print("Use `<M-e>`")
+    print("Use `<M-w>`")
 end)
 
 set({ "n", "x", "o" }, "B", function()
-    print("Use `<M-S-e>`")
+    print("Use `<M-S-w>`")
 end)
 
 --Credit llakala
