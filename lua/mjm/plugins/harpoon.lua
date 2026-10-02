@@ -10,9 +10,7 @@ local function setup_harpoon()
         settings = {
             save_on_toggle = true,
             sync_on_ui_close = true,
-            menu = {
-                height = 10,
-            },
+            menu = { height = 10 },
         },
         -- Using custom selection since the built-in uses bufload
         default = {
@@ -70,9 +68,9 @@ local function setup_harpoon()
         local this_mark = mark -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
         local mod_mark = this_mark % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
-        set("n", string.format("<leader>%s", mod_mark), function()
+        set("n", "'" .. mod_mark, function()
             local open_mark = function()
-                harpoon:list():select(this_mark)
+                return harpoon:list():select(this_mark)
             end
 
             local ok, result = pcall(open_mark)
@@ -86,8 +84,7 @@ local function setup_harpoon()
     end
 
     set("n", "<leader>ar", function()
-        local buf = api.nvim_get_current_buf()
-        require("mjm.utils").harpoon_rm_buf({ buf = buf })
+        require("mjm.utils").harpoon_rm_buf({ buf = api.nvim_get_current_buf() })
     end)
 end
 
