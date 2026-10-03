@@ -1,5 +1,6 @@
 ## TODO:
 
+- [ ] See if this allows for simplification of the BMove cmd: https://github.com/neovim/neovim/commit/1dc9728dbd4cb07f07dbfae92e857452f23a2849
 - [ ] More API buf changes - https://github.com/neovim/neovim/pull/38900
   - https://github.com/neovim/neovim/commit/d0af4cd9094f3439382622906da5b1c5cd82c294
   - https://github.com/neovim/neovim/commit/71ac4db335e00b03b27d2c4aa5ab90c083a3a3e7
