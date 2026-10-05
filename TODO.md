@@ -2,6 +2,7 @@
 
 - [ ] Replace uses of nvim_mcursor
 
+- [ ] https://github.com/neovim/neovim/commit/483815ab45cf8fc08804e0cfa95b126493a5dd1f: eq_partial potentially useful for plugin testing. Definitely should be in nvim-tools
 - [ ] https://github.com/neovim/neovim/pull/42092
   - This PR changes multiple annotation types in Neovim.
   - [ ] Update the relevant rancher annotations and variable names

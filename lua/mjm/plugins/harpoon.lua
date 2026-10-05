@@ -80,6 +80,10 @@ local function setup_harpoon()
             end
         end)
 
+        set("n", "<leader>" .. mod_mark, function()
+            print("Use '" .. mod_mark)
+        end)
+
         mark = mod_mark + 1
     end
 
