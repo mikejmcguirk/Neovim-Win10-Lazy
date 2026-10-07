@@ -2,7 +2,7 @@
   "blink-cmp-dictionary": { "branch": "master", "commit": "898a958cece34da20524d04ebc032a92a9565643" },
   "blink.cmp": { "branch": "main", "commit": "78336bc89ee5365633bcf754d93df01678b5c08f" },
   "bullets.vim": { "branch": "master", "commit": "81570b98ca44b4100b3ddcf8d9ca74b9a9b0c884" },
-  "catharsis.nvim": { "branch": "master", "commit": "c16568c615a44ef0362699baec63db19bc601122" },
+  "catharsis.nvim": { "branch": "master", "commit": "43aaddd11ad12c6ab73df39da5b0179bc7d4bafd" },
   "catppuccin": { "branch": "main", "commit": "edefef779ab08ce1a4a404713e3012b0d202bd35" },
   "conform.nvim": { "branch": "master", "commit": "016802de402556da54c36bd7359b441266b01cdd" },
   "farsight.nvim": { "branch": "master", "commit": "a7d041215e16f9a3d93865accccf56ba93ea29fe" },
