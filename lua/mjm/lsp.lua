@@ -43,7 +43,7 @@ local function set_lsp_maps(ev)
         -- blink + moxide + codelens on line 1 + core workaround of changing view = the cursor
         -- moves up and down during LSP driven autocompletion
         if api.nvim_get_option_value("ft", { buf = buf }) ~= "markdown" then
-            lsp.codelens.enable()
+            lsp.codelens.enable(true, { bufnr = buf })
         end
     end
 
