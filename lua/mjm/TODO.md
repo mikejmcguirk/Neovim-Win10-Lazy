@@ -5,6 +5,7 @@
   - https://github.com/neovim/neovim/commit/d0af4cd9094f3439382622906da5b1c5cd82c294
   - https://github.com/neovim/neovim/commit/71ac4db335e00b03b27d2c4aa5ab90c083a3a3e7
 - [ ] Change these keys over - https://github.com/neovim/neovim/commit/3a4a66017b74192caaf9af9af172bdc08e0c1608
+- [ ] Run conform on ZZ specificaly, so that `:w` can be used to write without formatting
 
 ## MID:
 

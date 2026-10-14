@@ -7,6 +7,7 @@ local formatters_by_ft = {
     -- html = { "prettier" },
     javascript = { "biome" },
     json = { "prettier" },
+    jsonc = { "prettier" },
     lua = { "stylua" },
     odin = { "odinfmt" },
     python = { "ruff_fix", "ruff_format" },

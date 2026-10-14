@@ -2,6 +2,8 @@
 
 - [ ] Replace uses of nvim_mcursor
 
+- [ ] Need better solution for where to put agent skills. The never run formatters skill does not apply per project to devs who don't have an agent harness that handles that. But there is stuff I want to persist. Questions questions.
+
 - [ ] https://github.com/neovim/neovim/commit/483815ab45cf8fc08804e0cfa95b126493a5dd1f: eq_partial potentially useful for plugin testing. Definitely should be in nvim-tools
 - [ ] https://github.com/neovim/neovim/pull/42092
   - This PR changes multiple annotation types in Neovim.
