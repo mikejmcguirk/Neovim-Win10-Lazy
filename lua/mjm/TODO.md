@@ -60,6 +60,7 @@
 - [ ] Archived, but an nvim matchparen implementation - https://github.com/utilyre/sentiment.nvim
   - Do I just rewrite the core matchparen in Lua then expand upon it for my own purposes? The matchup.vim plugin creates issues
 - [ ] https://github.com/ergodice/statuscol-oil.nvim
+- [ ] https://github.com/neovim/neovim/pull/42351 - This might fix some of the goofy option set stuff I've noticed
 
 ## LOW:
 
