@@ -28,7 +28,7 @@ local function add_annotation(annotation)
 end
 
 set("n", "<leader>-a", function()
-    add_annotation("[[@as")
+    add_annotation("@as")
 end, { buf = 0 })
 
 set("n", "<leader>-b", function()
