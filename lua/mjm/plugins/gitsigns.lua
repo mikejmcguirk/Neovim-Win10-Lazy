@@ -15,7 +15,7 @@ return {
                 ---@param nav_opts Gitsigns.NavOpts
                 ---@param backup string
                 ---@param opts vim.keymap.set.Opts
-                local function diff_set(lhs, nav, nav_opts, backup, opts)
+                local function nav_set(lhs, nav, nav_opts, backup, opts)
                     set("n", lhs, function()
                         local win = api.nvim_get_current_win()
                         if not api.nvim_get_option_value("diff", { win = win }) then
@@ -37,14 +37,14 @@ return {
 
                 local greedy = { greedy = true }
                 local greedy_staged = { greedy = true, target = "staged" }
-                diff_set("[c", "prev", greedy, "[c", buf_opt)
-                diff_set("]c", "next", greedy, "]c", buf_opt)
-                diff_set("[C", "first", greedy, "[c", buf_opt)
-                diff_set("]C", "last", greedy, "]c", buf_opt)
-                diff_set("[<C-c>", "prev", greedy_staged, "[c", buf_opt)
-                diff_set("]<C-c>", "next", greedy_staged, "]c", buf_opt)
-                diff_set("[<M-c>", "first", greedy_staged, "[c", buf_opt)
-                diff_set("]<M-c>", "last", greedy_staged, "]c", buf_opt)
+                nav_set("[c", "prev", greedy, "[c", buf_opt)
+                nav_set("]c", "next", greedy, "]c", buf_opt)
+                nav_set("[C", "first", greedy, "[c", buf_opt)
+                nav_set("]C", "last", greedy, "]c", buf_opt)
+                nav_set("[<C-c>", "prev", greedy_staged, "[c", buf_opt)
+                nav_set("]<C-c>", "next", greedy_staged, "]c", buf_opt)
+                nav_set("[<M-c>", "first", greedy_staged, "[c", buf_opt)
+                nav_set("]<M-c>", "last", greedy_staged, "]c", buf_opt)
 
                 -- NOTE: stage_hunk is also undo stage
                 set("n", "<leader>hs", gitsigns.stage_hunk, buf_opt)
