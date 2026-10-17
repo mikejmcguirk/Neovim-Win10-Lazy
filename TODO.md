@@ -73,6 +73,7 @@ VERSION BASED CODE REMOVALS
   * Possibly related: https://github.com/neovim/neovim/discussions/32540
   * It looks like tmux is the remaining case where it doesn't work. Lots of different things colliding here.
 * [ ] https://github.com/neovim/neovim/commit/bbd0fdd36dcd684e09836ff41517e0e7ea6d802e - More efficient string parsing method
+- [ ] https://github.com/neovim/neovim/commit/9244da12e400ec0291450a5e9400d995e7a29b83 - Does this provide to tools to implement a floating inspector output?
 
 ## LOW:
 
