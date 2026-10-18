@@ -56,13 +56,6 @@ local function set_lsp_maps(ev)
         require("fzf-lua").lsp_declarations({ jump1 = false })
     end, { buf = buf })
 
-    set("n", "gr<C-d>", function()
-        local fzf_lua = require("fzf-lua")
-        fzf_lua.lsp_declarations({
-            jump1_action = fzf_lua.actions.file_vsplit,
-        })
-    end, { buf = buf })
-
     -- textDocument/definition --
     -- Check method support because these mask a Vim default.
     if client:supports_method("textDocument/definition") then
@@ -72,13 +65,6 @@ local function set_lsp_maps(ev)
 
         set("n", "gD", function()
             require("fzf-lua").lsp_definitions({ jump1 = false })
-        end, { buf = buf })
-
-        set("n", "g<C-d>", function()
-            local fzf_lua = require("fzf-lua")
-            fzf_lua.lsp_definitions({
-                jump1_action = fzf_lua.actions.file_vsplit,
-            })
         end, { buf = buf })
     end
 
@@ -90,6 +76,7 @@ local function set_lsp_maps(ev)
     set("n", "grO", lsp.document_color.color_presentation, { buf = buf })
 
     -- textDocument/documentHighlight --
+    -- Handled with catharsis.
 
     -- textDocument/documentSymbol --
     -- Check method support because this masks a Vim default.
@@ -110,18 +97,11 @@ local function set_lsp_maps(ev)
         require("fzf-lua").lsp_implementations({ jump1 = false })
     end, { buf = buf })
 
-    set("n", "gr<C-i>", function()
-        local fzf_lua = require("fzf-lua")
-        fzf_lua.lsp_implementations({
-            jump1_action = fzf_lua.actions.file_vsplit,
-        })
-    end)
-
     -- textDocument/inlayHint --
     if client:supports_method("textDocument/inlayHint") then
         set("n", "grh", function()
             lsp.inlay_hint.enable(not lsp.inlay_hint.is_enabled({ buf = buf }))
-        end, { buf = buf })
+        end, { buf = buf, desc = "Toggle inlay hint." })
     end
 
     -- textDocument/linkedEditingRange
@@ -130,19 +110,11 @@ local function set_lsp_maps(ev)
     -- textDocument/references --
     set("n", "grr", function()
         require("fzf-lua").lsp_references({ includeDeclaration = false })
-    end, { buf = buf })
+    end, { buf = buf, desc = "Goto LSP references." })
 
     set("n", "grR", function()
         require("fzf-lua").lsp_references({ includeDeclaration = false, jump1 = false })
-    end, { buf = buf })
-
-    set("n", "gr<C-r>", function()
-        local fzf_lua = require("fzf-lua")
-        fzf_lua.lsp_references({
-            includeDeclaration = false,
-            jump1_action = fzf_lua.actions.file_vsplit,
-        })
-    end)
+    end, { buf = buf, desc = "Peek LSP references." })
 
     -- textDocument/rename --
     -- Handled through catharsis
@@ -167,13 +139,6 @@ local function set_lsp_maps(ev)
     set("n", "grT", function()
         require("fzf-lua").lsp_typedefs({ jump1 = false })
     end, { buf = buf })
-
-    set("n", "gr<C-t>", function()
-        local fzf_lua = require("fzf-lua")
-        fzf_lua.lsp_typedefs({
-            jump1_action = fzf_lua.actions.file_vsplit,
-        })
-    end)
 
     -- typeHierarchy/subtypes --
     if client:supports_method("typeHierarchy/subtypes") then
