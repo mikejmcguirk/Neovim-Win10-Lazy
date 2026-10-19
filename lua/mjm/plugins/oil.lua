@@ -72,3 +72,4 @@ return {
 -- Could maybe do the cmd line attached style layout here, so it feels less arbitrary
 -- The philosophical issue is - A floating window should feel like it has an anchor point, and
 -- right now it just arbitrarily floats there, which is bad
+-- LOW: Implement Nvim default style {count}- upward navigation.
