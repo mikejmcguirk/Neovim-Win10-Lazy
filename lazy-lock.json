@@ -16,7 +16,7 @@
   "mini.operators": { "branch": "main", "commit": "9e844663fe217bae78e857b7dc59468d8ee6d425" },
   "mini.test": { "branch": "main", "commit": "4d0fbfbae53ef872250fb3701dc1756262d36bf4" },
   "nvim-autopairs": { "branch": "master", "commit": "3172f40c16563db871a58f20d205c710ad782311" },
-  "nvim-lspconfig": { "branch": "master", "commit": "3bccb6fa49a3a75bfb6d92fed63b13a71a85cfaf" },
+  "nvim-lspconfig": { "branch": "master", "commit": "4b2b045b8ceb035f5c8bc9cab19b95706bfa6a19" },
   "nvim-pqf": { "branch": "main", "commit": "0f11180718b861986ac06a2fef16c404a58b3645" },
   "nvim-qf-herder": { "branch": "master", "commit": "c6b20b36c4a6909298b863fbd63f07eb31dad398" },
   "nvim-surround": { "branch": "main", "commit": "8b47db616ef658b8fc27e61db2896aa2f40134de" },
