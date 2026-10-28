@@ -10,20 +10,6 @@ return {
         local action_filters = {
             ---@param _ integer
             ---@param action lsp.Command|lsp.CodeAction
-            lua = function(_, action)
-                if action.disabled then
-                    return false
-                end
-
-                local title = action.title ---@type string|nil
-                if not title then
-                    return true
-                end
-
-                return string.find(title, "Change to parameter", 1, true) == nil
-            end,
-            ---@param _ integer
-            ---@param action lsp.Command|lsp.CodeAction
             python = function(_, action)
                 if action.disabled then
                     return false
@@ -44,6 +30,18 @@ return {
 
                 return true
             end,
+        }
+        -- TODO: This should be a client specific config.
+
+        vim.g.catharsis = {
+            document_highlight = {
+                on_jump = function(_, _, _, info)
+                    api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true })
+                    if info.did_scroll then
+                        api.nvim_cmd({ cmd = "norm", args = { "zzze" }, bang = true })
+                    end
+                end,
+            },
         }
 
         api.nvim_create_autocmd("LspAttach", {

@@ -68,8 +68,11 @@ api.nvim_set_option_value("wrap", false, scope_global)
 api.nvim_set_option_value("bri", true, scope_global)
 api.nvim_set_option_value("lbr", true, scope_global)
 -- So that '"...bar."' stays on one line. Doing these individually is necessary for some reason.
+-- TODO: There might have been a fix that allows all of these to be one set.
 api.nvim_set_option_value("brk", ".", scope_global_rm)
 api.nvim_set_option_value("brk", "?", scope_global_rm)
+-- So that "foo-bar" stays on one line.
+api.nvim_set_option_value("brk", "-", scope_global_rm)
 api.nvim_set_option_value("brk", "*", scope_global_rm)
 -- So `@param` is not broken up between two lines.
 api.nvim_set_option_value("brk", "@", scope_global_rm)
