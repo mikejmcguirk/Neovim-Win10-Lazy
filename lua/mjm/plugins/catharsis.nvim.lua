@@ -6,9 +6,9 @@ return {
     init = function()
         local api = vim.api
 
-        ---@type table<string, fun(client_id: integer, action: lsp.Command|lsp.CodeAction):boolean>
+        ---@type table<string, fun(client: vim.lsp.Client, action: lsp.Command|lsp.CodeAction):boolean>
         local action_filters = {
-            ---@param _ integer
+            ---@param _ vim.lsp.Client
             ---@param action lsp.Command|lsp.CodeAction
             python = function(_, action)
                 if action.disabled then
