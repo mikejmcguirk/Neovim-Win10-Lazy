@@ -54,6 +54,7 @@ require("lazy").setup({
 
 vim.keymap.set("n", "<leader>zc", "<cmd>Lazy check<cr>")
 vim.keymap.set("n", "<leader>zp", "<cmd>Lazy profile<cr>")
+vim.keymap.set("n", "<leader>zr", "<cmd>Lazy restore<cr>")
 vim.keymap.set("n", "<leader>zs", "<cmd>Lazy sync<cr>")
 vim.keymap.set("n", "<leader>zu", "<cmd>Lazy update<cr>")
 vim.keymap.set("n", "<leader>zx", "<cmd>Lazy clean<cr>")
