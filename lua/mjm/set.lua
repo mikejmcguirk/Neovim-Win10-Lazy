@@ -124,6 +124,10 @@ end
 autoset_winopt("WinEnter", "cul", true)
 autoset_winopt("WinLeave", "cul", false)
 
+-- Has weird random issues.
+-- autoset_winopt("WinEnter", "rnu", true)
+-- autoset_winopt("WinLeave", "rnu", false)
+
 -- :h fo-table
 -- Since multiple runtime ftplugin files set formatoptions, correct here
 api.nvim_create_autocmd({ "FileType" }, {

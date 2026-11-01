@@ -46,13 +46,6 @@
   - Also an interesting thing where you can do di, and da, in text
   - Also this: https://github.com/kana/vim-textobj-user
   - Note in both of these, there are other ideas and some suggested mappings for them that are interesting
-- [ ] Try to make dynamic rnu again
-  - Blockers:
-    - [ ] My file opening is in flux, so I don't want to chase a moving target
-    - [ ] For the open file methods I use, I need to understand when the different parts of the process happen, so I know what I'm missing that's causing the flaky rnu appearance
-  - Requirements:
-    * [ ] Cannot require layering a bunch of hacks on top of each other that create complexity surface area.
-    * [ ] Must be centralized. Cannot require setting nu/rnu in every problem filetype
 - [ ] The jumplist should not inherit bufs from other sessions
   * Starting it fresh each time is acceptable
 - [ ] Is the new `scrolloffpad` option useful for my use case?
@@ -61,6 +54,7 @@
   - Do I just rewrite the core matchparen in Lua then expand upon it for my own purposes? The matchup.vim plugin creates issues
 - [ ] https://github.com/ergodice/statuscol-oil.nvim
 - [ ] https://github.com/neovim/neovim/pull/42351 - This might fix some of the goofy option set stuff I've noticed
+- [ ] fzf-lua's `fzf3` background highlight might be useful for the "second visual selection"
 
 ## LOW:
 
