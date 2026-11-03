@@ -41,6 +41,7 @@ VERSION BASED CODE REMOVALS
   - [ ] Remove optional tables from API calls
 - [ ] 0.15
   - [ ] nvim-tools nonnil wrapper
+  - [ ] Any wrapper code for the old vim.uri_ interfaces
 
 ## MID:
 

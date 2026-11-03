@@ -695,7 +695,6 @@ set("n", "<C-k>", function()
     mv_normal(true)
 end)
 
--- TODO: Does not correctly handle count. I guess you have to manually pass it in with a norm cmd?
 set({ "n", "x" }, "x", '"_x')
 set("n", "X", '"_X')
 
