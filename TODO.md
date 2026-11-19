@@ -1,5 +1,9 @@
 ## TODO:
 
+- [ ] https://github.com/neovim/neovim/commit/e6aba758b60f4e6e15e0aa845f82390293781078 - wat mean?
+  - [ ] https://github.com/neovim/neovim/pull/42875 - Related?
+  - [ ] https://github.com/neovim/neovim/commit/9dfe199b93ff9fa550671242bd9d45b93f392f19 - Related?
+  - [ ] https://github.com/neovim/neovim/commit/22a3f150bee7e87a2c4bdc79424240e1f16d97a3 - Related?
 - [ ] Replace uses of nvim_mcursor
 
 - [ ] Need better solution for where to put agent skills. The never run formatters skill does not apply per project to devs who don't have an agent harness that handles that. But there is stuff I want to persist. Questions questions.
@@ -39,9 +43,9 @@ VERSION BASED CODE REMOVALS
   - [ ] Manual creating of the "Dimmed" highlight group in plugins
   - [ ] For any uses of nvim_win_call or nvim_buf_call with multiple returns, remove any table packing logic
   - [ ] Remove optional tables from API calls
+  - [ ] Any wrapper code for the old vim.uri_ interfaces
 - [ ] 0.15
   - [ ] nvim-tools nonnil wrapper
-  - [ ] Any wrapper code for the old vim.uri_ interfaces
 
 ## MID:
 

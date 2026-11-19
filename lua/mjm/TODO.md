@@ -9,6 +9,7 @@
 
 ## MID:
 
+- A tool to add review comments inline to stuff in the git working tree for the bots to read and work on, rather than having to type it into the prompt
 - MULTICURSOR:
   * Discussions:
     + https://github.com/neovim/neovim/discussions?discussions_q=label%3Amulticursor < Neovim Github discussions
@@ -55,6 +56,8 @@
 - [ ] https://github.com/ergodice/statuscol-oil.nvim
 - [ ] https://github.com/neovim/neovim/pull/42351 - This might fix some of the goofy option set stuff I've noticed
 - [ ] fzf-lua's `fzf3` background highlight might be useful for the "second visual selection"
+- [ ] Let a) text object and so on accept count
+  - When you need it you need it.
 
 ## LOW:
 
