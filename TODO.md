@@ -44,6 +44,7 @@ VERSION BASED CODE REMOVALS
   - [ ] For any uses of nvim_win_call or nvim_buf_call with multiple returns, remove any table packing logic
   - [ ] Remove optional tables from API calls
   - [ ] Any wrapper code for the old vim.uri_ interfaces
+  - [ ] Look for any nvim_buf_set_text calls that split or wrap strings and just pass in the string
 - [ ] 0.15
   - [ ] nvim-tools nonnil wrapper
 
